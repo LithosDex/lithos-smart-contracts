@@ -14,10 +14,10 @@ contract LithosTest is Test {
     address public user3;
     address public recipient;
 
-    uint constant INITIAL_MINT_AMOUNT = 50 * 1e6 * 1e18; // 50M tokens
+    uint256 constant INITIAL_MINT_AMOUNT = 50 * 1e6 * 1e18; // 50M tokens
 
-    event Transfer(address indexed from, address indexed to, uint value);
-    event Approval(address indexed owner, address indexed spender, uint value);
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 
     function setUp() public {
         deployer = address(this);
@@ -129,7 +129,7 @@ contract LithosTest is Test {
     // ============ Regular Mint Tests ============
 
     function test_Mint_Success() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
 
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(0), user1, amount);
@@ -141,7 +141,7 @@ contract LithosTest is Test {
     }
 
     function test_Mint_OnlyMinter() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
 
         vm.prank(user1);
         vm.expectRevert("not allowed");
@@ -149,8 +149,8 @@ contract LithosTest is Test {
     }
 
     function test_Mint_MultipleAmounts() public {
-        uint amount1 = 1000 * 1e18;
-        uint amount2 = 500 * 1e18;
+        uint256 amount1 = 1000 * 1e18;
+        uint256 amount2 = 500 * 1e18;
 
         lithos.mint(user1, amount1);
         lithos.mint(user2, amount2);
@@ -161,8 +161,8 @@ contract LithosTest is Test {
     }
 
     function test_Mint_ToSameAddress() public {
-        uint amount1 = 1000 * 1e18;
-        uint amount2 = 500 * 1e18;
+        uint256 amount1 = 1000 * 1e18;
+        uint256 amount2 = 500 * 1e18;
 
         lithos.mint(user1, amount1);
         lithos.mint(user1, amount2);
@@ -182,7 +182,7 @@ contract LithosTest is Test {
         // First mint a small amount to set totalSupply > 0
         lithos.mint(user1, 1);
 
-        uint maxAmount = type(uint).max;
+        uint256 maxAmount = type(uint256).max;
 
         vm.expectRevert(); // Should overflow when adding to totalSupply
         lithos.mint(user2, maxAmount);
@@ -190,7 +190,7 @@ contract LithosTest is Test {
 
     function test_Mint_AfterMinterChange() public {
         lithos.setMinter(minter);
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
 
         vm.prank(deployer);
         vm.expectRevert("not allowed");
@@ -204,7 +204,7 @@ contract LithosTest is Test {
     // ============ Transfer Tests ============
 
     function test_Transfer_Success() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.startPrank(user1);
@@ -221,7 +221,7 @@ contract LithosTest is Test {
     }
 
     function test_Transfer_InsufficientBalance() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.prank(user1);
@@ -230,7 +230,7 @@ contract LithosTest is Test {
     }
 
     function test_Transfer_ZeroAmount() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.prank(user1);
@@ -241,7 +241,7 @@ contract LithosTest is Test {
     }
 
     function test_Transfer_ToSelf() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.prank(user1);
@@ -251,7 +251,7 @@ contract LithosTest is Test {
     }
 
     function test_Transfer_ToZeroAddress() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.prank(user1);
@@ -262,7 +262,7 @@ contract LithosTest is Test {
     }
 
     function test_Transfer_EntireBalance() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.prank(user1);
@@ -275,7 +275,7 @@ contract LithosTest is Test {
     // ============ Approval Tests ============
 
     function test_Approve_Success() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
 
         vm.prank(user1);
 
@@ -295,7 +295,7 @@ contract LithosTest is Test {
     }
 
     function test_Approve_MaxAmount() public {
-        uint maxAmount = type(uint).max;
+        uint256 maxAmount = type(uint256).max;
 
         vm.prank(user1);
         assertTrue(lithos.approve(user2, maxAmount));
@@ -330,7 +330,7 @@ contract LithosTest is Test {
     // ============ TransferFrom Tests ============
 
     function test_TransferFrom_Success() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.prank(user1);
@@ -349,7 +349,7 @@ contract LithosTest is Test {
     }
 
     function test_TransferFrom_InsufficientAllowance() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.prank(user1);
@@ -361,7 +361,7 @@ contract LithosTest is Test {
     }
 
     function test_TransferFrom_InsufficientBalance() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.prank(user1);
@@ -373,22 +373,22 @@ contract LithosTest is Test {
     }
 
     function test_TransferFrom_MaxAllowance() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.prank(user1);
-        lithos.approve(user2, type(uint).max);
+        lithos.approve(user2, type(uint256).max);
 
         vm.prank(user2);
         assertTrue(lithos.transferFrom(user1, user3, 500 * 1e18));
 
         assertEq(lithos.balanceOf(user1), 500 * 1e18);
         assertEq(lithos.balanceOf(user3), 500 * 1e18);
-        assertEq(lithos.allowance(user1, user2), type(uint).max); // Should not decrease
+        assertEq(lithos.allowance(user1, user2), type(uint256).max); // Should not decrease
     }
 
     function test_TransferFrom_ZeroAmount() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.prank(user1);
@@ -403,7 +403,7 @@ contract LithosTest is Test {
     }
 
     function test_TransferFrom_NoAllowance() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.prank(user2);
@@ -412,7 +412,7 @@ contract LithosTest is Test {
     }
 
     function test_TransferFrom_ToSelf() public {
-        uint amount = 1000 * 1e18;
+        uint256 amount = 1000 * 1e18;
         lithos.mint(user1, amount);
 
         vm.prank(user1);
@@ -443,10 +443,7 @@ contract LithosTest is Test {
 
         lithos.transferFrom(recipient, user2, 1500 * 1e18);
 
-        assertEq(
-            lithos.balanceOf(recipient),
-            INITIAL_MINT_AMOUNT - 1000 * 1e18 - 1500 * 1e18
-        );
+        assertEq(lithos.balanceOf(recipient), INITIAL_MINT_AMOUNT - 1000 * 1e18 - 1500 * 1e18);
         assertEq(lithos.balanceOf(user1), 1000 * 1e18);
         assertEq(lithos.balanceOf(user2), 1500 * 1e18);
         assertEq(lithos.allowance(recipient, user1), 500 * 1e18);
@@ -558,8 +555,8 @@ contract LithosTest is Test {
     // ============ State Consistency Tests ============
 
     function test_StateConsistency_TotalSupplyTracking() public {
-        uint amount1 = 1000 * 1e18;
-        uint amount2 = 500 * 1e18;
+        uint256 amount1 = 1000 * 1e18;
+        uint256 amount2 = 500 * 1e18;
 
         // Initial state
         assertEq(lithos.totalSupply(), 0);
@@ -576,9 +573,7 @@ contract LithosTest is Test {
         assertEq(lithos.totalSupply(), amount1 + amount2 + INITIAL_MINT_AMOUNT);
 
         // Total supply should equal sum of all balances
-        uint totalBalance = lithos.balanceOf(user1) +
-            lithos.balanceOf(user2) +
-            lithos.balanceOf(recipient);
+        uint256 totalBalance = lithos.balanceOf(user1) + lithos.balanceOf(user2) + lithos.balanceOf(recipient);
         assertEq(lithos.totalSupply(), totalBalance);
     }
 
@@ -586,9 +581,7 @@ contract LithosTest is Test {
         lithos.mint(user1, 2000 * 1e18);
         lithos.mint(user2, 1000 * 1e18);
 
-        uint initialTotal = lithos.balanceOf(user1) +
-            lithos.balanceOf(user2) +
-            lithos.balanceOf(user3);
+        uint256 initialTotal = lithos.balanceOf(user1) + lithos.balanceOf(user2) + lithos.balanceOf(user3);
 
         // Transfer between users
         vm.prank(user1);
@@ -597,9 +590,7 @@ contract LithosTest is Test {
         vm.prank(user2);
         lithos.transfer(user1, 300 * 1e18);
 
-        uint finalTotal = lithos.balanceOf(user1) +
-            lithos.balanceOf(user2) +
-            lithos.balanceOf(user3);
+        uint256 finalTotal = lithos.balanceOf(user1) + lithos.balanceOf(user2) + lithos.balanceOf(user3);
 
         assertEq(initialTotal, finalTotal);
         assertEq(lithos.totalSupply(), finalTotal);
@@ -611,9 +602,9 @@ contract LithosTest is Test {
         lithos.mint(user1, 1000 * 1e18);
 
         vm.prank(user1);
-        uint gasBefore = gasleft();
+        uint256 gasBefore = gasleft();
         lithos.transfer(user2, 500 * 1e18);
-        uint gasUsed = gasBefore - gasleft();
+        uint256 gasUsed = gasBefore - gasleft();
 
         // Gas usage should be reasonable for a transfer
         assertTrue(gasUsed < 100000); // Arbitrary reasonable limit
@@ -621,9 +612,9 @@ contract LithosTest is Test {
 
     function test_Gas_ApprovalOptimization() public {
         vm.prank(user1);
-        uint gasBefore = gasleft();
+        uint256 gasBefore = gasleft();
         lithos.approve(user2, 1000 * 1e18);
-        uint gasUsed = gasBefore - gasleft();
+        uint256 gasUsed = gasBefore - gasleft();
 
         // Gas usage should be reasonable for an approval
         assertTrue(gasUsed < 100000); // Arbitrary reasonable limit

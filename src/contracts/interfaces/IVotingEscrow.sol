@@ -11,49 +11,39 @@ interface IVotingEscrow {
 
     struct LockedBalance {
         int128 amount;
-        uint end;
+        uint256 end;
     }
 
-    function create_lock_for(
-        uint _value,
-        uint _lock_duration,
-        address _to
-    ) external returns (uint);
+    function create_lock_for(uint256 _value, uint256 _lock_duration, address _to) external returns (uint256);
 
-    function locked(uint id) external view returns (LockedBalance memory);
-    function tokenOfOwnerByIndex(
-        address _owner,
-        uint _tokenIndex
-    ) external view returns (uint);
+    function locked(uint256 id) external view returns (LockedBalance memory);
+    function tokenOfOwnerByIndex(address _owner, uint256 _tokenIndex) external view returns (uint256);
 
     function token() external view returns (address);
     function team() external returns (address);
-    function epoch() external view returns (uint);
-    function point_history(uint loc) external view returns (Point memory);
-    function user_point_history(
-        uint tokenId,
-        uint loc
-    ) external view returns (Point memory);
-    function user_point_epoch(uint tokenId) external view returns (uint);
+    function epoch() external view returns (uint256);
+    function point_history(uint256 loc) external view returns (Point memory);
+    function user_point_history(uint256 tokenId, uint256 loc) external view returns (Point memory);
+    function user_point_epoch(uint256 tokenId) external view returns (uint256);
 
-    function ownerOf(uint) external view returns (address);
-    function isApprovedOrOwner(address, uint) external view returns (bool);
-    function transferFrom(address, address, uint) external;
+    function ownerOf(uint256) external view returns (address);
+    function isApprovedOrOwner(address, uint256) external view returns (bool);
+    function transferFrom(address, address, uint256) external;
 
-    function voted(uint) external view returns (bool);
-    function attachments(uint) external view returns (uint);
-    function voting(uint tokenId) external;
-    function abstain(uint tokenId) external;
-    function attach(uint tokenId) external;
-    function detach(uint tokenId) external;
+    function voted(uint256) external view returns (bool);
+    function attachments(uint256) external view returns (uint256);
+    function voting(uint256 tokenId) external;
+    function abstain(uint256 tokenId) external;
+    function attach(uint256 tokenId) external;
+    function detach(uint256 tokenId) external;
 
     function checkpoint() external;
-    function deposit_for(uint tokenId, uint value) external;
+    function deposit_for(uint256 tokenId, uint256 value) external;
 
-    function balanceOfNFT(uint _id) external view returns (uint);
-    function balanceOf(address _owner) external view returns (uint);
-    function totalSupply() external view returns (uint);
-    function supply() external view returns (uint);
+    function balanceOfNFT(uint256 _id) external view returns (uint256);
+    function balanceOf(address _owner) external view returns (uint256);
+    function totalSupply() external view returns (uint256);
+    function supply() external view returns (uint256);
 
     function decimals() external view returns (uint8);
 }

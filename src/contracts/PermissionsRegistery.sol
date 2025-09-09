@@ -84,7 +84,7 @@ contract PermissionsRegistry {
         bytes memory _role = bytes(role);
         require(_checkRole[_role], "not a role");
 
-        for (uint i = 0; i < _roles.length; i++) {
+        for (uint256 i = 0; i < _roles.length; i++) {
             if (keccak256(_roles[i]) == keccak256(_role)) {
                 _roles[i] = _roles[_roles.length - 1];
                 _roles.pop();
@@ -95,10 +95,10 @@ contract PermissionsRegistry {
         }
 
         address[] memory rta = _roleToAddresses[bytes(role)];
-        for (uint i = 0; i < rta.length; i++) {
+        for (uint256 i = 0; i < rta.length; i++) {
             hasRole[bytes(role)][rta[i]] = false;
             bytes[] memory __roles = _addressToRoles[rta[i]];
-            for (uint k = 0; k < __roles.length; k++) {
+            for (uint256 k = 0; k < __roles.length; k++) {
                 if (keccak256(__roles[k]) == keccak256(bytes(role))) {
                     _addressToRoles[rta[i]][k] = _roles[_roles.length - 1];
                     _addressToRoles[rta[i]].pop();
@@ -108,10 +108,7 @@ contract PermissionsRegistry {
     }
 
     /// @notice Set a role for an address
-    function setRoleFor(
-        address c,
-        string memory role
-    ) external onlyLithosMultisig {
+    function setRoleFor(address c, string memory role) external onlyLithosMultisig {
         bytes memory _role = bytes(role);
         require(_checkRole[_role], "not a role");
         require(!hasRole[_role][c], "assigned");
@@ -125,10 +122,7 @@ contract PermissionsRegistry {
     }
 
     /// @notice remove a role from an address
-    function removeRoleFrom(
-        address c,
-        string memory role
-    ) external onlyLithosMultisig {
+    function removeRoleFrom(address c, string memory role) external onlyLithosMultisig {
         bytes memory _role = bytes(role);
         require(_checkRole[_role], "not a role");
         require(hasRole[_role][c], "not assigned");
@@ -136,7 +130,7 @@ contract PermissionsRegistry {
         hasRole[_role][c] = false;
 
         address[] storage rta = _roleToAddresses[_role];
-        for (uint i = 0; i < rta.length; i++) {
+        for (uint256 i = 0; i < rta.length; i++) {
             if (rta[i] == c) {
                 rta[i] = rta[rta.length - 1];
                 rta.pop();
@@ -144,7 +138,7 @@ contract PermissionsRegistry {
         }
 
         bytes[] storage atr = _addressToRoles[c];
-        for (uint i = 0; i < atr.length; i++) {
+        for (uint256 i = 0; i < atr.length; i++) {
             if (keccak256(atr[i]) == keccak256(_role)) {
                 atr[i] = atr[atr.length - 1];
                 atr.pop();
@@ -154,14 +148,16 @@ contract PermissionsRegistry {
         emit RoleRemovedFor(c, _role);
     }
 
-    /************************************************************
-                                VIEW
-    *************************************************************/
+    /**
+     *
+     *                             VIEW
+     *
+     */
 
     /// @notice Read roles and return strings
     function rolesToString() external view returns (string[] memory __roles) {
         __roles = new string[](_roles.length);
-        for (uint i = 0; i < _roles.length; i++) {
+        for (uint256 i = 0; i < _roles.length; i++) {
             __roles[i] = string(_roles[i]);
         }
     }
@@ -172,44 +168,38 @@ contract PermissionsRegistry {
     }
 
     /// @notice Read roles length
-    function rolesLength() external view returns (uint) {
+    function rolesLength() external view returns (uint256) {
         return _roles.length;
     }
 
     /// @notice Return addresses for a given role
-    function roleToAddresses(
-        string memory role
-    ) external view returns (address[] memory _addresses) {
+    function roleToAddresses(string memory role) external view returns (address[] memory _addresses) {
         return _roleToAddresses[bytes(role)];
     }
 
     /// @notice Return roles for a given address
-    function addressToRole(
-        address _user
-    ) external view returns (string[] memory) {
+    function addressToRole(address _user) external view returns (string[] memory) {
         string[] memory _temp = new string[](_addressToRoles[_user].length);
-        uint i = 0;
+        uint256 i = 0;
         for (i; i < _temp.length; i++) {
             _temp[i] = string(_addressToRoles[_user][i]);
         }
         return _temp;
     }
 
-    /************************************************************
-                                HELPERS
-    *************************************************************/
+    /**
+     *
+     *                             HELPERS
+     *
+     */
 
     /// @notice Helper function to get bytes from a string
-    function helper_stringToBytes(
-        string memory _input
-    ) public pure returns (bytes memory) {
+    function helper_stringToBytes(string memory _input) public pure returns (bytes memory) {
         return bytes(_input);
     }
 
     /// @notice Helper function to get string from bytes
-    function helper_bytesToString(
-        bytes memory _input
-    ) public pure returns (string memory) {
+    function helper_bytesToString(bytes memory _input) public pure returns (string memory) {
         return string(_input);
     }
 
@@ -222,10 +212,7 @@ contract PermissionsRegistry {
     /// @notice set emergency counsil
     /// @param _new new address
     function setEmergencyCouncil(address _new) external {
-        require(
-            msg.sender == emergencyCouncil || msg.sender == lithosMultisig,
-            "not allowed"
-        );
+        require(msg.sender == emergencyCouncil || msg.sender == lithosMultisig, "not allowed");
         require(_new != address(0), "addr0");
         require(_new != emergencyCouncil, "same emergencyCouncil");
         emergencyCouncil = _new;

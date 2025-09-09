@@ -13,15 +13,15 @@ contract VeArtProxyUpgradeable is IVeArtProxy, OwnableUpgradeable {
         __Ownable_init(msg.sender);
     }
 
-    function toString(uint value) internal pure returns (string memory) {
+    function toString(uint256 value) internal pure returns (string memory) {
         // Inspired by OraclizeAPI's implementation - MIT license
         // https://github.com/oraclize/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol
 
         if (value == 0) {
             return "0";
         }
-        uint temp = value;
-        uint digits;
+        uint256 temp = value;
+        uint256 digits;
         while (temp != 0) {
             digits++;
             temp /= 10;
@@ -29,51 +29,28 @@ contract VeArtProxyUpgradeable is IVeArtProxy, OwnableUpgradeable {
         bytes memory buffer = new bytes(digits);
         while (value != 0) {
             digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint(value % 10)));
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
             value /= 10;
         }
         return string(buffer);
     }
 
-    function _tokenURI(
-        uint _tokenId,
-        uint _balanceOf,
-        uint _locked_end,
-        uint _value
-    ) external pure returns (string memory output) {
-        output = '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 350 350"><style>.base { fill: white; font-family: serif; font-size: 14px; }</style><rect width="100%" height="100%" fill="black" /><text x="10" y="20" class="base">';
+    function _tokenURI(uint256 _tokenId, uint256 _balanceOf, uint256 _locked_end, uint256 _value)
+        external
+        pure
+        returns (string memory output)
+    {
+        output =
+            '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 350 350"><style>.base { fill: white; font-family: serif; font-size: 14px; }</style><rect width="100%" height="100%" fill="black" /><text x="10" y="20" class="base">';
+        output =
+            string(abi.encodePacked(output, "token ", toString(_tokenId), '</text><text x="10" y="40" class="base">'));
         output = string(
-            abi.encodePacked(
-                output,
-                "token ",
-                toString(_tokenId),
-                '</text><text x="10" y="40" class="base">'
-            )
+            abi.encodePacked(output, "balanceOf ", toString(_balanceOf), '</text><text x="10" y="60" class="base">')
         );
         output = string(
-            abi.encodePacked(
-                output,
-                "balanceOf ",
-                toString(_balanceOf),
-                '</text><text x="10" y="60" class="base">'
-            )
+            abi.encodePacked(output, "locked_end ", toString(_locked_end), '</text><text x="10" y="80" class="base">')
         );
-        output = string(
-            abi.encodePacked(
-                output,
-                "locked_end ",
-                toString(_locked_end),
-                '</text><text x="10" y="80" class="base">'
-            )
-        );
-        output = string(
-            abi.encodePacked(
-                output,
-                "value ",
-                toString(_value),
-                "</text></svg>"
-            )
-        );
+        output = string(abi.encodePacked(output, "value ", toString(_value), "</text></svg>"));
 
         string memory json = Base64.encode(
             bytes(
@@ -88,8 +65,6 @@ contract VeArtProxyUpgradeable is IVeArtProxy, OwnableUpgradeable {
                 )
             )
         );
-        output = string(
-            abi.encodePacked("data:application/json;base64,", json)
-        );
+        output = string(abi.encodePacked("data:application/json;base64,", json));
     }
 }

@@ -12,10 +12,7 @@ contract VeArtProxyUpgradeableTest is Test {
     address public user1;
     address public user2;
 
-    event OwnershipTransferred(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     function setUp() public {
         owner = address(this);
@@ -88,17 +85,12 @@ contract VeArtProxyUpgradeableTest is Test {
     // ============ TokenURI Generation Tests ============
 
     function test_TokenURI_BasicGeneration() public {
-        uint tokenId = 1;
-        uint balanceOf = 1000 * 1e18;
-        uint lockedEnd = block.timestamp + 365 days;
-        uint value = 500 * 1e18;
+        uint256 tokenId = 1;
+        uint256 balanceOf = 1000 * 1e18;
+        uint256 lockedEnd = block.timestamp + 365 days;
+        uint256 value = 500 * 1e18;
 
-        string memory result = veArtProxy._tokenURI(
-            tokenId,
-            balanceOf,
-            lockedEnd,
-            value
-        );
+        string memory result = veArtProxy._tokenURI(tokenId, balanceOf, lockedEnd, value);
 
         // Should return a data URI
         assertTrue(bytes(result).length > 0);
@@ -112,7 +104,7 @@ contract VeArtProxyUpgradeableTest is Test {
         if (resultBytes.length < prefixBytes.length) {
             hasCorrectPrefix = false;
         } else {
-            for (uint i = 0; i < prefixBytes.length; i++) {
+            for (uint256 i = 0; i < prefixBytes.length; i++) {
                 if (resultBytes[i] != prefixBytes[i]) {
                     hasCorrectPrefix = false;
                     break;
@@ -134,17 +126,12 @@ contract VeArtProxyUpgradeableTest is Test {
     }
 
     function test_TokenURI_WithLargeValues() public {
-        uint tokenId = type(uint128).max;
-        uint balanceOf = type(uint128).max;
-        uint lockedEnd = type(uint128).max;
-        uint value = type(uint128).max;
+        uint256 tokenId = type(uint128).max;
+        uint256 balanceOf = type(uint128).max;
+        uint256 lockedEnd = type(uint128).max;
+        uint256 value = type(uint128).max;
 
-        string memory result = veArtProxy._tokenURI(
-            tokenId,
-            balanceOf,
-            lockedEnd,
-            value
-        );
+        string memory result = veArtProxy._tokenURI(tokenId, balanceOf, lockedEnd, value);
 
         assertTrue(bytes(result).length > 0);
     }
@@ -156,23 +143,13 @@ contract VeArtProxyUpgradeableTest is Test {
     }
 
     function test_TokenURI_ConsistentOutput() public {
-        uint tokenId = 42;
-        uint balanceOf = 1337 * 1e18;
-        uint lockedEnd = 1234567890;
-        uint value = 999 * 1e18;
+        uint256 tokenId = 42;
+        uint256 balanceOf = 1337 * 1e18;
+        uint256 lockedEnd = 1234567890;
+        uint256 value = 999 * 1e18;
 
-        string memory result1 = veArtProxy._tokenURI(
-            tokenId,
-            balanceOf,
-            lockedEnd,
-            value
-        );
-        string memory result2 = veArtProxy._tokenURI(
-            tokenId,
-            balanceOf,
-            lockedEnd,
-            value
-        );
+        string memory result1 = veArtProxy._tokenURI(tokenId, balanceOf, lockedEnd, value);
+        string memory result2 = veArtProxy._tokenURI(tokenId, balanceOf, lockedEnd, value);
 
         assertEq(keccak256(bytes(result1)), keccak256(bytes(result2)));
     }
@@ -201,46 +178,31 @@ contract VeArtProxyUpgradeableTest is Test {
     }
 
     function test_ToString_MultipleDigits() public {
-        string memory result = veArtProxy._tokenURI(
-            123456789,
-            1000,
-            2000,
-            3000
-        );
+        string memory result = veArtProxy._tokenURI(123456789, 1000, 2000, 3000);
         assertTrue(bytes(result).length > 0);
     }
 
     function test_ToString_MaxValue() public {
-        string memory result = veArtProxy._tokenURI(
-            type(uint256).max,
-            1000,
-            2000,
-            3000
-        );
+        string memory result = veArtProxy._tokenURI(type(uint256).max, 1000, 2000, 3000);
         assertTrue(bytes(result).length > 0);
     }
 
     // ============ SVG Structure Tests ============
 
     function test_SVG_ContainsExpectedElements() public {
-        uint tokenId = 123;
-        uint balanceOf = 1000 * 1e18;
-        uint lockedEnd = 1234567890;
-        uint value = 500 * 1e18;
+        uint256 tokenId = 123;
+        uint256 balanceOf = 1000 * 1e18;
+        uint256 lockedEnd = 1234567890;
+        uint256 value = 500 * 1e18;
 
-        string memory result = veArtProxy._tokenURI(
-            tokenId,
-            balanceOf,
-            lockedEnd,
-            value
-        );
+        string memory result = veArtProxy._tokenURI(tokenId, balanceOf, lockedEnd, value);
 
         // Decode the base64 to check SVG content
         // Extract the base64 part after "data:application/json;base64,"
         bytes memory resultBytes = bytes(result);
         bytes memory base64Part = new bytes(resultBytes.length - 29); // 29 = length of prefix
 
-        for (uint i = 29; i < resultBytes.length; i++) {
+        for (uint256 i = 29; i < resultBytes.length; i++) {
             base64Part[i - 29] = resultBytes[i];
         }
 
@@ -252,14 +214,14 @@ contract VeArtProxyUpgradeableTest is Test {
     // ============ Gas Optimization Tests ============
 
     function test_Gas_TokenURIGeneration() public {
-        uint tokenId = 1;
-        uint balanceOf = 1000 * 1e18;
-        uint lockedEnd = block.timestamp + 365 days;
-        uint value = 500 * 1e18;
+        uint256 tokenId = 1;
+        uint256 balanceOf = 1000 * 1e18;
+        uint256 lockedEnd = block.timestamp + 365 days;
+        uint256 value = 500 * 1e18;
 
-        uint gasBefore = gasleft();
+        uint256 gasBefore = gasleft();
         veArtProxy._tokenURI(tokenId, balanceOf, lockedEnd, value);
-        uint gasUsed = gasBefore - gasleft();
+        uint256 gasUsed = gasBefore - gasleft();
 
         // Gas usage should be reasonable
         assertTrue(gasUsed < 500000); // Arbitrary reasonable limit for SVG generation
@@ -281,27 +243,17 @@ contract VeArtProxyUpgradeableTest is Test {
 
     function test_EdgeCase_RepeatedTokenURICalls() public {
         // Test that multiple calls don't interfere with each other
-        for (uint i = 0; i < 10; i++) {
-            string memory result = veArtProxy._tokenURI(
-                i,
-                i * 100,
-                i * 200,
-                i * 300
-            );
+        for (uint256 i = 0; i < 10; i++) {
+            string memory result = veArtProxy._tokenURI(i, i * 100, i * 200, i * 300);
             assertTrue(bytes(result).length > 0);
         }
     }
 
     function test_EdgeCase_VeryLongNumbers() public {
         // Test with very large numbers that would create long strings
-        uint largeValue = 999999999999999999999999999999999;
+        uint256 largeValue = 999999999999999999999999999999999;
 
-        string memory result = veArtProxy._tokenURI(
-            largeValue,
-            largeValue,
-            largeValue,
-            largeValue
-        );
+        string memory result = veArtProxy._tokenURI(largeValue, largeValue, largeValue, largeValue);
         assertTrue(bytes(result).length > 0);
     }
 
@@ -428,35 +380,25 @@ contract VeArtProxyUpgradeableTest is Test {
     // ============ Performance Tests ============
 
     function test_Performance_RepeatedTokenURIGeneration() public {
-        uint iterations = 50;
+        uint256 iterations = 50;
 
-        for (uint i = 0; i < iterations; i++) {
-            string memory result = veArtProxy._tokenURI(
-                i,
-                i * 1000,
-                block.timestamp + i * 86400,
-                i * 500
-            );
+        for (uint256 i = 0; i < iterations; i++) {
+            string memory result = veArtProxy._tokenURI(i, i * 1000, block.timestamp + i * 86400, i * 500);
             assertTrue(bytes(result).length > 0);
         }
     }
 
     function test_Performance_LargeValueHandling() public {
-        uint[] memory testValues = new uint[](5);
+        uint256[] memory testValues = new uint256[](5);
         testValues[0] = type(uint64).max;
         testValues[1] = type(uint128).max;
         testValues[2] = type(uint192).max;
         testValues[3] = type(uint248).max;
         testValues[4] = type(uint256).max;
 
-        for (uint i = 0; i < testValues.length; i++) {
-            uint testValue = testValues[i];
-            string memory result = veArtProxy._tokenURI(
-                testValue,
-                testValue,
-                testValue,
-                testValue
-            );
+        for (uint256 i = 0; i < testValues.length; i++) {
+            uint256 testValue = testValues[i];
+            string memory result = veArtProxy._tokenURI(testValue, testValue, testValue, testValue);
             assertTrue(bytes(result).length > 0);
         }
     }
@@ -464,34 +406,19 @@ contract VeArtProxyUpgradeableTest is Test {
     // ============ Data Integrity Tests ============
 
     function test_DataIntegrity_TokenURIContent() public {
-        uint tokenId = 12345;
-        uint balanceOf = 67890;
-        uint lockedEnd = 11111;
-        uint value = 22222;
+        uint256 tokenId = 12345;
+        uint256 balanceOf = 67890;
+        uint256 lockedEnd = 11111;
+        uint256 value = 22222;
 
-        string memory result = veArtProxy._tokenURI(
-            tokenId,
-            balanceOf,
-            lockedEnd,
-            value
-        );
+        string memory result = veArtProxy._tokenURI(tokenId, balanceOf, lockedEnd, value);
 
         // The result should be deterministic for the same inputs
-        string memory result2 = veArtProxy._tokenURI(
-            tokenId,
-            balanceOf,
-            lockedEnd,
-            value
-        );
+        string memory result2 = veArtProxy._tokenURI(tokenId, balanceOf, lockedEnd, value);
         assertEq(keccak256(bytes(result)), keccak256(bytes(result2)));
 
         // Different inputs should produce different results
-        string memory result3 = veArtProxy._tokenURI(
-            tokenId + 1,
-            balanceOf,
-            lockedEnd,
-            value
-        );
+        string memory result3 = veArtProxy._tokenURI(tokenId + 1, balanceOf, lockedEnd, value);
         assertTrue(keccak256(bytes(result)) != keccak256(bytes(result3)));
     }
 

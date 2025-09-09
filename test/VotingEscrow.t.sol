@@ -20,46 +20,26 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     address public user3;
     address public user4;
 
-    uint constant MAXTIME = 2 * 365 * 86400; // 2 years
-    uint constant WEEK = 1 weeks;
-    uint constant LOCK_AMOUNT = 1000 * 1e18;
-    uint constant LOCK_DURATION = 52 weeks; // 1 year
+    uint256 constant MAXTIME = 2 * 365 * 86400; // 2 years
+    uint256 constant WEEK = 1 weeks;
+    uint256 constant LOCK_AMOUNT = 1000 * 1e18;
+    uint256 constant LOCK_DURATION = 52 weeks; // 1 year
 
     event Deposit(
         address indexed provider,
-        uint tokenId,
-        uint value,
-        uint indexed locktime,
+        uint256 tokenId,
+        uint256 value,
+        uint256 indexed locktime,
         VotingEscrow.DepositType deposit_type,
-        uint ts
+        uint256 ts
     );
-    event Withdraw(address indexed provider, uint tokenId, uint value, uint ts);
-    event Supply(uint prevSupply, uint supply);
-    event Transfer(
-        address indexed from,
-        address indexed to,
-        uint indexed tokenId
-    );
-    event Approval(
-        address indexed owner,
-        address indexed approved,
-        uint indexed tokenId
-    );
-    event ApprovalForAll(
-        address indexed owner,
-        address indexed operator,
-        bool approved
-    );
-    event DelegateChanged(
-        address indexed delegator,
-        address indexed fromDelegate,
-        address indexed toDelegate
-    );
-    event DelegateVotesChanged(
-        address indexed delegate,
-        uint previousBalance,
-        uint newBalance
-    );
+    event Withdraw(address indexed provider, uint256 tokenId, uint256 value, uint256 ts);
+    event Supply(uint256 prevSupply, uint256 supply);
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
+    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
+    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
+    event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
 
     function setUp() public {
         deployer = address(this);
@@ -96,12 +76,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         assertEq(votingEscrow.decimals(), 18);
     }
 
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -119,7 +94,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
 
     function test_SetTeam_Success() public {
         address newTeam = makeAddr("newTeam");
-        
+
         vm.prank(team);
         votingEscrow.setTeam(newTeam);
         assertEq(votingEscrow.team(), newTeam);
@@ -159,145 +134,145 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     }
 
     // ============ veNFT Creation Tests ============
-    
+
     function test_VeNFTCreation_TokenIdIncrement() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT * 3);
-        
-        uint tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        uint tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        uint tokenId3 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        
+
+        uint256 tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId3 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+
         assertEq(tokenId1, 1);
         assertEq(tokenId2, 2);
         assertEq(tokenId3, 3);
-        
+
         vm.stopPrank();
     }
-    
+
     function test_VeNFTCreation_OwnershipAndBalance() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        
-        uint initialBalance = votingEscrow.balanceOf(user1);
+
+        uint256 initialBalance = votingEscrow.balanceOf(user1);
         assertEq(initialBalance, 0);
-        
+
         vm.expectEmit(true, true, true, false);
         emit Transfer(address(0), user1, 1);
-        
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        
+
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+
         assertEq(votingEscrow.ownerOf(tokenId), user1);
         assertEq(votingEscrow.balanceOf(user1), 1);
-        
+
         vm.stopPrank();
     }
-    
+
     function test_VeNFTCreation_TokenProperties() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        
+
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+
         // Check that token exists and has properties
         assertEq(votingEscrow.ownerOf(tokenId), user1);
         assertTrue(votingEscrow.balanceOfNFT(tokenId) > 0);
-        
+
         // Check that token URI can be generated
         string memory uri = votingEscrow.tokenURI(tokenId);
         assertTrue(bytes(uri).length > 0);
-        
+
         // Check locked properties
-        (int128 amount, uint end) = votingEscrow.locked(tokenId);
-        assertEq(uint(int256(amount)), LOCK_AMOUNT);
+        (int128 amount, uint256 end) = votingEscrow.locked(tokenId);
+        assertEq(uint256(int256(amount)), LOCK_AMOUNT);
         assertGt(end, block.timestamp);
-        
+
         vm.stopPrank();
     }
-    
+
     function test_VeNFTCreation_MultipleUsers() public {
         // User1 creates veNFT
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
         vm.stopPrank();
-        
+
         // User2 creates veNFT
         vm.startPrank(user2);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
         vm.stopPrank();
-        
+
         // Verify ownership and balances
         assertEq(votingEscrow.ownerOf(tokenId1), user1);
         assertEq(votingEscrow.ownerOf(tokenId2), user2);
         assertEq(votingEscrow.balanceOf(user1), 1);
         assertEq(votingEscrow.balanceOf(user2), 1);
-        
+
         // Verify they have different token IDs
         assertTrue(tokenId1 != tokenId2);
     }
-    
+
     function test_VeNFTCreation_CreateLockFor() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        
+
         vm.expectEmit(true, true, true, false);
         emit Transfer(address(0), user2, 1);
-        
-        uint tokenId = votingEscrow.create_lock_for(LOCK_AMOUNT, LOCK_DURATION, user2);
-        
+
+        uint256 tokenId = votingEscrow.create_lock_for(LOCK_AMOUNT, LOCK_DURATION, user2);
+
         // Token should belong to user2, not user1 who paid
         assertEq(votingEscrow.ownerOf(tokenId), user2);
         assertEq(votingEscrow.balanceOf(user1), 0);
         assertEq(votingEscrow.balanceOf(user2), 1);
-        
+
         vm.stopPrank();
     }
-    
+
     function test_VeNFTCreation_VotingPowerCalculation() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT * 2);
-        
+
         // Create two locks with different durations
-        uint tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
-        uint tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
-        
-        uint votingPower1 = votingEscrow.balanceOfNFT(tokenId1);
-        uint votingPower2 = votingEscrow.balanceOfNFT(tokenId2);
-        
+        uint256 tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
+        uint256 tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
+
+        uint256 votingPower1 = votingEscrow.balanceOfNFT(tokenId1);
+        uint256 votingPower2 = votingEscrow.balanceOfNFT(tokenId2);
+
         // Longer lock should have more voting power
         assertGt(votingPower2, votingPower1);
-        
+
         // Both should have some voting power
         assertGt(votingPower1, 0);
         assertGt(votingPower2, 0);
-        
+
         vm.stopPrank();
     }
-    
+
     function test_VeNFTCreation_SupplyTracking() public {
-        uint initialSupply = votingEscrow.totalSupply();
-        uint initialTokenSupply = votingEscrow.supply();
-        
+        uint256 initialSupply = votingEscrow.totalSupply();
+        uint256 initialTokenSupply = votingEscrow.supply();
+
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        
-        uint newTotalSupply = votingEscrow.totalSupply();
-        uint newTokenSupply = votingEscrow.supply();
-        
+
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+
+        uint256 newTotalSupply = votingEscrow.totalSupply();
+        uint256 newTokenSupply = votingEscrow.supply();
+
         // Total voting power supply should increase
         assertGt(newTotalSupply, initialSupply);
-        
+
         // Token supply should increase by locked amount
         assertEq(newTokenSupply, initialTokenSupply + LOCK_AMOUNT);
-        
+
         // Individual voting power should be less than locked amount (time decay)
-        uint votingPower = votingEscrow.balanceOfNFT(tokenId);
+        uint256 votingPower = votingEscrow.balanceOfNFT(tokenId);
         assertLt(votingPower, LOCK_AMOUNT);
-        
+
         vm.stopPrank();
     }
 
@@ -317,15 +292,15 @@ contract VotingEscrowTest is Test, IERC721Receiver {
             block.timestamp
         );
 
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
         assertEq(tokenId, 1);
         assertEq(votingEscrow.ownerOf(tokenId), user1);
         assertEq(votingEscrow.balanceOf(user1), 1);
         assertGt(votingEscrow.balanceOfNFT(tokenId), 0);
 
-        (int128 amount, uint end) = votingEscrow.locked(tokenId);
-        assertEq(uint(int256(amount)), LOCK_AMOUNT);
+        (int128 amount, uint256 end) = votingEscrow.locked(tokenId);
+        assertEq(uint256(int256(amount)), LOCK_AMOUNT);
         assertApproxEqAbs(end, block.timestamp + LOCK_DURATION, WEEK);
 
         vm.stopPrank();
@@ -335,10 +310,10 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
 
-        (int128 amount, uint end) = votingEscrow.locked(tokenId);
-        assertEq(uint(int256(amount)), LOCK_AMOUNT);
+        (int128 amount, uint256 end) = votingEscrow.locked(tokenId);
+        assertEq(uint256(int256(amount)), LOCK_AMOUNT);
         assertApproxEqAbs(end, block.timestamp + WEEK, WEEK);
 
         vm.stopPrank();
@@ -348,10 +323,10 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
 
-        (int128 amount, uint end) = votingEscrow.locked(tokenId);
-        assertEq(uint(int256(amount)), LOCK_AMOUNT);
+        (int128 amount, uint256 end) = votingEscrow.locked(tokenId);
+        assertEq(uint256(int256(amount)), LOCK_AMOUNT);
         assertApproxEqAbs(end, block.timestamp + MAXTIME, WEEK);
 
         vm.stopPrank();
@@ -391,11 +366,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint tokenId = votingEscrow.create_lock_for(
-            LOCK_AMOUNT,
-            LOCK_DURATION,
-            user2
-        );
+        uint256 tokenId = votingEscrow.create_lock_for(LOCK_AMOUNT, LOCK_DURATION, user2);
 
         assertEq(tokenId, 1);
         assertEq(votingEscrow.ownerOf(tokenId), user2);
@@ -411,23 +382,16 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT * 2);
 
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        uint initialBalance = votingEscrow.balanceOfNFT(tokenId);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 initialBalance = votingEscrow.balanceOfNFT(tokenId);
 
         vm.expectEmit(true, false, false, true);
-        emit Deposit(
-            user1,
-            tokenId,
-            LOCK_AMOUNT,
-            0,
-            VotingEscrow.DepositType.DEPOSIT_FOR_TYPE,
-            block.timestamp
-        );
+        emit Deposit(user1, tokenId, LOCK_AMOUNT, 0, VotingEscrow.DepositType.DEPOSIT_FOR_TYPE, block.timestamp);
 
         votingEscrow.deposit_for(tokenId, LOCK_AMOUNT);
 
-        (int128 amount, ) = votingEscrow.locked(tokenId);
-        assertEq(uint(int256(amount)), LOCK_AMOUNT * 2);
+        (int128 amount,) = votingEscrow.locked(tokenId);
+        assertEq(uint256(int256(amount)), LOCK_AMOUNT * 2);
         assertGt(votingEscrow.balanceOfNFT(tokenId), initialBalance);
 
         vm.stopPrank();
@@ -436,19 +400,19 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_DepositFor_AnyoneCanDeposit() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
         vm.stopPrank();
 
         // Anyone can deposit for any token - this is intentional design
         vm.startPrank(user2);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint initialBalance = votingEscrow.balanceOfNFT(tokenId);
-        
+        uint256 initialBalance = votingEscrow.balanceOfNFT(tokenId);
+
         votingEscrow.deposit_for(tokenId, LOCK_AMOUNT);
 
         (int128 amount,) = votingEscrow.locked(tokenId);
-        assertEq(uint(int256(amount)), LOCK_AMOUNT * 2);
+        assertEq(uint256(int256(amount)), LOCK_AMOUNT * 2);
         assertGt(votingEscrow.balanceOfNFT(tokenId), initialBalance);
 
         vm.stopPrank();
@@ -458,12 +422,12 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT * 2);
 
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
         votingEscrow.increase_amount(tokenId, LOCK_AMOUNT);
 
-        (int128 amount, ) = votingEscrow.locked(tokenId);
-        assertEq(uint(int256(amount)), LOCK_AMOUNT * 2);
+        (int128 amount,) = votingEscrow.locked(tokenId);
+        assertEq(uint256(int256(amount)), LOCK_AMOUNT * 2);
 
         vm.stopPrank();
     }
@@ -472,12 +436,12 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        (, uint initialEnd) = votingEscrow.locked(tokenId);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        (, uint256 initialEnd) = votingEscrow.locked(tokenId);
 
         votingEscrow.increase_unlock_time(tokenId, LOCK_DURATION * 2);
 
-        (, uint newEnd) = votingEscrow.locked(tokenId);
+        (, uint256 newEnd) = votingEscrow.locked(tokenId);
         assertGt(newEnd, initialEnd);
 
         vm.stopPrank();
@@ -489,12 +453,12 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
 
         // Fast forward past lock expiration
         vm.warp(block.timestamp + WEEK + 1);
 
-        uint balanceBefore = lithos.balanceOf(user1);
+        uint256 balanceBefore = lithos.balanceOf(user1);
 
         vm.expectEmit(true, false, false, true);
         emit Withdraw(user1, tokenId, LOCK_AMOUNT, block.timestamp);
@@ -506,10 +470,10 @@ contract VotingEscrowTest is Test, IERC721Receiver {
 
         // Check that token is burned - ownerOf returns address(0)
         assertEq(votingEscrow.ownerOf(tokenId), address(0));
-        
+
         // Check that locked amount is zero
-        (int128 amount, uint end) = votingEscrow.locked(tokenId);
-        assertEq(uint(int256(amount)), 0);
+        (int128 amount, uint256 end) = votingEscrow.locked(tokenId);
+        assertEq(uint256(int256(amount)), 0);
         assertEq(end, 0);
 
         vm.stopPrank();
@@ -519,7 +483,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
         vm.expectRevert();
         votingEscrow.withdraw(tokenId);
@@ -531,7 +495,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
         vm.stopPrank();
 
         vm.warp(block.timestamp + WEEK + 1);
@@ -549,14 +513,14 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
 
-        uint initialBalance = votingEscrow.balanceOfNFT(tokenId);
+        uint256 initialBalance = votingEscrow.balanceOfNFT(tokenId);
 
         // Fast forward 1 year
         vm.warp(block.timestamp + 365 days);
 
-        uint laterBalance = votingEscrow.balanceOfNFT(tokenId);
+        uint256 laterBalance = votingEscrow.balanceOfNFT(tokenId);
 
         assertLt(laterBalance, initialBalance);
         assertGt(laterBalance, 0);
@@ -568,19 +532,16 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint timestamp1 = block.timestamp;
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
-        uint balance1 = votingEscrow.balanceOfNFT(tokenId);
+        uint256 timestamp1 = block.timestamp;
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
+        uint256 balance1 = votingEscrow.balanceOfNFT(tokenId);
 
         vm.warp(timestamp1 + 365 days);
-        uint timestamp2 = block.timestamp;
-        uint balance2 = votingEscrow.balanceOfNFT(tokenId);
+        uint256 timestamp2 = block.timestamp;
+        uint256 balance2 = votingEscrow.balanceOfNFT(tokenId);
 
         // Query historical balance
-        uint historicalBalance = votingEscrow.balanceOfNFTAt(
-            tokenId,
-            timestamp1
-        );
+        uint256 historicalBalance = votingEscrow.balanceOfNFTAt(tokenId, timestamp1);
 
         assertApproxEqAbs(historicalBalance, balance1, 1e15); // Small margin for rounding
         assertLt(balance2, balance1);
@@ -591,22 +552,21 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_TotalSupply_TracksAllLocks() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
-        uint totalAfterFirst = votingEscrow.totalSupply();
+        uint256 tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
+        uint256 totalAfterFirst = votingEscrow.totalSupply();
         vm.stopPrank();
 
         vm.startPrank(user2);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
-        uint totalAfterSecond = votingEscrow.totalSupply();
+        uint256 tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
+        uint256 totalAfterSecond = votingEscrow.totalSupply();
         vm.stopPrank();
 
         assertGt(totalAfterFirst, 0);
         assertGt(totalAfterSecond, totalAfterFirst);
 
         // Verify individual balances sum approximately to total
-        uint sum = votingEscrow.balanceOfNFT(tokenId1) +
-            votingEscrow.balanceOfNFT(tokenId2);
+        uint256 sum = votingEscrow.balanceOfNFT(tokenId1) + votingEscrow.balanceOfNFT(tokenId2);
         assertApproxEqAbs(sum, totalAfterSecond, 1e15);
     }
 
@@ -615,7 +575,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Transfer_Success() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
         vm.expectEmit(true, true, true, false);
         emit Transfer(user1, user2, tokenId);
@@ -632,7 +592,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Transfer_NotOwner() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
         vm.stopPrank();
 
         vm.startPrank(user2);
@@ -644,7 +604,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Approve_Success() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
         vm.expectEmit(true, true, true, false);
         emit Approval(user1, user2, tokenId);
@@ -680,30 +640,27 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT * 2);
 
-        uint tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        uint tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
-        (int128 amount1Before, ) = votingEscrow.locked(tokenId1);
-        (int128 amount2Before, ) = votingEscrow.locked(tokenId2);
+        (int128 amount1Before,) = votingEscrow.locked(tokenId1);
+        (int128 amount2Before,) = votingEscrow.locked(tokenId2);
 
         assertEq(votingEscrow.balanceOf(user1), 2); // Two NFTs initially
 
         votingEscrow.merge(tokenId1, tokenId2);
 
-        (int128 amount2After, ) = votingEscrow.locked(tokenId2);
+        (int128 amount2After,) = votingEscrow.locked(tokenId2);
 
         // Check that amounts were combined
-        assertEq(
-            uint(int256(amount2After)),
-            uint(int256(amount1Before)) + uint(int256(amount2Before))
-        );
-        
+        assertEq(uint256(int256(amount2After)), uint256(int256(amount1Before)) + uint256(int256(amount2Before)));
+
         // Check that one NFT was burned
-        assertEq(votingEscrow.balanceOf(user1), 1); 
-        
+        assertEq(votingEscrow.balanceOf(user1), 1);
+
         // Check that the first token's locked amount is zero (burned)
-        (int128 amount1After, ) = votingEscrow.locked(tokenId1);
-        assertEq(uint(int256(amount1After)), 0);
+        (int128 amount1After,) = votingEscrow.locked(tokenId1);
+        assertEq(uint256(int256(amount1After)), 0);
 
         vm.stopPrank();
     }
@@ -712,13 +669,13 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
-        uint[] memory amounts = new uint[](2);
+        uint256[] memory amounts = new uint256[](2);
         amounts[0] = LOCK_AMOUNT / 2;
         amounts[1] = LOCK_AMOUNT / 2;
 
-        uint initialBalance = votingEscrow.balanceOf(user1);
+        uint256 initialBalance = votingEscrow.balanceOf(user1);
 
         votingEscrow.split(amounts, tokenId);
 
@@ -732,7 +689,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Delegate_Success() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
         vm.expectEmit(true, true, true, false);
         emit DelegateChanged(user1, user1, user2); // Auto-delegation to self initially
@@ -747,9 +704,9 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_GetVotes_AfterDelegation() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
-        uint votingPower = votingEscrow.balanceOfNFT(tokenId);
+        uint256 votingPower = votingEscrow.balanceOfNFT(tokenId);
 
         // Initially self-delegated
         assertApproxEqAbs(votingEscrow.getVotes(user1), votingPower, 1e15);
@@ -769,7 +726,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Voting_Success() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
         vm.stopPrank();
 
         vm.prank(voter);
@@ -781,7 +738,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Voting_OnlyVoter() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
         vm.expectRevert();
         votingEscrow.voting(tokenId);
@@ -792,7 +749,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Abstain_Success() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
         vm.stopPrank();
 
         vm.startPrank(voter);
@@ -808,7 +765,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Attach_Success() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
         vm.stopPrank();
 
         vm.prank(voter);
@@ -820,7 +777,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Transfer_BlockedWhenVoted() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
         vm.stopPrank();
 
         vm.prank(voter);
@@ -835,7 +792,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Transfer_BlockedWhenAttached() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
         vm.stopPrank();
 
         vm.prank(voter);
@@ -852,7 +809,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_TokenURI_Success() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
         string memory uri = votingEscrow.tokenURI(tokenId);
         assertTrue(bytes(uri).length > 0);
@@ -868,7 +825,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     // ============ Supply and Checkpoint Tests ============
 
     function test_Supply_UpdatesOnDeposit() public {
-        uint initialSupply = votingEscrow.supply();
+        uint256 initialSupply = votingEscrow.supply();
 
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
@@ -886,7 +843,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Supply_UpdatesOnWithdraw() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
 
         assertEq(votingEscrow.supply(), LOCK_AMOUNT);
 
@@ -924,12 +881,9 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT * 3);
 
-        uint tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        uint tokenId2 = votingEscrow.create_lock(
-            LOCK_AMOUNT,
-            LOCK_DURATION * 2
-        );
-        uint tokenId3 = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
+        uint256 tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION * 2);
+        uint256 tokenId3 = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
 
         assertEq(votingEscrow.balanceOf(user1), 3);
         assertEq(votingEscrow.ownerOf(tokenId1), user1);
@@ -946,8 +900,8 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         lithos.approve(address(votingEscrow), LOCK_AMOUNT * 2);
 
         // Create lock
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        uint initialBalance = votingEscrow.balanceOfNFT(tokenId);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 initialBalance = votingEscrow.balanceOfNFT(tokenId);
 
         // Increase amount
         votingEscrow.increase_amount(tokenId, LOCK_AMOUNT);
@@ -990,11 +944,8 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         lithos.approve(address(votingEscrow), LOCK_AMOUNT * 4);
 
         // Create multiple locks
-        uint tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        uint tokenId2 = votingEscrow.create_lock(
-            LOCK_AMOUNT * 2,
-            LOCK_DURATION
-        );
+        uint256 tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT * 2, LOCK_DURATION);
 
         assertEq(votingEscrow.balanceOf(user1), 2);
 
@@ -1002,11 +953,11 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         votingEscrow.merge(tokenId1, tokenId2);
         assertEq(votingEscrow.balanceOf(user1), 1);
 
-        (int128 mergedAmount, ) = votingEscrow.locked(tokenId2);
-        assertEq(uint(int256(mergedAmount)), LOCK_AMOUNT * 3);
+        (int128 mergedAmount,) = votingEscrow.locked(tokenId2);
+        assertEq(uint256(int256(mergedAmount)), LOCK_AMOUNT * 3);
 
         // Split
-        uint[] memory amounts = new uint[](2);
+        uint256[] memory amounts = new uint256[](2);
         amounts[0] = LOCK_AMOUNT;
         amounts[1] = LOCK_AMOUNT * 2;
 
@@ -1022,9 +973,9 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint gasBefore = gasleft();
+        uint256 gasBefore = gasleft();
         votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        uint gasUsed = gasBefore - gasleft();
+        uint256 gasUsed = gasBefore - gasleft();
 
         assertTrue(gasUsed < 500000); // Reasonable gas limit
 
@@ -1034,11 +985,11 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Gas_Transfer() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
+        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
-        uint gasBefore = gasleft();
+        uint256 gasBefore = gasleft();
         votingEscrow.transferFrom(user1, user2, tokenId);
-        uint gasUsed = gasBefore - gasleft();
+        uint256 gasUsed = gasBefore - gasleft();
 
         assertTrue(gasUsed < 200000); // Reasonable gas limit
 
