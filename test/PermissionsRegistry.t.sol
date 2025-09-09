@@ -2,6 +2,7 @@
 pragma solidity 0.8.29;
 
 import {Test} from "forge-std/Test.sol";
+
 import {PermissionsRegistry} from "../src/contracts/PermissionsRegistery.sol";
 
 contract PermissionsRegistryTest is Test {
