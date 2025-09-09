@@ -84,7 +84,7 @@ contract VeArtProxyUpgradeableTest is Test {
 
     // ============ TokenURI Generation Tests ============
 
-    function test_TokenURI_BasicGeneration() public {
+    function test_TokenURI_BasicGeneration() public view {
         uint256 tokenId = 1;
         uint256 balanceOf = 1000 * 1e18;
         uint256 lockedEnd = block.timestamp + 365 days;
@@ -115,7 +115,7 @@ contract VeArtProxyUpgradeableTest is Test {
         assertTrue(hasCorrectPrefix);
     }
 
-    function test_TokenURI_WithZeroValues() public {
+    function test_TokenURI_WithZeroValues() public view {
         string memory result = veArtProxy._tokenURI(0, 0, 0, 0);
 
         assertTrue(bytes(result).length > 0);
@@ -125,7 +125,7 @@ contract VeArtProxyUpgradeableTest is Test {
         // to verify exact content, but for simplicity we're checking basic structure
     }
 
-    function test_TokenURI_WithLargeValues() public {
+    function test_TokenURI_WithLargeValues() public view {
         uint256 tokenId = type(uint128).max;
         uint256 balanceOf = type(uint128).max;
         uint256 lockedEnd = type(uint128).max;
@@ -136,13 +136,13 @@ contract VeArtProxyUpgradeableTest is Test {
         assertTrue(bytes(result).length > 0);
     }
 
-    function test_TokenURI_WithSmallValues() public {
+    function test_TokenURI_WithSmallValues() public view {
         string memory result = veArtProxy._tokenURI(1, 1, 1, 1);
 
         assertTrue(bytes(result).length > 0);
     }
 
-    function test_TokenURI_ConsistentOutput() public {
+    function test_TokenURI_ConsistentOutput() public view {
         uint256 tokenId = 42;
         uint256 balanceOf = 1337 * 1e18;
         uint256 lockedEnd = 1234567890;
@@ -154,7 +154,7 @@ contract VeArtProxyUpgradeableTest is Test {
         assertEq(keccak256(bytes(result1)), keccak256(bytes(result2)));
     }
 
-    function test_TokenURI_DifferentInputsDifferentOutputs() public {
+    function test_TokenURI_DifferentInputsDifferentOutputs() public view {
         string memory result1 = veArtProxy._tokenURI(1, 100, 1000, 10000);
         string memory result2 = veArtProxy._tokenURI(2, 200, 2000, 20000);
 
@@ -164,7 +164,7 @@ contract VeArtProxyUpgradeableTest is Test {
     // ============ ToString Function Tests ============
     // Note: toString is internal, so we test it indirectly through _tokenURI
 
-    function test_ToString_ZeroValue() public {
+    function test_ToString_ZeroValue() public view {
         // Test indirectly by using _tokenURI with zero tokenId
         string memory result = veArtProxy._tokenURI(0, 1000, 2000, 3000);
 
@@ -172,24 +172,24 @@ contract VeArtProxyUpgradeableTest is Test {
         assertTrue(bytes(result).length > 0);
     }
 
-    function test_ToString_SingleDigit() public {
+    function test_ToString_SingleDigit() public view {
         string memory result = veArtProxy._tokenURI(5, 1000, 2000, 3000);
         assertTrue(bytes(result).length > 0);
     }
 
-    function test_ToString_MultipleDigits() public {
+    function test_ToString_MultipleDigits() public view {
         string memory result = veArtProxy._tokenURI(123456789, 1000, 2000, 3000);
         assertTrue(bytes(result).length > 0);
     }
 
-    function test_ToString_MaxValue() public {
+    function test_ToString_MaxValue() public view {
         string memory result = veArtProxy._tokenURI(type(uint256).max, 1000, 2000, 3000);
         assertTrue(bytes(result).length > 0);
     }
 
     // ============ SVG Structure Tests ============
 
-    function test_SVG_ContainsExpectedElements() public {
+    function test_SVG_ContainsExpectedElements() public view {
         uint256 tokenId = 123;
         uint256 balanceOf = 1000 * 1e18;
         uint256 lockedEnd = 1234567890;
@@ -213,7 +213,7 @@ contract VeArtProxyUpgradeableTest is Test {
 
     // ============ Gas Optimization Tests ============
 
-    function test_Gas_TokenURIGeneration() public {
+    function test_Gas_TokenURIGeneration() public view {
         uint256 tokenId = 1;
         uint256 balanceOf = 1000 * 1e18;
         uint256 lockedEnd = block.timestamp + 365 days;
@@ -241,7 +241,7 @@ contract VeArtProxyUpgradeableTest is Test {
         assertTrue(bytes(result).length > 0);
     }
 
-    function test_EdgeCase_RepeatedTokenURICalls() public {
+    function test_EdgeCase_RepeatedTokenURICalls() public view {
         // Test that multiple calls don't interfere with each other
         for (uint256 i = 0; i < 10; i++) {
             string memory result = veArtProxy._tokenURI(i, i * 100, i * 200, i * 300);
@@ -249,7 +249,7 @@ contract VeArtProxyUpgradeableTest is Test {
         }
     }
 
-    function test_EdgeCase_VeryLongNumbers() public {
+    function test_EdgeCase_VeryLongNumbers() public view {
         // Test with very large numbers that would create long strings
         uint256 largeValue = 999999999999999999999999999999999;
 
@@ -379,7 +379,7 @@ contract VeArtProxyUpgradeableTest is Test {
 
     // ============ Performance Tests ============
 
-    function test_Performance_RepeatedTokenURIGeneration() public {
+    function test_Performance_RepeatedTokenURIGeneration() public view {
         uint256 iterations = 50;
 
         for (uint256 i = 0; i < iterations; i++) {
@@ -388,7 +388,7 @@ contract VeArtProxyUpgradeableTest is Test {
         }
     }
 
-    function test_Performance_LargeValueHandling() public {
+    function test_Performance_LargeValueHandling() public view {
         uint256[] memory testValues = new uint256[](5);
         testValues[0] = type(uint64).max;
         testValues[1] = type(uint128).max;
@@ -405,7 +405,7 @@ contract VeArtProxyUpgradeableTest is Test {
 
     // ============ Data Integrity Tests ============
 
-    function test_DataIntegrity_TokenURIContent() public {
+    function test_DataIntegrity_TokenURIContent() public view {
         uint256 tokenId = 12345;
         uint256 balanceOf = 67890;
         uint256 lockedEnd = 11111;

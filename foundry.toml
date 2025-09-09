@@ -4,4 +4,8 @@ out = "out"
 libs = ["lib"]
 solc_version = "0.8.29"
 
+# Optimizer settings to reduce bytecode size
+optimizer = true
+optimizer_runs = 200
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

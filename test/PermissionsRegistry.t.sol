@@ -434,7 +434,7 @@ contract PermissionsRegistryTest is Test {
 
     // ============ Helper Function Tests ============
 
-    function test_HelperFunctions() public {
+    function test_HelperFunctions() public view {
         string memory testString = "TEST_ROLE";
         bytes memory testBytes = registry.helper_stringToBytes(testString);
         string memory convertedBack = registry.helper_bytesToString(testBytes);

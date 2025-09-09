@@ -40,7 +40,7 @@ contract LithosTest is Test {
 
     // ============ Constructor Tests ============
 
-    function test_Constructor_InitialState() public {
+    function test_Constructor_InitialState() public view {
         assertEq(lithos.name(), "Lithos");
         assertEq(lithos.symbol(), "LITHOS");
         assertEq(lithos.decimals(), 18);

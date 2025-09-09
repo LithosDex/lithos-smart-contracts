@@ -82,7 +82,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
 
     // ============ Constructor and Setup Tests ============
 
-    function test_Constructor_InitialState() public {
+    function test_Constructor_InitialState() public view {
         assertEq(votingEscrow.token(), address(lithos));
         assertEq(votingEscrow.voter(), address(voter)); // Initially set to deployer
         assertEq(votingEscrow.team(), address(team)); // Initially set to deployer
@@ -537,7 +537,6 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         uint256 balance1 = votingEscrow.balanceOfNFT(tokenId);
 
         vm.warp(timestamp1 + 365 days);
-        uint256 timestamp2 = block.timestamp;
         uint256 balance2 = votingEscrow.balanceOfNFT(tokenId);
 
         // Query historical balance
@@ -689,7 +688,6 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     function test_Delegate_Success() public {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
-        uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
         vm.expectEmit(true, true, true, false);
         emit DelegateChanged(user1, user1, user2); // Auto-delegation to self initially
@@ -998,7 +996,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
 
     // ============ ERC165 Support Tests ============
 
-    function test_SupportsInterface() public {
+    function test_SupportsInterface() public view {
         assertTrue(votingEscrow.supportsInterface(0x01ffc9a7)); // ERC165
         assertTrue(votingEscrow.supportsInterface(0x80ac58cd)); // ERC721
         assertTrue(votingEscrow.supportsInterface(0x5b5e139f)); // ERC721Metadata
