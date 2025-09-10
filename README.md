@@ -24,6 +24,8 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 - **VeArtProxyUpgradeable**: [0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1](https://testnet.plasmascan.to/address/0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1)
 - **VotingEscrow**: [0x592FA200950B053aCE9Be6d4FB3F58b1763898C0](https://testnet.plasmascan.to/address/0x592FA200950B053aCE9Be6d4FB3F58b1763898C0)
 - **RewardsDistributor**: [0x3b32FEDe4309265Cacc601368787F4264C69070e](https://testnet.plasmascan.to/address/0x3b32FEDe4309265Cacc601368787F4264C69070e)
+- **PermissionsRegistry**: [0x3A908c6095bD1A69b651D7B32AB42806528d88c8](https://testnet.plasmascan.to/address/0x3A908c6095bD1A69b651D7B32AB42806528d88c8)
+- **TEST Token**: [0xb89cdFf170b45797BF93536773113861EBEABAfa](https://testnet.plasmascan.to/address/0xb89cdFf170b45797BF93536773113861EBEABAfa) *(Test token for bribes contract)*
 
 > **Note**: RouterV2 is the primary contract for frontend integration. It handles all liquidity and swap operations.
 
