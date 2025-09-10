@@ -252,7 +252,83 @@ const tx3 = await router.swapExactETHForTokens(
 );
 ```
 
-### 4. Price Queries & Calculations
+### 4. Voting Escrow (veNFT) System
+
+Lock LITHOS tokens to receive veNFTs with voting power and revenue sharing rights:
+
+#### Create Lock
+
+```solidity
+// Create a new lock position
+function create_lock(uint256 _value, uint256 _lock_duration) external returns (uint256)
+
+// Create lock for another address
+function create_lock_for(uint256 _value, uint256 _lock_duration, address _to) external returns (uint256)
+```
+
+#### Manage Existing Lock
+
+```solidity
+// Add more tokens to existing lock
+function increase_amount(uint256 _tokenId, uint256 _value) external
+
+// Extend lock duration
+function increase_unlock_time(uint256 _tokenId, uint256 _lock_duration) external
+
+// Withdraw after lock expires
+function withdraw(uint256 _tokenId) external
+```
+
+#### NFT Features
+
+```solidity
+// Get voting power of NFT
+function balanceOfNFT(uint256 _tokenId) external view returns (uint256)
+
+// Transfer veNFT (standard ERC-721)
+function transferFrom(address _from, address _to, uint256 _tokenId) external
+
+// Merge two NFTs into one
+function merge(uint256 _from, uint256 _to) external
+
+// Split NFT into multiple (specify percentages)
+function split(uint256[] memory amounts, uint256 _tokenId) external
+```
+
+**JavaScript Example:**
+
+```javascript
+const votingEscrow = new ethers.Contract(VOTING_ESCROW_ADDRESS, votingEscrowAbi, signer);
+
+// Approve LITHOS tokens
+await lithos.approve(VOTING_ESCROW_ADDRESS, lockAmount);
+
+// Create 1 year lock
+const lockDuration = 365 * 24 * 60 * 60; // 1 year in seconds
+const tx = await votingEscrow.create_lock(lockAmount, lockDuration);
+
+// Get veNFT ID from event
+const receipt = await tx.wait();
+const tokenId = receipt.events.find(e => e.event === 'Transfer').args.tokenId;
+
+// Check voting power
+const votingPower = await votingEscrow.balanceOfNFT(tokenId);
+
+// Increase lock amount
+await lithos.approve(VOTING_ESCROW_ADDRESS, additionalAmount);
+await votingEscrow.increase_amount(tokenId, additionalAmount);
+
+// Transfer veNFT
+await votingEscrow.transferFrom(userAddress, recipientAddress, tokenId);
+```
+
+**Lock Parameters:**
+- **Min Duration**: 1 week
+- **Max Duration**: 2 years (104 weeks)
+- **Voting Power**: Linear decay over time
+- **Revenue Sharing**: Proportional to voting power
+
+### 5. Price Queries & Calculations
 
 Use TradeHelper for price calculations without executing trades:
 
@@ -280,7 +356,7 @@ function quoteAddLiquidity(
 ) external view returns (uint amountA, uint amountB, uint liquidity)
 ```
 
-### 5. Fee-on-Transfer Token Support
+### 6. Fee-on-Transfer Token Support
 
 For tokens that charge fees on transfers, use the `SupportingFeeOnTransferTokens` variants:
 
@@ -319,6 +395,7 @@ function swapExactETHForTokensSupportingFeeOnTransferTokens(
 
 ## Integration Checklist
 
+### DEX Features
 - [ ] Import RouterV2 ABI and connect to `0x84E8a39C85F645c7f7671689a9337B33Bdc784f8`
 - [ ] Implement token approval flows before liquidity/swap operations
 - [ ] Add slippage tolerance settings (recommend 0.5% for stable, 2% for volatile)
@@ -327,6 +404,16 @@ function swapExactETHForTokensSupportingFeeOnTransferTokens(
 - [ ] Add support for XPL (native token) operations via `*ETH` functions
 - [ ] Implement price impact warnings for large trades
 - [ ] Add liquidity preview using `quoteAddLiquidity`
+
+### Voting Escrow (veNFT) Features
+- [ ] Import VotingEscrow ABI and connect to `0xF53aB8c9852533Ae1536aCE66F42C15Cd7926547`
+- [ ] Import Lithos token ABI and connect to `0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51`
+- [ ] Implement LITHOS token approval for locking operations
+- [ ] Add lock duration selector (1 week to 2 years)
+- [ ] Display voting power decay over time
+- [ ] Implement veNFT transfer functionality (ERC-721 standard)
+- [ ] Add merge/split NFT features for advanced users
+- [ ] Show lock expiration dates and withdrawal eligibility
 
 ## Error Handling
 
