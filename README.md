@@ -252,11 +252,76 @@ const tx3 = await router.swapExactETHForTokens(
 );
 ```
 
-### 4. Voting Escrow (veNFT) System
+### 4. Price Queries & Calculations
+
+Use TradeHelper for price calculations without executing trades:
+
+```solidity
+// Get best rate between stable and volatile pools
+function getAmountOut(
+    uint amountIn,
+    address tokenIn,
+    address tokenOut
+) external view returns (uint amount, bool stable)
+
+// Calculate multi-hop swap output
+function getAmountsOut(
+    uint amountIn,
+    route[] memory routes
+) external view returns (uint[] memory amounts)
+
+// Quote liquidity addition
+function quoteAddLiquidity(
+    address tokenA,
+    address tokenB,
+    bool stable,
+    uint amountADesired,
+    uint amountBDesired
+) external view returns (uint amountA, uint amountB, uint liquidity)
+```
+
+### 5. Fee-on-Transfer Token Support
+
+For tokens that charge fees on transfers, use the `SupportingFeeOnTransferTokens` variants:
+
+```solidity
+function swapExactTokensForTokensSupportingFeeOnTransferTokens(
+    uint amountIn,
+    uint amountOutMin,
+    route[] calldata routes,
+    address to,
+    uint deadline
+) external
+
+function swapExactETHForTokensSupportingFeeOnTransferTokens(
+    uint amountOutMin,
+    route[] calldata routes,
+    address to,
+    uint deadline
+) external payable
+```
+
+## Pool Types
+
+### Stable Pools (`stable = true`)
+
+- **Use Case**: Assets with similar values (USDC/USDT, ETH/stETH)
+- **Algorithm**: Curve-like stable swap math
+- **Benefits**: Lower slippage, better rates for similar assets
+- **Fees**: 0.04% (4 basis points)
+
+### Volatile Pools (`stable = false`)
+
+- **Use Case**: Standard trading pairs with different values
+- **Algorithm**: Uniswap V2 xy=k formula
+- **Benefits**: Standard AMM behavior, suitable for all assets
+- **Fees**: 0.18% (18 basis points)
+
+## Voting Escrow (veNFT) System
 
 Lock LITHOS tokens to receive veNFTs with voting power and revenue sharing rights:
 
-#### Create Lock
+### Create Lock
 
 ```solidity
 // Create a new lock position
@@ -266,7 +331,7 @@ function create_lock(uint256 _value, uint256 _lock_duration) external returns (u
 function create_lock_for(uint256 _value, uint256 _lock_duration, address _to) external returns (uint256)
 ```
 
-#### Manage Existing Lock
+### Manage Existing Lock
 
 ```solidity
 // Add more tokens to existing lock
@@ -279,7 +344,7 @@ function increase_unlock_time(uint256 _tokenId, uint256 _lock_duration) external
 function withdraw(uint256 _tokenId) external
 ```
 
-#### NFT Features
+### NFT Features
 
 ```solidity
 // Get voting power of NFT
@@ -327,71 +392,6 @@ await votingEscrow.transferFrom(userAddress, recipientAddress, tokenId);
 - **Max Duration**: 2 years (104 weeks)
 - **Voting Power**: Linear decay over time
 - **Revenue Sharing**: Proportional to voting power
-
-### 5. Price Queries & Calculations
-
-Use TradeHelper for price calculations without executing trades:
-
-```solidity
-// Get best rate between stable and volatile pools
-function getAmountOut(
-    uint amountIn,
-    address tokenIn,
-    address tokenOut
-) external view returns (uint amount, bool stable)
-
-// Calculate multi-hop swap output
-function getAmountsOut(
-    uint amountIn,
-    route[] memory routes
-) external view returns (uint[] memory amounts)
-
-// Quote liquidity addition
-function quoteAddLiquidity(
-    address tokenA,
-    address tokenB,
-    bool stable,
-    uint amountADesired,
-    uint amountBDesired
-) external view returns (uint amountA, uint amountB, uint liquidity)
-```
-
-### 6. Fee-on-Transfer Token Support
-
-For tokens that charge fees on transfers, use the `SupportingFeeOnTransferTokens` variants:
-
-```solidity
-function swapExactTokensForTokensSupportingFeeOnTransferTokens(
-    uint amountIn,
-    uint amountOutMin,
-    route[] calldata routes,
-    address to,
-    uint deadline
-) external
-
-function swapExactETHForTokensSupportingFeeOnTransferTokens(
-    uint amountOutMin,
-    route[] calldata routes,
-    address to,
-    uint deadline
-) external payable
-```
-
-## Pool Types
-
-### Stable Pools (`stable = true`)
-
-- **Use Case**: Assets with similar values (USDC/USDT, ETH/stETH)
-- **Algorithm**: Curve-like stable swap math
-- **Benefits**: Lower slippage, better rates for similar assets
-- **Fees**: 0.04% (4 basis points)
-
-### Volatile Pools (`stable = false`)
-
-- **Use Case**: Standard trading pairs with different values
-- **Algorithm**: Uniswap V2 xy=k formula
-- **Benefits**: Standard AMM behavior, suitable for all assets
-- **Fees**: 0.18% (18 basis points)
 
 ## Integration Checklist
 
