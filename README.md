@@ -14,11 +14,15 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 ## Contract Addresses
 
 ### Testnet (Plasma)
+
 - **PairFactory**: [0xF1471A005b7557C1d472f0a060040f93ae074297](https://testnet.plasmascan.to/address/0xF1471A005b7557C1d472f0a060040f93ae074297)
 - **TradeHelper**: [0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e](https://testnet.plasmascan.to/address/0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e)
 - **GlobalRouter**: [0x48406768424369b69Cc52886A6520a1839CC426E](https://testnet.plasmascan.to/address/0x48406768424369b69Cc52886A6520a1839CC426E)
 - **RouterV2** (Main): [0x84E8a39C85F645c7f7671689a9337B33Bdc784f8](https://testnet.plasmascan.to/address/0x84E8a39C85F645c7f7671689a9337B33Bdc784f8)
 - **WXPL**: [0x6100E367285b01F48D07953803A2d8dCA5D19873](https://testnet.plasmascan.to/address/0x6100E367285b01F48D07953803A2d8dCA5D19873)
+- **Lithos**: [0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51](https://testnet.plasmascan.to/address/0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51)
+- **VeArtProxyUpgradeable**: [0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1](https://testnet.plasmascan.to/address/0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1)
+- **VotingEscrow**: [0xF53aB8c9852533Ae1536aCE66F42C15Cd7926547](https://testnet.plasmascan.to/address/0xF53aB8c9852533Ae1536aCE66F42C15Cd7926547)
 
 > **Note**: RouterV2 is the primary contract for frontend integration. It handles all liquidity and swap operations.
 
@@ -32,19 +36,24 @@ Create trading pairs through the PairFactory contract:
 // Create a new trading pair
 function createPair(
     address tokenA,
-    address tokenB,  
+    address tokenB,
     bool stable      // true for stable pool, false for volatile pool
 ) external returns (address pair)
 ```
 
 **JavaScript Example:**
+
 ```javascript
-const pairFactory = new ethers.Contract(PAIR_FACTORY_ADDRESS, pairFactoryAbi, signer);
+const pairFactory = new ethers.Contract(
+  PAIR_FACTORY_ADDRESS,
+  pairFactoryAbi,
+  signer
+);
 
 // Create volatile pool (standard AMM)
 const volatilePair = await pairFactory.createPair(tokenA, tokenB, false);
 
-// Create stable pool (low slippage for similar assets)  
+// Create stable pool (low slippage for similar assets)
 const stablePair = await pairFactory.createPair(USDC, USDT, true);
 ```
 
@@ -62,7 +71,7 @@ function addLiquidity(
     uint amountADesired,
     uint amountBDesired,
     uint amountAMin,      // Slippage protection
-    uint amountBMin,      // Slippage protection  
+    uint amountBMin,      // Slippage protection
     address to,           // LP token recipient
     uint deadline
 ) external returns (uint amountA, uint amountB, uint liquidity)
@@ -112,6 +121,7 @@ function removeLiquidityETH(
 ```
 
 **JavaScript Example:**
+
 ```javascript
 const router = new ethers.Contract(ROUTER_V2_ADDRESS, routerV2Abi, signer);
 
@@ -120,28 +130,28 @@ await tokenA.approve(ROUTER_V2_ADDRESS, amountADesired);
 await tokenB.approve(ROUTER_V2_ADDRESS, amountBDesired);
 
 const tx = await router.addLiquidity(
-    USDC_ADDRESS,
-    USDT_ADDRESS,  
-    true,  // stable pool
-    amountADesired,
-    amountBDesired,
-    amountAMin,
-    amountBMin,
-    userAddress,
-    deadline
+  USDC_ADDRESS,
+  USDT_ADDRESS,
+  true, // stable pool
+  amountADesired,
+  amountBDesired,
+  amountAMin,
+  amountBMin,
+  userAddress,
+  deadline
 );
 
 // Add liquidity with XPL
 await token.approve(ROUTER_V2_ADDRESS, amountTokenDesired);
 const tx2 = await router.addLiquidityETH(
-    TOKEN_ADDRESS,
-    false, // volatile pool
-    amountTokenDesired,
-    amountTokenMin,
-    amountETHMin,
-    userAddress,
-    deadline,
-    { value: ethers.utils.parseEther("1.0") }
+  TOKEN_ADDRESS,
+  false, // volatile pool
+  amountTokenDesired,
+  amountTokenMin,
+  amountETHMin,
+  userAddress,
+  deadline,
+  { value: ethers.utils.parseEther("1.0") }
 );
 ```
 
@@ -182,12 +192,12 @@ function swapExactETHForTokens(
     uint deadline
 ) external payable returns (uint[] memory amounts)
 
-// Token -> XPL  
+// Token -> XPL
 function swapExactTokensForETH(
     uint amountIn,
     uint amountOutMin,
     route[] calldata routes,
-    address to, 
+    address to,
     uint deadline
 ) external returns (uint[] memory amounts)
 ```
@@ -203,41 +213,42 @@ struct route {
 ```
 
 **JavaScript Example:**
+
 ```javascript
 // Simple swap: USDC -> USDT (stable pool)
 await usdc.approve(ROUTER_V2_ADDRESS, amountIn);
 const tx = await router.swapExactTokensForTokensSimple(
-    amountIn,
-    amountOutMin,
-    USDC_ADDRESS,
-    USDT_ADDRESS,
-    true,  // use stable pool
-    userAddress,
-    deadline
+  amountIn,
+  amountOutMin,
+  USDC_ADDRESS,
+  USDT_ADDRESS,
+  true, // use stable pool
+  userAddress,
+  deadline
 );
 
 // Multi-hop swap: TokenA -> TokenB -> TokenC
 const routes = [
-    { from: TOKEN_A, to: TOKEN_B, stable: false },
-    { from: TOKEN_B, to: TOKEN_C, stable: true }
+  { from: TOKEN_A, to: TOKEN_B, stable: false },
+  { from: TOKEN_B, to: TOKEN_C, stable: true },
 ];
 
 await tokenA.approve(ROUTER_V2_ADDRESS, amountIn);
 const tx2 = await router.swapExactTokensForTokens(
-    amountIn,
-    amountOutMin,
-    routes,
-    userAddress,
-    deadline
+  amountIn,
+  amountOutMin,
+  routes,
+  userAddress,
+  deadline
 );
 
 // XPL -> Token swap
 const tx3 = await router.swapExactETHForTokens(
-    amountOutMin,
-    [{ from: WXPL_ADDRESS, to: TOKEN_ADDRESS, stable: false }],
-    userAddress,
-    deadline,
-    { value: ethers.utils.parseEther("1.0") }
+  amountOutMin,
+  [{ from: WXPL_ADDRESS, to: TOKEN_ADDRESS, stable: false }],
+  userAddress,
+  deadline,
+  { value: ethers.utils.parseEther("1.0") }
 );
 ```
 
@@ -250,7 +261,7 @@ Use TradeHelper for price calculations without executing trades:
 function getAmountOut(
     uint amountIn,
     address tokenIn,
-    address tokenOut  
+    address tokenOut
 ) external view returns (uint amount, bool stable)
 
 // Calculate multi-hop swap output
@@ -293,12 +304,14 @@ function swapExactETHForTokensSupportingFeeOnTransferTokens(
 ## Pool Types
 
 ### Stable Pools (`stable = true`)
+
 - **Use Case**: Assets with similar values (USDC/USDT, ETH/stETH)
 - **Algorithm**: Curve-like stable swap math
 - **Benefits**: Lower slippage, better rates for similar assets
 - **Fees**: 0.04% (4 basis points)
 
-### Volatile Pools (`stable = false`)  
+### Volatile Pools (`stable = false`)
+
 - **Use Case**: Standard trading pairs with different values
 - **Algorithm**: Uniswap V2 xy=k formula
 - **Benefits**: Standard AMM behavior, suitable for all assets
@@ -307,7 +320,7 @@ function swapExactETHForTokensSupportingFeeOnTransferTokens(
 ## Integration Checklist
 
 - [ ] Import RouterV2 ABI and connect to `0x84E8a39C85F645c7f7671689a9337B33Bdc784f8`
-- [ ] Implement token approval flows before liquidity/swap operations  
+- [ ] Implement token approval flows before liquidity/swap operations
 - [ ] Add slippage tolerance settings (recommend 0.5% for stable, 2% for volatile)
 - [ ] Implement deadline parameter (recommend current timestamp + 20 minutes)
 - [ ] Handle both stable and volatile pool routing
@@ -318,8 +331,9 @@ function swapExactETHForTokensSupportingFeeOnTransferTokens(
 ## Error Handling
 
 Common revert reasons:
+
 - `BaseV1Router: EXPIRED` - Transaction deadline passed
-- `BaseV1Router: INSUFFICIENT_OUTPUT_AMOUNT` - Slippage tolerance exceeded  
+- `BaseV1Router: INSUFFICIENT_OUTPUT_AMOUNT` - Slippage tolerance exceeded
 - `BaseV1Router: INSUFFICIENT_A_AMOUNT` - Minimum amount not met
 - `BaseV1Router: INVALID_PATH` - Routing path invalid (check WXPL address)
 - `Pair: INSUFFICIENT_LIQUIDITY` - Pool has no liquidity
@@ -330,10 +344,10 @@ Common revert reasons:
 
 Foundry consists of:
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
+- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
+- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
+- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
 
 ## Documentation
 
