@@ -22,7 +22,8 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 - **WXPL**: [0x6100E367285b01F48D07953803A2d8dCA5D19873](https://testnet.plasmascan.to/address/0x6100E367285b01F48D07953803A2d8dCA5D19873)
 - **Lithos**: [0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51](https://testnet.plasmascan.to/address/0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51)
 - **VeArtProxyUpgradeable**: [0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1](https://testnet.plasmascan.to/address/0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1)
-- **VotingEscrow**: [0xF53aB8c9852533Ae1536aCE66F42C15Cd7926547](https://testnet.plasmascan.to/address/0xF53aB8c9852533Ae1536aCE66F42C15Cd7926547)
+- **VotingEscrow**: [0x592FA200950B053aCE9Be6d4FB3F58b1763898C0](https://testnet.plasmascan.to/address/0x592FA200950B053aCE9Be6d4FB3F58b1763898C0)
+- **RewardsDistributor**: [0x3b32FEDe4309265Cacc601368787F4264C69070e](https://testnet.plasmascan.to/address/0x3b32FEDe4309265Cacc601368787F4264C69070e)
 
 > **Note**: RouterV2 is the primary contract for frontend integration. It handles all liquidity and swap operations.
 
@@ -363,7 +364,11 @@ function split(uint256[] memory amounts, uint256 _tokenId) external
 **JavaScript Example:**
 
 ```javascript
-const votingEscrow = new ethers.Contract(VOTING_ESCROW_ADDRESS, votingEscrowAbi, signer);
+const votingEscrow = new ethers.Contract(
+  VOTING_ESCROW_ADDRESS,
+  votingEscrowAbi,
+  signer
+);
 
 // Approve LITHOS tokens
 await lithos.approve(VOTING_ESCROW_ADDRESS, lockAmount);
@@ -374,7 +379,7 @@ const tx = await votingEscrow.create_lock(lockAmount, lockDuration);
 
 // Get veNFT ID from event
 const receipt = await tx.wait();
-const tokenId = receipt.events.find(e => e.event === 'Transfer').args.tokenId;
+const tokenId = receipt.events.find((e) => e.event === "Transfer").args.tokenId;
 
 // Check voting power
 const votingPower = await votingEscrow.balanceOfNFT(tokenId);
@@ -388,6 +393,7 @@ await votingEscrow.transferFrom(userAddress, recipientAddress, tokenId);
 ```
 
 **Lock Parameters:**
+
 - **Min Duration**: 1 week
 - **Max Duration**: 2 years (104 weeks)
 - **Voting Power**: Linear decay over time
@@ -396,6 +402,7 @@ await votingEscrow.transferFrom(userAddress, recipientAddress, tokenId);
 ## Integration Checklist
 
 ### DEX Features
+
 - [ ] Import RouterV2 ABI and connect to `0x84E8a39C85F645c7f7671689a9337B33Bdc784f8`
 - [ ] Implement token approval flows before liquidity/swap operations
 - [ ] Add slippage tolerance settings (recommend 0.5% for stable, 2% for volatile)
@@ -406,6 +413,7 @@ await votingEscrow.transferFrom(userAddress, recipientAddress, tokenId);
 - [ ] Add liquidity preview using `quoteAddLiquidity`
 
 ### Voting Escrow (veNFT) Features
+
 - [ ] Import VotingEscrow ABI and connect to `0xF53aB8c9852533Ae1536aCE66F42C15Cd7926547`
 - [ ] Import Lithos token ABI and connect to `0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51`
 - [ ] Implement LITHOS token approval for locking operations
