@@ -16,6 +16,7 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 ### Testnet (Plasma)
 - **PairFactory**: [0xF1471A005b7557C1d472f0a060040f93ae074297](https://testnet.plasmascan.to/address/0xF1471A005b7557C1d472f0a060040f93ae074297)
 - **TradeHelper**: [0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e](https://testnet.plasmascan.to/address/0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e)
+- **GlobalRouter**: [0x48406768424369b69Cc52886A6520a1839CC426E](https://testnet.plasmascan.to/address/0x48406768424369b69Cc52886A6520a1839CC426E)
 - **RouterV2** (Main): [0x84E8a39C85F645c7f7671689a9337B33Bdc784f8](https://testnet.plasmascan.to/address/0x84E8a39C85F645c7f7671689a9337B33Bdc784f8)
 - **WXPL**: [0x6100E367285b01F48D07953803A2d8dCA5D19873](https://testnet.plasmascan.to/address/0x6100E367285b01F48D07953803A2d8dCA5D19873)
 
