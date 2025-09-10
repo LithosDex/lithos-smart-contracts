@@ -85,7 +85,7 @@ contract GaugeV2 is ReentrancyGuard, Ownable {
         address _internal_bribe,
         address _external_bribe,
         bool _isForPair
-    ) {
+    ) Ownable(msg.sender) {
         rewardToken = IERC20(_rewardToken); // main reward
         VE = _ve; // vested
         TOKEN = IERC20(_token); // underlying (LP)
