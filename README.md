@@ -1,3 +1,8 @@
+## Deployed Contracts
+
+### Testnet (Plasma)
+- **PairFactory**: [0xF1471A005b7557C1d472f0a060040f93ae074297](https://testnet.plasmascan.to/address/0xF1471A005b7557C1d472f0a060040f93ae074297)
+
 ## Foundry
 
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
