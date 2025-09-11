@@ -202,18 +202,19 @@ struct route {
 }
 ```
 
-**JavaScript Example:**
+**JavaScript Example (GlobalRouter):**
 ```javascript
+const globalRouter = new ethers.Contract(GLOBAL_ROUTER_ADDRESS, globalRouterAbi, signer);
+
 // Simple swap: USDC -> USDT (stable pool)
-await usdc.approve(ROUTER_V2_ADDRESS, amountIn);
-const tx = await router.swapExactTokensForTokensSimple(
+await usdc.approve(GLOBAL_ROUTER_ADDRESS, amountIn);
+const tx = await globalRouter.swapExactTokensForTokens(
     amountIn,
     amountOutMin,
-    USDC_ADDRESS,
-    USDT_ADDRESS,
-    true,  // use stable pool
+    [{ from: USDC_ADDRESS, to: USDT_ADDRESS, stable: true }],
     userAddress,
-    deadline
+    deadline,
+    true  // _type = true for V2 pools, false for V3 pools
 );
 
 // Multi-hop swap: TokenA -> TokenB -> TokenC
@@ -222,22 +223,21 @@ const routes = [
     { from: TOKEN_B, to: TOKEN_C, stable: true }
 ];
 
-await tokenA.approve(ROUTER_V2_ADDRESS, amountIn);
-const tx2 = await router.swapExactTokensForTokens(
+await tokenA.approve(GLOBAL_ROUTER_ADDRESS, amountIn);
+const tx2 = await globalRouter.swapExactTokensForTokens(
     amountIn,
     amountOutMin,
     routes,
     userAddress,
-    deadline
+    deadline,
+    true  // use V2 pools
 );
 
-// XPL -> Token swap
-const tx3 = await router.swapExactETHForTokens(
-    amountOutMin,
-    [{ from: WXPL_ADDRESS, to: TOKEN_ADDRESS, stable: false }],
-    userAddress,
-    deadline,
-    { value: ethers.utils.parseEther("1.0") }
+// Get swap preview using GlobalRouter
+const [amount, isStablePool] = await globalRouter.getAmountOut(
+    amountIn,
+    TOKEN_A,
+    TOKEN_B
 );
 ```
 
