@@ -15,19 +15,39 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 
 ### Testnet (Plasma)
 
+#### Core DEX
 - **PairFactory**: [0xF1471A005b7557C1d472f0a060040f93ae074297](https://testnet.plasmascan.to/address/0xF1471A005b7557C1d472f0a060040f93ae074297)
-- **TradeHelper**: [0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e](https://testnet.plasmascan.to/address/0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e)
-- **GlobalRouter**: [0x48406768424369b69Cc52886A6520a1839CC426E](https://testnet.plasmascan.to/address/0x48406768424369b69Cc52886A6520a1839CC426E)
 - **RouterV2** (Main): [0x84E8a39C85F645c7f7671689a9337B33Bdc784f8](https://testnet.plasmascan.to/address/0x84E8a39C85F645c7f7671689a9337B33Bdc784f8)
-- **WXPL**: [0x6100E367285b01F48D07953803A2d8dCA5D19873](https://testnet.plasmascan.to/address/0x6100E367285b01F48D07953803A2d8dCA5D19873)
-- **Lithos**: [0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51](https://testnet.plasmascan.to/address/0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51)
-- **VeArtProxyUpgradeable**: [0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1](https://testnet.plasmascan.to/address/0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1)
+- **GlobalRouter**: [0x48406768424369b69Cc52886A6520a1839CC426E](https://testnet.plasmascan.to/address/0x48406768424369b69Cc52886A6520a1839CC426E)
+- **TradeHelper**: [0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e](https://testnet.plasmascan.to/address/0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e)
+
+#### ve(3,3) Governance
 - **VotingEscrow**: [0x592FA200950B053aCE9Be6d4FB3F58b1763898C0](https://testnet.plasmascan.to/address/0x592FA200950B053aCE9Be6d4FB3F58b1763898C0)
+- **VeArtProxyUpgradeable**: [0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1](https://testnet.plasmascan.to/address/0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1)
 - **RewardsDistributor**: [0x3b32FEDe4309265Cacc601368787F4264C69070e](https://testnet.plasmascan.to/address/0x3b32FEDe4309265Cacc601368787F4264C69070e)
 - **PermissionsRegistry**: [0x3A908c6095bD1A69b651D7B32AB42806528d88c8](https://testnet.plasmascan.to/address/0x3A908c6095bD1A69b651D7B32AB42806528d88c8)
-- **TEST Token**: [0xb89cdFf170b45797BF93536773113861EBEABAfa](https://testnet.plasmascan.to/address/0xb89cdFf170b45797BF93536773113861EBEABAfa) _(Test token for bribes contract)_
+- **VoterV3**: [0xb7cF73026b3a35955081BB8D9025aE13C50C74cd](https://testnet.plasmascan.to/address/0xb7cF73026b3a35955081BB8D9025aE13C50C74cd)
+- **GaugeFactoryV2**: [0x23e7E5f66Ff4396F0D95ad630f4297D768193DE1](https://testnet.plasmascan.to/address/0x23e7E5f66Ff4396F0D95ad630f4297D768193DE1)
+- **BribeFactoryV3**: [0xC4B0BeCF35366629712FCEfcB4A88727236A531E](https://testnet.plasmascan.to/address/0xC4B0BeCF35366629712FCEfcB4A88727236A531E)
+- **MinterUpgradeable**: [0x6e74245E7E7582790bE61a1a16b459945cCf65A2](https://testnet.plasmascan.to/address/0x6e74245E7E7582790bE61a1a16b459945cCf65A2)
+
+#### Tokens
+- **LITH**: [0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51](https://testnet.plasmascan.to/address/0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51)
+- **WXPL**: [0x6100E367285b01F48D07953803A2d8dCA5D19873](https://testnet.plasmascan.to/address/0x6100E367285b01F48D07953803A2d8dCA5D19873)
+- **TEST**: [0xb89cdFf170b45797BF93536773113861EBEABAfa](https://testnet.plasmascan.to/address/0xb89cdFf170b45797BF93536773113861EBEABAfa) _(Test token for bribes contract)_
 
 > **Note**: RouterV2 is the primary contract for frontend integration. It handles all liquidity and swap operations.
+
+#### Pairs/Gauge
+Pair Index 0
+- Token0: 0x3576E9157cF2e1dB071b3587dEbBFb67D9e0962d (WXPL)
+- Token1: 0x726A66766A784A582F5f48E81A5772DD6bD1F34E (USDT)
+- Pair: 0xf89834bA86E8D74c7E691796F80badc817D0c764
+- Gauge: 0xaff8EF3a3aCfeF558cb6b32DB1d8b0C7d0Bd43ED
+- Internal Bribe: 0xf9ED85d7c293B9773f9f84A285f8a950A9C21d86
+- External Bribe: 0xf1f95E914cED73f95F1323CFd8F8f0bdf902bC06
+- Pool Type: Volatile
+
 
 ## Frontend Integration Guide
 
@@ -431,7 +451,7 @@ await votingEscrow.transferFrom(userAddress, recipientAddress, tokenId);
 
 ### Voting Escrow (veNFT) Features
 
-- [ ] Import VotingEscrow ABI and connect to `0xF53aB8c9852533Ae1536aCE66F42C15Cd7926547`
+- [ ] Import VotingEscrow ABI and connect to `0x592FA200950B053aCE9Be6d4FB3F58b1763898C0`
 - [ ] Import Lithos token ABI and connect to `0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51`
 - [ ] Implement LITHOS token approval for locking operations
 - [ ] Add lock duration selector (1 week to 2 years)
