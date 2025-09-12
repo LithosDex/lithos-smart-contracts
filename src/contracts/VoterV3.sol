@@ -157,6 +157,11 @@ contract VoterV3 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
         VOTE_DELAY = _delay;
     }
 
+    /// @notice Get the voting escrow address (matches IVoter interface)
+    function ve() external view returns (address) {
+        return _ve;
+    }
+
     /// @notice Set a new Minter
     function setMinter(address _minter) external VoterAdmin {
         require(_minter != address(0), "addr0");
