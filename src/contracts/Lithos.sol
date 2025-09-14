@@ -4,8 +4,8 @@ pragma solidity 0.8.29;
 import "./interfaces/ILithos.sol";
 
 contract Lithos is ILithos {
-    string public constant name = "TEST";
-    string public constant symbol = "TEST";
+    string public constant name = "Lithos";
+    string public constant symbol = "LITH";
     uint8 public constant decimals = 18;
     uint256 public totalSupply = 0;
 

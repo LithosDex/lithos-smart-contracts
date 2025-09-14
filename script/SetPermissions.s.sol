@@ -15,7 +15,6 @@ contract SetPermissions is Script {
 
         // Contract addresses that need roles
         address voter = vm.envAddress("VOTER");
-        address minter = vm.envAddress("MINTER");
 
         vm.startBroadcast(deployerPrivateKey);
 
