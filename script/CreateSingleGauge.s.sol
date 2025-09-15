@@ -4,9 +4,9 @@ pragma solidity 0.8.29;
 import {Script, console} from "forge-std/Script.sol";
 
 interface IPairFactory {
-    function allPairsLength() external view returns (uint);
+    function allPairsLength() external view returns (uint256);
 
-    function allPairs(uint index) external view returns (address);
+    function allPairs(uint256 index) external view returns (address);
 }
 
 interface IPair {
@@ -18,10 +18,7 @@ interface IPair {
 }
 
 interface IVoter {
-    function createGauge(
-        address _pool,
-        uint256 _gaugeType
-    ) external returns (address);
+    function createGauge(address _pool, uint256 _gaugeType) external returns (address);
 
     function gauges(address _pool) external view returns (address);
 }

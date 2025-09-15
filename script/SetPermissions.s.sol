@@ -18,9 +18,7 @@ contract SetPermissions is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        IPermissionsRegistry registry = IPermissionsRegistry(
-            permissionsRegistry
-        );
+        IPermissionsRegistry registry = IPermissionsRegistry(permissionsRegistry);
 
         // Set VOTER_ADMIN role
         registry.setRoleFor(deployer, "VOTER_ADMIN");

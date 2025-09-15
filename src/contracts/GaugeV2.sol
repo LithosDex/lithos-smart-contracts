@@ -11,11 +11,7 @@ import "./interfaces/IBribe.sol";
 import "./libraries/Math.sol";
 
 interface IRewarder {
-    function onReward(
-        address user,
-        address recipient,
-        uint256 userBalance
-    ) external;
+    function onReward(address user, address recipient, uint256 userBalance) external;
 }
 
 contract GaugeV2 is ReentrancyGuard, Ownable {
@@ -65,10 +61,7 @@ contract GaugeV2 is ReentrancyGuard, Ownable {
     }
 
     modifier onlyDistribution() {
-        require(
-            msg.sender == DISTRIBUTION,
-            "Caller is not RewardsDistribution contract"
-        );
+        require(msg.sender == DISTRIBUTION, "Caller is not RewardsDistribution contract");
         _;
     }
 
@@ -168,22 +161,14 @@ contract GaugeV2 is ReentrancyGuard, Ownable {
         if (_totalSupply == 0) {
             return rewardPerTokenStored;
         } else {
-            return
-                rewardPerTokenStored +
-                ((lastTimeRewardApplicable() - lastUpdateTime) *
-                    rewardRate *
-                    1e18) /
-                _totalSupply;
+            return rewardPerTokenStored
+                + ((lastTimeRewardApplicable() - lastUpdateTime) * rewardRate * 1e18) / _totalSupply;
         }
     }
 
     ///@notice see earned rewards for user
     function earned(address account) public view returns (uint256) {
-        return
-            rewards[account] +
-            (_balances[account] *
-                (rewardPerToken() - userRewardPerTokenPaid[account])) /
-            1e18;
+        return rewards[account] + (_balances[account] * (rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18;
     }
 
     ///@notice get total reward for the duration
@@ -214,21 +199,14 @@ contract GaugeV2 is ReentrancyGuard, Ownable {
     }
 
     ///@notice deposit internal
-    function _deposit(
-        uint256 amount,
-        address account
-    ) internal nonReentrant isNotEmergency updateReward(account) {
+    function _deposit(uint256 amount, address account) internal nonReentrant isNotEmergency updateReward(account) {
         require(amount > 0, "deposit(Gauge): cannot stake 0");
 
         _balances[account] = _balances[account] + amount;
         _totalSupply = _totalSupply + amount;
 
         if (address(gaugeRewarder) != address(0)) {
-            IRewarder(gaugeRewarder).onReward(
-                account,
-                account,
-                _balances[account]
-            );
+            IRewarder(gaugeRewarder).onReward(account, account, _balances[account]);
         }
 
         TOKEN.safeTransferFrom(account, address(this), amount);
@@ -247,9 +225,7 @@ contract GaugeV2 is ReentrancyGuard, Ownable {
     }
 
     ///@notice withdraw internal
-    function _withdraw(
-        uint256 amount
-    ) internal nonReentrant isNotEmergency updateReward(msg.sender) {
+    function _withdraw(uint256 amount) internal nonReentrant isNotEmergency updateReward(msg.sender) {
         require(amount > 0, "Cannot withdraw 0");
         require(_balances[msg.sender] > 0, "no balances");
 
@@ -257,11 +233,7 @@ contract GaugeV2 is ReentrancyGuard, Ownable {
         _balances[msg.sender] = _balances[msg.sender] - amount;
 
         if (address(gaugeRewarder) != address(0)) {
-            IRewarder(gaugeRewarder).onReward(
-                msg.sender,
-                msg.sender,
-                _balances[msg.sender]
-            );
+            IRewarder(gaugeRewarder).onReward(msg.sender, msg.sender, _balances[msg.sender]);
         }
 
         TOKEN.safeTransfer(msg.sender, amount);
@@ -278,6 +250,7 @@ contract GaugeV2 is ReentrancyGuard, Ownable {
         TOKEN.safeTransfer(msg.sender, _amount);
         emit Withdraw(msg.sender, _amount);
     }
+
     function emergencyWithdrawAmount(uint256 _amount) external nonReentrant {
         require(emergency, "emergency");
         _totalSupply = _totalSupply - _amount;
@@ -294,9 +267,7 @@ contract GaugeV2 is ReentrancyGuard, Ownable {
     }
 
     ///@notice User harvest function called from distribution (voter allows harvest on multiple gauges)
-    function getReward(
-        address _user
-    ) public nonReentrant onlyDistribution updateReward(_user) {
+    function getReward(address _user) public nonReentrant onlyDistribution updateReward(_user) {
         uint256 reward = rewards[_user];
         if (reward > 0) {
             rewards[_user] = 0;
@@ -319,11 +290,7 @@ contract GaugeV2 is ReentrancyGuard, Ownable {
         }
 
         if (gaugeRewarder != address(0)) {
-            IRewarder(gaugeRewarder).onReward(
-                msg.sender,
-                msg.sender,
-                _balances[msg.sender]
-            );
+            IRewarder(gaugeRewarder).onReward(msg.sender, msg.sender, _balances[msg.sender]);
         }
     }
 
@@ -337,10 +304,7 @@ contract GaugeV2 is ReentrancyGuard, Ownable {
 
     /// @dev Receive rewards from distribution
 
-    function notifyRewardAmount(
-        address token,
-        uint256 reward
-    )
+    function notifyRewardAmount(address token, uint256 reward)
         external
         nonReentrant
         isNotEmergency
@@ -370,18 +334,11 @@ contract GaugeV2 is ReentrancyGuard, Ownable {
         emit RewardAdded(reward);
     }
 
-    function claimFees()
-        external
-        nonReentrant
-        returns (uint256 claimed0, uint256 claimed1)
-    {
+    function claimFees() external nonReentrant returns (uint256 claimed0, uint256 claimed1) {
         return _claimFees();
     }
 
-    function _claimFees()
-        internal
-        returns (uint256 claimed0, uint256 claimed1)
-    {
+    function _claimFees() internal returns (uint256 claimed0, uint256 claimed1) {
         if (!isForPair) {
             return (0, 0);
         }

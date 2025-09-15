@@ -4,11 +4,7 @@ pragma solidity 0.8.29;
 import {Script, console} from "forge-std/Script.sol";
 
 interface IVoter {
-    function _init(
-        address[] memory _tokens,
-        address _permissionsRegistry,
-        address _minter
-    ) external;
+    function _init(address[] memory _tokens, address _permissionsRegistry, address _minter) external;
 }
 
 contract InitializeVoter is Script {

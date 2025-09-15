@@ -21,6 +21,7 @@ contract GaugeFactoryV2 is IGaugeFactory, OwnableUpgradeable {
     address public permissionsRegistry;
 
     address[] internal __gauges;
+
     constructor() {}
 
     function initialize(address _permissionRegistry) public initializer {
@@ -37,7 +38,7 @@ contract GaugeFactoryV2 is IGaugeFactory, OwnableUpgradeable {
         return __gauges;
     }
 
-    function length() external view returns (uint) {
+    function length() external view returns (uint256) {
         return __gauges.length;
     }
 
@@ -50,97 +51,65 @@ contract GaugeFactoryV2 is IGaugeFactory, OwnableUpgradeable {
         address _external_bribe,
         bool _isPair
     ) external returns (address) {
-        last_gauge = address(
-            new GaugeV2(
-                _rewardToken,
-                _ve,
-                _token,
-                _distribution,
-                _internal_bribe,
-                _external_bribe,
-                _isPair
-            )
-        );
+        last_gauge =
+            address(new GaugeV2(_rewardToken, _ve, _token, _distribution, _internal_bribe, _external_bribe, _isPair));
         __gauges.push(last_gauge);
         return last_gauge;
     }
 
     modifier onlyAllowed() {
         require(
-            owner() == msg.sender ||
-                IPermissionsRegistry(permissionsRegistry).hasRole(
-                    "GAUGE_ADMIN",
-                    msg.sender
-                ),
+            owner() == msg.sender || IPermissionsRegistry(permissionsRegistry).hasRole("GAUGE_ADMIN", msg.sender),
             "ERR: GAUGE_ADMIN"
         );
         _;
     }
 
     modifier EmergencyCouncil() {
-        require(
-            msg.sender ==
-                IPermissionsRegistry(permissionsRegistry).emergencyCouncil()
-        );
+        require(msg.sender == IPermissionsRegistry(permissionsRegistry).emergencyCouncil());
         _;
     }
 
-    function activateEmergencyMode(
-        address[] memory _gauges
-    ) external EmergencyCouncil {
-        uint i = 0;
+    function activateEmergencyMode(address[] memory _gauges) external EmergencyCouncil {
+        uint256 i = 0;
         for (i; i < _gauges.length; i++) {
             IGauge(_gauges[i]).activateEmergencyMode();
         }
     }
 
-    function stopEmergencyMode(
-        address[] memory _gauges
-    ) external EmergencyCouncil {
-        uint i = 0;
+    function stopEmergencyMode(address[] memory _gauges) external EmergencyCouncil {
+        uint256 i = 0;
         for (i; i < _gauges.length; i++) {
             IGauge(_gauges[i]).stopEmergencyMode();
         }
     }
 
-    function setRewarderPid(
-        address[] memory _gauges,
-        uint[] memory _pids
-    ) external onlyAllowed {
+    function setRewarderPid(address[] memory _gauges, uint256[] memory _pids) external onlyAllowed {
         require(_gauges.length == _pids.length);
-        uint i = 0;
+        uint256 i = 0;
         for (i; i < _gauges.length; i++) {
             IGauge(_gauges[i]).setRewarderPid(_pids[i]);
         }
     }
 
-    function setGaugeRewarder(
-        address[] memory _gauges,
-        address[] memory _rewarder
-    ) external onlyAllowed {
+    function setGaugeRewarder(address[] memory _gauges, address[] memory _rewarder) external onlyAllowed {
         require(_gauges.length == _rewarder.length);
-        uint i = 0;
+        uint256 i = 0;
         for (i; i < _gauges.length; i++) {
             IGauge(_gauges[i]).setGaugeRewarder(_rewarder[i]);
         }
     }
 
-    function setDistribution(
-        address[] memory _gauges,
-        address distro
-    ) external onlyAllowed {
-        uint i = 0;
+    function setDistribution(address[] memory _gauges, address distro) external onlyAllowed {
+        uint256 i = 0;
         for (i; i < _gauges.length; i++) {
             IGauge(_gauges[i]).setDistribution(distro);
         }
     }
 
-    function setInternalBribe(
-        address[] memory _gauges,
-        address[] memory int_bribe
-    ) external onlyAllowed {
+    function setInternalBribe(address[] memory _gauges, address[] memory int_bribe) external onlyAllowed {
         require(_gauges.length == int_bribe.length);
-        uint i = 0;
+        uint256 i = 0;
         for (i; i < _gauges.length; i++) {
             IGauge(_gauges[i]).setInternalBribe(int_bribe[i]);
         }

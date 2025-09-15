@@ -7,103 +7,55 @@ interface ITradeHelper {
         address to;
         bool stable;
     }
-    function getAmountOutStable(
-        uint amountIn,
-        address tokenIn,
-        address tokenOut
-    ) external view returns (uint amount);
-    function getAmountOutVolatile(
-        uint amountIn,
-        address tokenIn,
-        address tokenOut
-    ) external view returns (uint amount);
-    function getAmountOut(
-        uint amountIn,
-        address tokenIn,
-        address tokenOut
-    ) external view returns (uint amount, bool stable);
-    function getAmountsOut(
-        uint amountIn,
-        Route[] memory routes
-    ) external view returns (uint[] memory amounts);
-    function getAmountInStable(
-        uint amountOut,
-        address tokenIn,
-        address tokenOut
-    ) external view returns (uint amountIn);
-    function pairFor(
-        address tokenA,
-        address tokenB,
-        bool stable
-    ) external view returns (address pair);
-    function sortTokens(
-        address tokenA,
-        address tokenB
-    ) external pure returns (address token0, address token1);
+
+    function getAmountOutStable(uint256 amountIn, address tokenIn, address tokenOut)
+        external
+        view
+        returns (uint256 amount);
+    function getAmountOutVolatile(uint256 amountIn, address tokenIn, address tokenOut)
+        external
+        view
+        returns (uint256 amount);
+    function getAmountOut(uint256 amountIn, address tokenIn, address tokenOut)
+        external
+        view
+        returns (uint256 amount, bool stable);
+    function getAmountsOut(uint256 amountIn, Route[] memory routes) external view returns (uint256[] memory amounts);
+    function getAmountInStable(uint256 amountOut, address tokenIn, address tokenOut)
+        external
+        view
+        returns (uint256 amountIn);
+    function pairFor(address tokenA, address tokenB, bool stable) external view returns (address pair);
+    function sortTokens(address tokenA, address tokenB) external pure returns (address token0, address token1);
 }
 
 interface IBaseV1Factory {
-    function allPairsLength() external view returns (uint);
+    function allPairsLength() external view returns (uint256);
     function isPair(address pair) external view returns (bool);
     function pairCodeHash() external pure returns (bytes32);
-    function getPair(
-        address tokenA,
-        address token,
-        bool stable
-    ) external view returns (address);
-    function createPair(
-        address tokenA,
-        address tokenB,
-        bool stable
-    ) external returns (address pair);
+    function getPair(address tokenA, address token, bool stable) external view returns (address);
+    function createPair(address tokenA, address tokenB, bool stable) external returns (address pair);
 }
 
 interface IBaseV1Pair {
-    function transferFrom(
-        address src,
-        address dst,
-        uint amount
-    ) external returns (bool);
-    function permit(
-        address owner,
-        address spender,
-        uint value,
-        uint deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
-    function swap(
-        uint amount0Out,
-        uint amount1Out,
-        address to,
-        bytes calldata data
-    ) external;
-    function burn(address to) external returns (uint amount0, uint amount1);
-    function mint(address to) external returns (uint liquidity);
-    function getReserves()
-        external
-        view
-        returns (
-            uint112 _reserve0,
-            uint112 _reserve1,
-            uint32 _blockTimestampLast
-        );
-    function getAmountOut(uint, address) external view returns (uint);
+    function transferFrom(address src, address dst, uint256 amount) external returns (bool);
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external;
+    function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data) external;
+    function burn(address to) external returns (uint256 amount0, uint256 amount1);
+    function mint(address to) external returns (uint256 liquidity);
+    function getReserves() external view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast);
+    function getAmountOut(uint256, address) external view returns (uint256);
 }
 
 interface erc20 {
     function totalSupply() external view returns (uint256);
-    function transfer(address recipient, uint amount) external returns (bool);
+    function transfer(address recipient, uint256 amount) external returns (bool);
     function decimals() external view returns (uint8);
     function symbol() external view returns (string memory);
-    function balanceOf(address) external view returns (uint);
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint amount
-    ) external returns (bool);
-    function approve(address spender, uint value) external returns (bool);
+    function balanceOf(address) external view returns (uint256);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    function approve(address spender, uint256 value) external returns (bool);
 }
 
 interface IPairFactory {
@@ -112,13 +64,14 @@ interface IPairFactory {
 }
 
 library Math {
-    function min(uint a, uint b) internal pure returns (uint) {
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
     }
-    function sqrt(uint y) internal pure returns (uint z) {
+
+    function sqrt(uint256 y) internal pure returns (uint256 z) {
         if (y > 3) {
             z = y;
-            uint x = y / 2 + 1;
+            uint256 x = y / 2 + 1;
             while (x < z) {
                 z = x;
                 x = (y / x + x) / 2;
@@ -127,15 +80,16 @@ library Math {
             z = 1;
         }
     }
-    function sub(uint x, uint y) internal pure returns (uint z) {
+
+    function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require((z = x - y) <= x, "Math: Sub-underflow");
     }
 }
 
 interface IWETH {
     function deposit() external payable;
-    function transfer(address to, uint value) external returns (bool);
-    function withdraw(uint) external;
+    function transfer(address to, uint256 value) external returns (bool);
+    function withdraw(uint256) external;
 }
 
 /// @title Router token swapping functionality
@@ -156,9 +110,7 @@ interface IRouterV3 {
     /// @notice Swaps `amountIn` of one token for as much as possible of another token
     /// @param params The parameters necessary for the swap, encoded as `ExactInputSingleParams` in calldata
     /// @return amountOut The amount of the received token
-    function exactInputSingle(
-        ExactInputSingleParams calldata params
-    ) external payable returns (uint256 amountOut);
+    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
 
     struct ExactInputParams {
         bytes path;
@@ -171,9 +123,7 @@ interface IRouterV3 {
     /// @notice Swaps `amountIn` of one token for as much as possible of another along the specified path
     /// @param params The parameters necessary for the multi-hop swap, encoded as `ExactInputParams` in calldata
     /// @return amountOut The amount of the received token
-    function exactInput(
-        ExactInputParams calldata params
-    ) external payable returns (uint256 amountOut);
+    function exactInput(ExactInputParams calldata params) external payable returns (uint256 amountOut);
 
     struct ExactOutputSingleParams {
         address tokenIn;
@@ -189,9 +139,7 @@ interface IRouterV3 {
     /// @notice Swaps as little as possible of one token for `amountOut` of another token
     /// @param params The parameters necessary for the swap, encoded as `ExactOutputSingleParams` in calldata
     /// @return amountIn The amount of the input token
-    function exactOutputSingle(
-        ExactOutputSingleParams calldata params
-    ) external payable returns (uint256 amountIn);
+    function exactOutputSingle(ExactOutputSingleParams calldata params) external payable returns (uint256 amountIn);
 
     struct ExactOutputParams {
         bytes path;
@@ -204,23 +152,21 @@ interface IRouterV3 {
     /// @notice Swaps as little as possible of one token for `amountOut` of another along the specified path (reversed)
     /// @param params The parameters necessary for the multi-hop swap, encoded as `ExactOutputParams` in calldata
     /// @return amountIn The amount of the input token
-    function exactOutput(
-        ExactOutputParams calldata params
-    ) external payable returns (uint256 amountIn);
+    function exactOutput(ExactOutputParams calldata params) external payable returns (uint256 amountIn);
 
     /// @notice Swaps `amountIn` of one token for as much as possible of another along the specified path
     /// @dev Unlike standard swaps, handles transferring from user before the actual swap.
     /// @param params The parameters necessary for the multi-hop swap, encoded as `ExactInputParams` in calldata
     /// @return amountOut The amount of the received token
-    function exactInputSingleSupportingFeeOnTransferTokens(
-        ExactInputSingleParams calldata params
-    ) external returns (uint256 amountOut);
+    function exactInputSingleSupportingFeeOnTransferTokens(ExactInputSingleParams calldata params)
+        external
+        returns (uint256 amountOut);
 }
 
 contract GlobalRouter {
     ITradeHelper public tradeHelper;
 
-    modifier ensure(uint deadline) {
+    modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, "BaseV1Router: EXPIRED");
         _;
     }
@@ -231,34 +177,18 @@ contract GlobalRouter {
 
     // **** SWAP ****
     // requires the initial amount to have already been sent to the first pair
-    function _swap(
-        uint[] memory amounts,
-        ITradeHelper.Route[] memory routes,
-        address _to
-    ) internal virtual {
-        for (uint i = 0; i < routes.length; i++) {
-            (address token0, ) = tradeHelper.sortTokens(
-                routes[i].from,
-                routes[i].to
-            );
-            uint amountOut = amounts[i + 1];
-            (uint amount0Out, uint amount1Out) = routes[i].from == token0
-                ? (uint(0), amountOut)
-                : (amountOut, uint(0));
+    function _swap(uint256[] memory amounts, ITradeHelper.Route[] memory routes, address _to) internal virtual {
+        for (uint256 i = 0; i < routes.length; i++) {
+            (address token0,) = tradeHelper.sortTokens(routes[i].from, routes[i].to);
+            uint256 amountOut = amounts[i + 1];
+            (uint256 amount0Out, uint256 amount1Out) =
+                routes[i].from == token0 ? (uint256(0), amountOut) : (amountOut, uint256(0));
             address to = i < routes.length - 1
-                ? tradeHelper.pairFor(
-                    routes[i + 1].from,
-                    routes[i + 1].to,
-                    routes[i + 1].stable
-                )
+                ? tradeHelper.pairFor(routes[i + 1].from, routes[i + 1].to, routes[i + 1].stable)
                 : _to;
-            IBaseV1Pair(
-                tradeHelper.pairFor(
-                    routes[i].from,
-                    routes[i].to,
-                    routes[i].stable
-                )
-            ).swap(amount0Out, amount1Out, to, new bytes(0));
+            IBaseV1Pair(tradeHelper.pairFor(routes[i].from, routes[i].to, routes[i].stable)).swap(
+                amount0Out, amount1Out, to, new bytes(0)
+            );
             //emit Swap(msg.sender,amounts[i],routes[i].from, _to, routes[i].stable);
         }
     }
@@ -266,32 +196,23 @@ contract GlobalRouter {
     /// @notice Swap a Token for a Token given the _type of pools
     /// @param  _type       boolean true := sAMM/vAMM pools, false := algebra v3
     function swapExactTokensForTokens(
-        uint amountIn,
-        uint amountOutMin,
+        uint256 amountIn,
+        uint256 amountOutMin,
         ITradeHelper.Route[] calldata routes,
         address to,
-        uint deadline,
+        uint256 deadline,
         bool _type
-    ) external ensure(deadline) returns (uint[] memory amounts) {
+    ) external ensure(deadline) returns (uint256[] memory amounts) {
         if (_type == false) {} else {
             amounts = tradeHelper.getAmountsOut(amountIn, routes);
-            require(
-                amounts[amounts.length - 1] >= amountOutMin,
-                "BaseV1Router: INSUFFICIENT_OUTPUT_AMOUNT"
-            );
-            address _pair = tradeHelper.pairFor(
-                routes[0].from,
-                routes[0].to,
-                routes[0].stable
-            );
+            require(amounts[amounts.length - 1] >= amountOutMin, "BaseV1Router: INSUFFICIENT_OUTPUT_AMOUNT");
+            address _pair = tradeHelper.pairFor(routes[0].from, routes[0].to, routes[0].stable);
             _safeTransferFrom(routes[0].from, msg.sender, _pair, amounts[0]);
             _swap(amounts, routes, to);
         }
     }
 
-    function exactInput(
-        IRouterV3.ExactInputParams memory params
-    )
+    function exactInput(IRouterV3.ExactInputParams memory params)
         external
         payable
         returns (
@@ -334,51 +255,51 @@ contract GlobalRouter {
     -------------------------------
     ---------------------------- */
 
-    function getAmountOutStable(
-        uint amountIn,
-        address tokenIn,
-        address tokenOut
-    ) external view returns (uint amount) {
+    function getAmountOutStable(uint256 amountIn, address tokenIn, address tokenOut)
+        external
+        view
+        returns (uint256 amount)
+    {
         return tradeHelper.getAmountOutStable(amountIn, tokenIn, tokenOut);
     }
-    function getAmountOutVolatile(
-        uint amountIn,
-        address tokenIn,
-        address tokenOut
-    ) external view returns (uint amount) {
+
+    function getAmountOutVolatile(uint256 amountIn, address tokenIn, address tokenOut)
+        external
+        view
+        returns (uint256 amount)
+    {
         return tradeHelper.getAmountOutVolatile(amountIn, tokenIn, tokenOut);
     }
-    function getAmountOut(
-        uint amountIn,
-        address tokenIn,
-        address tokenOut
-    ) external view returns (uint amount, bool stable) {
+
+    function getAmountOut(uint256 amountIn, address tokenIn, address tokenOut)
+        external
+        view
+        returns (uint256 amount, bool stable)
+    {
         return tradeHelper.getAmountOut(amountIn, tokenIn, tokenOut);
     }
-    function getAmountsOut(
-        uint amountIn,
-        ITradeHelper.Route[] memory routes
-    ) external view returns (uint[] memory amounts) {
+
+    function getAmountsOut(uint256 amountIn, ITradeHelper.Route[] memory routes)
+        external
+        view
+        returns (uint256[] memory amounts)
+    {
         return tradeHelper.getAmountsOut(amountIn, routes);
     }
-    function getAmountInStable(
-        uint amountOut,
-        address tokenIn,
-        address tokenOut
-    ) external view returns (uint amountIn) {
+
+    function getAmountInStable(uint256 amountOut, address tokenIn, address tokenOut)
+        external
+        view
+        returns (uint256 amountIn)
+    {
         return tradeHelper.getAmountInStable(amountOut, tokenIn, tokenOut);
     }
-    function pairFor(
-        address tokenA,
-        address tokenB,
-        bool stable
-    ) external view returns (address pair) {
+
+    function pairFor(address tokenA, address tokenB, bool stable) external view returns (address pair) {
         return tradeHelper.pairFor(tokenA, tokenB, stable);
     }
-    function sortTokens(
-        address tokenA,
-        address tokenB
-    ) external view returns (address token0, address token1) {
+
+    function sortTokens(address tokenA, address tokenB) external view returns (address token0, address token1) {
         return tradeHelper.sortTokens(tokenA, tokenB);
     }
 
@@ -388,29 +309,21 @@ contract GlobalRouter {
     -------------------------------
     ---------------------------- */
 
-    function _safeTransferFrom(
-        address token,
-        address from,
-        address to,
-        uint256 value
-    ) internal {
+    function _safeTransferFrom(address token, address from, address to, uint256 value) internal {
         require(token.code.length > 0);
-        (bool success, bytes memory data) = token.call(
-            abi.encodeWithSelector(erc20.transferFrom.selector, from, to, value)
-        );
+        (bool success, bytes memory data) =
+            token.call(abi.encodeWithSelector(erc20.transferFrom.selector, from, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))));
     }
 
-    function _safeTransferETH(address to, uint value) internal {
-        (bool success, ) = to.call{value: value}(new bytes(0));
+    function _safeTransferETH(address to, uint256 value) internal {
+        (bool success,) = to.call{value: value}(new bytes(0));
         require(success, "TransferHelper: ETH_TRANSFER_FAILED");
     }
 
     function _safeTransfer(address token, address to, uint256 value) internal {
         require(token.code.length > 0);
-        (bool success, bytes memory data) = token.call(
-            abi.encodeWithSelector(erc20.transfer.selector, to, value)
-        );
+        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(erc20.transfer.selector, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))));
     }
 }

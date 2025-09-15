@@ -33,38 +33,13 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         VotingEscrow.DepositType deposit_type,
         uint256 ts
     );
-    event Withdraw(
-        address indexed provider,
-        uint256 tokenId,
-        uint256 value,
-        uint256 ts
-    );
+    event Withdraw(address indexed provider, uint256 tokenId, uint256 value, uint256 ts);
     event Supply(uint256 prevSupply, uint256 supply);
-    event Transfer(
-        address indexed from,
-        address indexed to,
-        uint256 indexed tokenId
-    );
-    event Approval(
-        address indexed owner,
-        address indexed approved,
-        uint256 indexed tokenId
-    );
-    event ApprovalForAll(
-        address indexed owner,
-        address indexed operator,
-        bool approved
-    );
-    event DelegateChanged(
-        address indexed delegator,
-        address indexed fromDelegate,
-        address indexed toDelegate
-    );
-    event DelegateVotesChanged(
-        address indexed delegate,
-        uint256 previousBalance,
-        uint256 newBalance
-    );
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
+    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
+    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
+    event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
 
     function setUp() public {
         deployer = address(this);
@@ -101,12 +76,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         assertEq(votingEscrow.decimals(), 18);
     }
 
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -250,11 +220,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.expectEmit(true, true, true, false);
         emit Transfer(address(0), user2, 1);
 
-        uint256 tokenId = votingEscrow.create_lock_for(
-            LOCK_AMOUNT,
-            LOCK_DURATION,
-            user2
-        );
+        uint256 tokenId = votingEscrow.create_lock_for(LOCK_AMOUNT, LOCK_DURATION, user2);
 
         // Token should belong to user2, not user1 who paid
         assertEq(votingEscrow.ownerOf(tokenId), user2);
@@ -400,11 +366,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint256 tokenId = votingEscrow.create_lock_for(
-            LOCK_AMOUNT,
-            LOCK_DURATION,
-            user2
-        );
+        uint256 tokenId = votingEscrow.create_lock_for(LOCK_AMOUNT, LOCK_DURATION, user2);
 
         assertEq(tokenId, 1);
         assertEq(votingEscrow.ownerOf(tokenId), user2);
@@ -424,18 +386,11 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         uint256 initialBalance = votingEscrow.balanceOfNFT(tokenId);
 
         vm.expectEmit(true, false, false, true);
-        emit Deposit(
-            user1,
-            tokenId,
-            LOCK_AMOUNT,
-            0,
-            VotingEscrow.DepositType.DEPOSIT_FOR_TYPE,
-            block.timestamp
-        );
+        emit Deposit(user1, tokenId, LOCK_AMOUNT, 0, VotingEscrow.DepositType.DEPOSIT_FOR_TYPE, block.timestamp);
 
         votingEscrow.deposit_for(tokenId, LOCK_AMOUNT);
 
-        (int128 amount, ) = votingEscrow.locked(tokenId);
+        (int128 amount,) = votingEscrow.locked(tokenId);
         assertEq(uint256(int256(amount)), LOCK_AMOUNT * 2);
         assertGt(votingEscrow.balanceOfNFT(tokenId), initialBalance);
 
@@ -456,7 +411,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
 
         votingEscrow.deposit_for(tokenId, LOCK_AMOUNT);
 
-        (int128 amount, ) = votingEscrow.locked(tokenId);
+        (int128 amount,) = votingEscrow.locked(tokenId);
         assertEq(uint256(int256(amount)), LOCK_AMOUNT * 2);
         assertGt(votingEscrow.balanceOfNFT(tokenId), initialBalance);
 
@@ -471,7 +426,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
 
         votingEscrow.increase_amount(tokenId, LOCK_AMOUNT);
 
-        (int128 amount, ) = votingEscrow.locked(tokenId);
+        (int128 amount,) = votingEscrow.locked(tokenId);
         assertEq(uint256(int256(amount)), LOCK_AMOUNT * 2);
 
         vm.stopPrank();
@@ -585,10 +540,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         uint256 balance2 = votingEscrow.balanceOfNFT(tokenId);
 
         // Query historical balance
-        uint256 historicalBalance = votingEscrow.balanceOfNFTAt(
-            tokenId,
-            timestamp1
-        );
+        uint256 historicalBalance = votingEscrow.balanceOfNFTAt(tokenId, timestamp1);
 
         assertApproxEqAbs(historicalBalance, balance1, 1e15); // Small margin for rounding
         assertLt(balance2, balance1);
@@ -613,8 +565,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         assertGt(totalAfterSecond, totalAfterFirst);
 
         // Verify individual balances sum approximately to total
-        uint256 sum = votingEscrow.balanceOfNFT(tokenId1) +
-            votingEscrow.balanceOfNFT(tokenId2);
+        uint256 sum = votingEscrow.balanceOfNFT(tokenId1) + votingEscrow.balanceOfNFT(tokenId2);
         assertApproxEqAbs(sum, totalAfterSecond, 1e15);
     }
 
@@ -691,26 +642,23 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         uint256 tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
         uint256 tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
 
-        (int128 amount1Before, ) = votingEscrow.locked(tokenId1);
-        (int128 amount2Before, ) = votingEscrow.locked(tokenId2);
+        (int128 amount1Before,) = votingEscrow.locked(tokenId1);
+        (int128 amount2Before,) = votingEscrow.locked(tokenId2);
 
         assertEq(votingEscrow.balanceOf(user1), 2); // Two NFTs initially
 
         votingEscrow.merge(tokenId1, tokenId2);
 
-        (int128 amount2After, ) = votingEscrow.locked(tokenId2);
+        (int128 amount2After,) = votingEscrow.locked(tokenId2);
 
         // Check that amounts were combined
-        assertEq(
-            uint256(int256(amount2After)),
-            uint256(int256(amount1Before)) + uint256(int256(amount2Before))
-        );
+        assertEq(uint256(int256(amount2After)), uint256(int256(amount1Before)) + uint256(int256(amount2Before)));
 
         // Check that one NFT was burned
         assertEq(votingEscrow.balanceOf(user1), 1);
 
         // Check that the first token's locked amount is zero (burned)
-        (int128 amount1After, ) = votingEscrow.locked(tokenId1);
+        (int128 amount1After,) = votingEscrow.locked(tokenId1);
         assertEq(uint256(int256(amount1After)), 0);
 
         vm.stopPrank();
@@ -932,10 +880,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         lithos.approve(address(votingEscrow), LOCK_AMOUNT * 3);
 
         uint256 tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        uint256 tokenId2 = votingEscrow.create_lock(
-            LOCK_AMOUNT,
-            LOCK_DURATION * 2
-        );
+        uint256 tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION * 2);
         uint256 tokenId3 = votingEscrow.create_lock(LOCK_AMOUNT, WEEK);
 
         assertEq(votingEscrow.balanceOf(user1), 3);
@@ -998,10 +943,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
 
         // Create multiple locks
         uint256 tokenId1 = votingEscrow.create_lock(LOCK_AMOUNT, LOCK_DURATION);
-        uint256 tokenId2 = votingEscrow.create_lock(
-            LOCK_AMOUNT * 2,
-            LOCK_DURATION
-        );
+        uint256 tokenId2 = votingEscrow.create_lock(LOCK_AMOUNT * 2, LOCK_DURATION);
 
         assertEq(votingEscrow.balanceOf(user1), 2);
 
@@ -1009,7 +951,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         votingEscrow.merge(tokenId1, tokenId2);
         assertEq(votingEscrow.balanceOf(user1), 1);
 
-        (int128 mergedAmount, ) = votingEscrow.locked(tokenId2);
+        (int128 mergedAmount,) = votingEscrow.locked(tokenId2);
         assertEq(uint256(int256(mergedAmount)), LOCK_AMOUNT * 3);
 
         // Split

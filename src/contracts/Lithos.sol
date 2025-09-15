@@ -16,11 +16,7 @@ contract Lithos is ILithos {
     address public minter;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 
     constructor() {
         minter = msg.sender;
@@ -55,11 +51,7 @@ contract Lithos is ILithos {
         return true;
     }
 
-    function _transfer(
-        address _from,
-        address _to,
-        uint256 _value
-    ) internal returns (bool) {
+    function _transfer(address _from, address _to, uint256 _value) internal returns (bool) {
         balanceOf[_from] -= _value;
         unchecked {
             balanceOf[_to] += _value;
@@ -72,11 +64,7 @@ contract Lithos is ILithos {
         return _transfer(msg.sender, _to, _value);
     }
 
-    function transferFrom(
-        address _from,
-        address _to,
-        uint256 _value
-    ) external returns (bool) {
+    function transferFrom(address _from, address _to, uint256 _value) external returns (bool) {
         uint256 allowed_from = allowance[_from][msg.sender];
         if (allowed_from != type(uint256).max) {
             allowance[_from][msg.sender] -= _value;

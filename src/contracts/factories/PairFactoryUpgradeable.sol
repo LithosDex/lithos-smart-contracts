@@ -20,8 +20,7 @@ contract PairFactoryUpgradeable is IPairFactory, OwnableUpgradeable {
     address public dibs; // referral fee handler
     address public stakingFeeHandler; // staking fee handler
 
-    mapping(address => mapping(address => mapping(bool => address)))
-        public getPair;
+    mapping(address => mapping(address => mapping(bool => address))) public getPair;
     address[] public allPairs;
     mapping(address => bool) public isPair; // simplified check if its a pair, given that `stable` flag might not be available in peripherals
 
@@ -29,13 +28,7 @@ contract PairFactoryUpgradeable is IPairFactory, OwnableUpgradeable {
     address internal _temp1;
     bool internal _temp;
 
-    event PairCreated(
-        address indexed token0,
-        address indexed token1,
-        bool stable,
-        address pair,
-        uint
-    );
+    event PairCreated(address indexed token0, address indexed token1, bool stable, address pair, uint256);
 
     modifier onlyManager() {
         require(msg.sender == feeManager);
@@ -43,6 +36,7 @@ contract PairFactoryUpgradeable is IPairFactory, OwnableUpgradeable {
     }
 
     constructor() {}
+
     function initialize() public initializer {
         __Ownable_init(msg.sender);
         isPaused = false;
@@ -53,7 +47,7 @@ contract PairFactoryUpgradeable is IPairFactory, OwnableUpgradeable {
         MAX_REFERRAL_FEE = 1200; // 12%
     }
 
-    function allPairsLength() external view returns (uint) {
+    function allPairsLength() external view returns (uint256) {
         return allPairs.length;
     }
 
@@ -116,15 +110,9 @@ contract PairFactoryUpgradeable is IPairFactory, OwnableUpgradeable {
         return (_temp0, _temp1, _temp);
     }
 
-    function createPair(
-        address tokenA,
-        address tokenB,
-        bool stable
-    ) external returns (address pair) {
+    function createPair(address tokenA, address tokenB, bool stable) external returns (address pair) {
         require(tokenA != tokenB, "IA"); // Pair: IDENTICAL_ADDRESSES
-        (address token0, address token1) = tokenA < tokenB
-            ? (tokenA, tokenB)
-            : (tokenB, tokenA);
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), "ZA"); // Pair: ZERO_ADDRESS
         require(getPair[token0][token1][stable] == address(0), "PE"); // Pair: PAIR_EXISTS - single check is sufficient
         bytes32 salt = keccak256(abi.encodePacked(token0, token1, stable)); // notice salt includes stable as well, 3 parameters

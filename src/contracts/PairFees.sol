@@ -20,24 +20,18 @@ contract PairFees {
 
     function _safeTransfer(address token, address to, uint256 value) internal {
         require(token.code.length > 0);
-        (bool success, bytes memory data) = token.call(
-            abi.encodeWithSelector(IERC20.transfer.selector, to, value)
-        );
+        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transfer.selector, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))));
     }
 
     // Allow the pair to transfer fees to users
-    function claimFeesFor(
-        address recipient,
-        uint amount0,
-        uint amount1
-    ) external {
+    function claimFeesFor(address recipient, uint256 amount0, uint256 amount1) external {
         require(msg.sender == pair);
         if (amount0 > 0) _safeTransfer(token0, recipient, amount0);
         if (amount1 > 0) _safeTransfer(token1, recipient, amount1);
     }
 
-    function processStakingFees(uint amount, bool isTokenZero) external {
+    function processStakingFees(uint256 amount, bool isTokenZero) external {
         require(msg.sender == pair);
         if (amount > 0 && isTokenZero) {
             toStake0 += amount;

@@ -17,11 +17,7 @@ contract LithosTest is Test {
     uint256 constant INITIAL_MINT_AMOUNT = 50 * 1e6 * 1e18; // 50M tokens
 
     event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 
     function setUp() public {
         deployer = address(this);
@@ -447,10 +443,7 @@ contract LithosTest is Test {
 
         lithos.transferFrom(recipient, user2, 1500 * 1e18);
 
-        assertEq(
-            lithos.balanceOf(recipient),
-            INITIAL_MINT_AMOUNT - 1000 * 1e18 - 1500 * 1e18
-        );
+        assertEq(lithos.balanceOf(recipient), INITIAL_MINT_AMOUNT - 1000 * 1e18 - 1500 * 1e18);
         assertEq(lithos.balanceOf(user1), 1000 * 1e18);
         assertEq(lithos.balanceOf(user2), 1500 * 1e18);
         assertEq(lithos.allowance(recipient, user1), 500 * 1e18);
@@ -580,9 +573,7 @@ contract LithosTest is Test {
         assertEq(lithos.totalSupply(), amount1 + amount2 + INITIAL_MINT_AMOUNT);
 
         // Total supply should equal sum of all balances
-        uint256 totalBalance = lithos.balanceOf(user1) +
-            lithos.balanceOf(user2) +
-            lithos.balanceOf(recipient);
+        uint256 totalBalance = lithos.balanceOf(user1) + lithos.balanceOf(user2) + lithos.balanceOf(recipient);
         assertEq(lithos.totalSupply(), totalBalance);
     }
 
@@ -590,9 +581,7 @@ contract LithosTest is Test {
         lithos.mint(user1, 2000 * 1e18);
         lithos.mint(user2, 1000 * 1e18);
 
-        uint256 initialTotal = lithos.balanceOf(user1) +
-            lithos.balanceOf(user2) +
-            lithos.balanceOf(user3);
+        uint256 initialTotal = lithos.balanceOf(user1) + lithos.balanceOf(user2) + lithos.balanceOf(user3);
 
         // Transfer between users
         vm.prank(user1);
@@ -601,9 +590,7 @@ contract LithosTest is Test {
         vm.prank(user2);
         lithos.transfer(user1, 300 * 1e18);
 
-        uint256 finalTotal = lithos.balanceOf(user1) +
-            lithos.balanceOf(user2) +
-            lithos.balanceOf(user3);
+        uint256 finalTotal = lithos.balanceOf(user1) + lithos.balanceOf(user2) + lithos.balanceOf(user3);
 
         assertEq(initialTotal, finalTotal);
         assertEq(lithos.totalSupply(), finalTotal);
