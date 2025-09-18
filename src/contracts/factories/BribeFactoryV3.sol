@@ -36,7 +36,7 @@ contract BribeFactoryV3 is OwnableUpgradeable {
         voter = _voter;
 
         //bribe default tokens
-        defaultRewardToken.push(address(0xF4C8E32EaDEC4BFe97E0F595AdD0f4450a863a11)); // $lith
+        defaultRewardToken.push(address(0x82bF51B4f3036bA6c46d7195B4140c3CB6cCF0EA)); // $lith
         defaultRewardToken.push(address(0x6100E367285b01F48D07953803A2d8dCA5D19873)); // $wxpl
 
         // registry to check accesses

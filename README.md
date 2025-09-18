@@ -16,30 +16,35 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 ### Testnet (Plasma)
 
 #### Core DEX
+
 - **PairFactory**: [0xF1471A005b7557C1d472f0a060040f93ae074297](https://testnet.plasmascan.to/address/0xF1471A005b7557C1d472f0a060040f93ae074297)
 - **RouterV2** (Main): [0x84E8a39C85F645c7f7671689a9337B33Bdc784f8](https://testnet.plasmascan.to/address/0x84E8a39C85F645c7f7671689a9337B33Bdc784f8)
 - **GlobalRouter**: [0x48406768424369b69Cc52886A6520a1839CC426E](https://testnet.plasmascan.to/address/0x48406768424369b69Cc52886A6520a1839CC426E)
 - **TradeHelper**: [0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e](https://testnet.plasmascan.to/address/0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e)
 
 #### ve(3,3) Governance
-- **VotingEscrow**: [0x592FA200950B053aCE9Be6d4FB3F58b1763898C0](https://testnet.plasmascan.to/address/0x592FA200950B053aCE9Be6d4FB3F58b1763898C0)
+
+- **VotingEscrow**: [0x349D59Dca5104189AF1fF2fac45108d66F44884F](https://testnet.plasmascan.to/address/0x349D59Dca5104189AF1fF2fac45108d66F44884F)
 - **VeArtProxyUpgradeable**: [0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1](https://testnet.plasmascan.to/address/0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1)
-- **RewardsDistributor**: [0x3b32FEDe4309265Cacc601368787F4264C69070e](https://testnet.plasmascan.to/address/0x3b32FEDe4309265Cacc601368787F4264C69070e)
+- **RewardsDistributor**: [0x75c703c4BA4dcFdbc431250B30aaed1c111b330c](https://testnet.plasmascan.to/address/0x75c703c4BA4dcFdbc431250B30aaed1c111b330c)
 - **PermissionsRegistry**: [0x3A908c6095bD1A69b651D7B32AB42806528d88c8](https://testnet.plasmascan.to/address/0x3A908c6095bD1A69b651D7B32AB42806528d88c8)
-- **VoterV3**: [0xb7cF73026b3a35955081BB8D9025aE13C50C74cd](https://testnet.plasmascan.to/address/0xb7cF73026b3a35955081BB8D9025aE13C50C74cd)
+- **VoterV3**: [0x0b8Aaf2C51EA5c07566D96E334B37FEEcCAbac0d](https://testnet.plasmascan.to/address/0x0b8Aaf2C51EA5c07566D96E334B37FEEcCAbac0d)
 - **GaugeFactoryV2**: [0x23e7E5f66Ff4396F0D95ad630f4297D768193DE1](https://testnet.plasmascan.to/address/0x23e7E5f66Ff4396F0D95ad630f4297D768193DE1)
-- **BribeFactoryV3**: [0xC4B0BeCF35366629712FCEfcB4A88727236A531E](https://testnet.plasmascan.to/address/0xC4B0BeCF35366629712FCEfcB4A88727236A531E)
-- **MinterUpgradeable**: [0x6e74245E7E7582790bE61a1a16b459945cCf65A2](https://testnet.plasmascan.to/address/0x6e74245E7E7582790bE61a1a16b459945cCf65A2)
+- **BribeFactoryV3**: [0xBDF9948D5AE1D6e97CF29bD36cBaDF006EfD66CF](https://testnet.plasmascan.to/address/0xBDF9948D5AE1D6e97CF29bD36cBaDF006EfD66CF)
+- **MinterUpgradeable**: [0x3739bf532c0ACe36fB081599224c0f81676407E5](https://testnet.plasmascan.to/address/0x3739bf532c0ACe36fB081599224c0f81676407E5)
 
 #### Tokens
-- **LITH**: [0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51](https://testnet.plasmascan.to/address/0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51)
+
+- **LITH**: [0x82bF51B4f3036bA6c46d7195B4140c3CB6cCF0EA](https://testnet.plasmascan.to/address/0x82bF51B4f3036bA6c46d7195B4140c3CB6cCF0EA)
 - **WXPL**: [0x6100E367285b01F48D07953803A2d8dCA5D19873](https://testnet.plasmascan.to/address/0x6100E367285b01F48D07953803A2d8dCA5D19873)
 - **TEST**: [0xb89cdFf170b45797BF93536773113861EBEABAfa](https://testnet.plasmascan.to/address/0xb89cdFf170b45797BF93536773113861EBEABAfa) _(Test token for bribes contract)_
 
 > **Note**: RouterV2 is the primary contract for frontend integration. It handles all liquidity and swap operations.
 
 #### Pairs/Gauge
+
 Pair Index 0
+
 - Token0: 0x3576E9157cF2e1dB071b3587dEbBFb67D9e0962d (WXPL)
 - Token1: 0x726A66766A784A582F5f48E81A5772DD6bD1F34E (USDT)
 - Pair: 0xf89834bA86E8D74c7E691796F80badc817D0c764
@@ -47,7 +52,6 @@ Pair Index 0
 - Internal Bribe: 0xf9ED85d7c293B9773f9f84A285f8a950A9C21d86
 - External Bribe: 0xf1f95E914cED73f95F1323CFd8F8f0bdf902bC06
 - Pool Type: Volatile
-
 
 ## Frontend Integration Guide
 
