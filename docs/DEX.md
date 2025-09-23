@@ -46,66 +46,78 @@ Total Fee: $18
 └── LPs: $11.09
 ```
 
-## User Actions
+## LP Token Mechanics
+
+### Minting (Adding Liquidity)
+When liquidity is added via `RouterV2.addLiquidity()`:
+1. Router transfers tokens to the Pair contract
+2. Pair calculates LP tokens to mint:
+   - **First deposit**: `liquidity = sqrt(amount0 × amount1) - MINIMUM_LIQUIDITY`
+   - **Subsequent**: `liquidity = min((amount0 × totalSupply) / reserve0, (amount1 × totalSupply) / reserve1)`
+3. LP tokens are minted to the liquidity provider's address
+
+### Burning (Removing Liquidity)
+When liquidity is removed via `RouterV2.removeLiquidity()`:
+1. LP tokens are burned
+2. Proportional share is returned: `amount = (lpTokens × poolBalance) / totalSupply`
+3. **Important**: Fees are NOT automatically claimed - `claimFees()` must be called separately
+
+### Fee Accounting System
+
+The protocol uses an index-based system to track fees without constant token transfers:
+
+| Component | Purpose |
+|-----------|---------|
+| `index0/index1` | Global fee accumulator per LP token |
+| `supplyIndex0/1[user]` | User's last synced position |
+| `claimable0/1[user]` | Accumulated unclaimed fees |
+
+#### When Fee Accounting Updates
+Fee positions are automatically **calculated and stored** (but NOT claimed) when:
+- **Minting LP tokens**: Updates fee position before increasing balance
+- **Burning LP tokens**: Updates fee position before decreasing balance
+- **Transferring LP tokens**: Updates both sender and receiver positions
+
+#### How Fees Accumulate
+```
+1. Swap occurs → fees collected → global index increases
+2. User action triggers _updateFor(address)
+3. System calculates: delta = globalIndex - userIndex
+4. Adds to claimable: fees = (lpBalance × delta) / 1e18
+5. Updates user index to current global index
+```
+
+### Important: Manual Fee Claiming Required
+
+**Fees are NEVER automatically sent to users.** The protocol only tracks owed amounts in internal mappings:
+- `claimable0[address]`: Unclaimed token0 fees
+- `claimable1[address]`: Unclaimed token1 fees
+
+To receive fees, `Pair.claimFees()` must be explicitly called, which:
+1. Reads claimable balances
+2. Resets them to zero
+3. Transfers tokens from PairFees contract to the caller
+
+This design is gas-efficient and prevents dust attacks, but requires active claiming.
+
+## Actions
 
 ### Traders
 - **Swap**: `GlobalRouter.swapExactTokensForTokens()`
 
 ### Liquidity Providers
 - **Add**: `RouterV2.addLiquidity()` or `addLiquidityETH()`
-- **Claim**: `Pair.claimFees()`
-- **Remove**: Burns LP tokens, auto-claims fees
+- **Claim**: `Pair.claimFees()` - must be called manually to receive fees
+- **Remove**: `RouterV2.removeLiquidity()` - burns LP tokens, returns liquidity (fees must be claimed separately)
 
 ### Protocol
+- **Pair Creation**: `PairFactory.createPair(tokenA, tokenB, stable)`
+  - **Stable**: x³y+y³x=k (pegged assets)
+  - **Volatile**: xy=k (non-correlated)
 - **Collect staking fees**: `Pair.claimStakingFees()`
 
-## Setup Checklist
-
-### Initial
-1. Deploy PairFactory
-2. Set fees: stable (4), volatile (18)
-3. Set staking (3000) and referral handlers
-4. Deploy routers
-
-### Ongoing
-- Monitor fees and TVL
-- Adjust parameters within limits
-- Manage emergency pauser
-
-## Pair Creation
-
-```solidity
-PairFactory.createPair(tokenA, tokenB, stable)
-```
-
-- **Stable**: x³y+y³x=k (pegged assets)
-- **Volatile**: xy=k (non-correlated)
-
-## Emergency Actions
-
-```solidity
-// Halt trading
-PairFactory.setPause(true)
-
-// Adjust fees rapidly
-PairFactory.setFee(true, 1)   // 0.01% stable
-PairFactory.setFee(false, 5)  // 0.05% volatile
-
-// Resume
-PairFactory.setPause(false)
-```
-
-## Monitoring
-
-### Key Metrics
-| Metric | Target | Alert |
-|--------|--------|-------|
-| Swap Success | >99.5% | <99% |
-| TVL Concentration | <40% per pair | >40% |
-| Slippage | <2% avg | >5% |
-| Gas/Swap | <$20 | >$50 |
-
-### Alerts
-- TVL drop >20% in 24h
-- Fee accumulation stops
-- Swap failures >1% hourly
+### Emergency
+- **Halt trading**: `PairFactory.setPause(true)`
+- **Adjust stable fees**: `PairFactory.setFee(true, 1)` - sets to 0.01%
+- **Adjust volatile fees**: `PairFactory.setFee(false, 5)` - sets to 0.05%
+- **Resume trading**: `PairFactory.setPause(false)`

@@ -4,7 +4,7 @@
 
 ### Emissions
 | Parameter | Default | Range | Setting |
-|-----------|---------|-------|------|
+|-----------|---------|-------|---------|
 | **Weekly** | 2.6M LITHOS | 2-3M | `Minter.setEmission()` |
 | **Decay** | 99% | 98-99.5% | `Minter.setEmission(990)` |
 | **Tail** | 0.2% supply | Min | Automatic |
@@ -13,190 +13,115 @@
 
 ### Voting
 | Parameter | Default | Max | Setting |
-|-----------|---------|-----|------|
+|-----------|---------|-----|---------|
 | **Vote Delay** | 0 | 7 days | `VoterV3.setVoteDelay()` |
 | **Whitelist** | - | - | `VoterV3.whitelist(tokens[])` |
 
-## ve(3,3) Flywheel
-
-```
-Lock LITHOS → Get veNFT → Vote for Pools
-     ↑                           ↓
-High APR ← Earn Fees ← Direct Emissions
-```
-
-**Key**: Fees go to voters, not LPs
-
-### Lock Rules
-- **Duration**: 1-104 weeks
-- **Power**: Linear decay
-- **NFT**: Transferable, splittable
+### System Constants
+| Constant | Value |
+|----------|-------|
+| **Epoch Duration** | 1 week (604,800 seconds) |
+| **Max Lock Period** | 104 weeks (2 years) |
+| **Min Lock Period** | 1 week |
+| **Vote Reset** | Weekly at epoch boundary |
 
 ## Core Contracts
 
-| Contract | Supply/Purpose | Key Functions |
-|----------|---------------|---------------|
-| **LITHOS** | 50M initial | `initialMint()`, `setMinter()` |
-| **VotingEscrow** | veNFT locks | `create_lock()`, `merge()`, `split()` |
-| **Minter** | Emissions | `update_period()`, `setEmission()` |
-| **VoterV3** | Voting hub | `vote()`, `claimFees()`, `claimBribes()` |
-| **Gauges** | LP rewards | `deposit()`, `getReward()` |
+| Contract | Purpose | Key Functions |
+|----------|---------|---------------|
+| **LITHOS** | ERC20 token (50M initial) | `initialMint()`, `setMinter()` |
+| **VotingEscrow** | veNFT lock management | `create_lock()`, `merge()`, `split()` |
+| **Minter** | Emission controller | `update_period()`, `setEmission()` |
+| **VoterV3** | Voting & distribution hub | `vote()`, `claimFees()`, `claimBribes()` |
+| **Gauges** | LP staking rewards | `deposit()`, `getReward()` |
 | **Bribes** | Vote incentives | `notifyRewardAmount()` |
 
-## Emission Schedule
+## Emissions & Fees
 
-**Weekly Decay**: 2.6M → 2.574M → 2.548M (99% each week)
-
-**Distribution**:
+### Weekly Emission Distribution
 ```
-Weekly Emission
+Weekly Emission (2.6M LITHOS, 99% decay/week)
 ├── Team: 4%
-├── Rebase: up to 30%
-└── Gauges: ~66%
+├── Rebase: min(locked%, 30%)
+└── Gauges: ~66% to voted pools
 ```
 
-**Rebase**: min(locked%, 30%) × emissions
-
-## Voting System
-
-### Actions
-```solidity
-vote(tokenId, pools[], weights[])  // Weekly voting
-reset(tokenId)                      // Clear votes
-poke(tokenId)                       // Update power
-claimFees(pairs[], tokens[][], id)  // Claim fees
-claimBribes(bribes[], tokens[][], id) // Claim bribes
+### Trading Fee Split
+```
+Total Fee (0.04% stable, 0.18% volatile)
+├── Referral: 12% of fee
+├── Staking (veNFT voters): 30% of remaining
+└── LPs: ~58% of total
 ```
 
-### Rules
-- Vote weekly (resets each epoch)
-- Weights sum to 10000
-- Power = veNFT balance
+## Referral System (Dibs)
 
-## Gauges
+| Component | Description |
+|-----------|-------------|
+| **Interface** | `IDibs.reward()` processes referral payments |
+| **Fee Share** | 12% of trading fees (max configurable) |
+| **Integration** | Auto-processed during swaps via `Pair._sendFees()` |
+| **Configuration** | `PairFactory.setDibs(address)` |
 
-### Types
-- **Type 0**: AMM pairs
-- **Type 1**: Concentrated liquidity
+## Voting & Rewards
 
-### Management
-```solidity
-VoterV3.createGauge(pool, type)
-VoterV3.killGauge(gauge)    // Emergency
-VoterV3.reviveGauge(gauge)  // Re-enable
-```
+### Voting Mechanics
+- **Frequency**: Weekly reset at epoch boundary
+- **Weight**: Must sum to 10000 (100%)
+- **Power**: Based on veNFT balance at vote time
 
-### LP Flow
-1. Add liquidity → Get LP tokens
-2. Stake in gauge → Earn emissions
-3. `Gauge.getReward()` anytime
+### Gauge Types
+- **Type 0**: Standard AMM pairs
+- **Type 1**: Concentrated liquidity pools
 
-## Bribes
+### Bribes
+Projects incentivize votes by depositing rewards that voters claim proportionally:
 
-### Flow
-1. Deposit bribes (for next epoch)
-2. Voters direct emissions
-3. Claim after epoch ends
-
-```solidity
-Bribe.notifyRewardAmount(token, amount)
-```
-
-### Efficiency
-- **Good**: $1 bribe → $1.2+ emissions
-- **Bad**: <$1 emissions per $1 bribe
-
-## Fee Distribution
-
-**Traditional AMM**: 100% fees to LPs
-**ve(3,3)**: Fees to veNFT voters
-
-```
-Trading Fee
-├── Referral: 12%
-├── Staking: 30% of remaining
-└── LPs: ~58%
-```
-
-veNFT holders earn from pairs they vote for.
-
-## Launch Phases
-
-### Week 0: Setup
-- Initial mint 50M
-- Create partner veNFTs
-- Deploy core pairs
-
-### Week 1-2: Soft Launch
-- Partners vote
-- First emissions
-- Monitor metrics
-
-### Week 3+: Public
-- Open veNFT creation
-- Launch UI
-- Start bribes
-
-### Initial Settings
-```
-Weekly: 2.6M LITHOS
-Decay: 99%
-Rebase: 30% max
-Team: 4%
-```
+| Efficiency | Ratio | Description |
+|------------|-------|-------------|
+| **Good** | >1.2x | $1 bribe → $1.20+ emissions |
+| **Break-even** | 1.0x | $1 bribe → $1 emissions |
+| **Poor** | <1.0x | Bribe cost exceeds emissions |
 
 ## Operations
 
-### Weekly (Thursday 00:00 UTC)
-```solidity
-Minter.update_period()      // New epoch
-VoterV3.distributeAll()     // Send rewards
-```
+### Initial Configuration
+| Parameter | Setting |
+|-----------|---------|
+| **Weekly Emission** | 2.6M LITHOS |
+| **Decay Rate** | 99% |
+| **Max Rebase** | 30% |
+| **Team Share** | 4% |
 
-### Monitoring
+### Weekly Maintenance (Thursday 00:00 UTC)
+- **Start Epoch**: `Minter.update_period()`
+- **Distribute**: `VoterV3.distributeAll()`
+
+### Monitoring Targets
 | Metric | Target | Alert |
 |--------|--------|-------|
-| Lock Rate | >40% | <25% |
-| Vote Participation | >60% | <40% |
-| Bribe Efficiency | 1.2x | <1x |
-| Concentration | <50% | >50% |
+| **Lock Rate** | >40% | <25% |
+| **Vote Participation** | >60% | <40% |
+| **Bribe Efficiency** | >1.2x | <1.0x |
 
-### Emergency
-```solidity
-VoterV3.killGauge(gauge)           // Stop gauge
-Gauge.activateEmergencyMode()      // Withdrawals only
-VoterV3.setVoteDelay(604800)       // 7-day delay
-VoterV3.blacklist(tokens[])        // Block tokens
-```
+### Emergency Actions
+- **Stop Gauge**: `VoterV3.killGauge(gauge)`
+- **Emergency Mode**: `Gauge.activateEmergencyMode()`
+- **Vote Delay**: `VoterV3.setVoteDelay(604800)`
+- **Block Tokens**: `VoterV3.blacklist(tokens[])`
 
-## Success Metrics
+## Actions
 
-### Launch (Week 1-4)
-- 30%+ locked
-- $10M+ TVL
-- $50k+ weekly fees
+### Users
+- **Create Lock**: `VotingEscrow.create_lock(amount, weeks)`
+- **Vote**: `VoterV3.vote(tokenId, pools[], weights[])`
+- **Claim Fees**: `VoterV3.claimFees(pairs[], tokens[][], tokenId)`
+- **Claim Bribes**: `VoterV3.claimBribes(bribes[], tokens[][], tokenId)`
+- **Stake LP**: `Gauge.deposit(amount)`
+- **Claim Rewards**: `Gauge.getReward()`
 
-### Growth (Month 2-6)
-- 40%+ locked
-- $50M+ TVL
-- $250k+ weekly fees
-
-### Mature (6+ months)
-- 50%+ locked
-- Self-sustaining fees
-- Efficient bribes (1.2x+)
-
-## Quick Reference
-
-### Key Actions
-```solidity
-VotingEscrow.create_lock(amount, weeks)
-VoterV3.vote(id, pools[], weights[])
-VoterV3.claimFees(pairs[], tokens[][], id)
-Gauge.deposit(amount)
-```
-
-### Constants
-- **Epoch**: 1 week (604,800s)
-- **Max Lock**: 104 weeks
-- **Vote Reset**: Weekly
+### Admin
+- **Emissions**: `Minter.setEmission(weeklyAmount)`
+- **Gauges**: `VoterV3.createGauge(pool, type)`
+- **Fees**: `PairFactory.setReferralFee(bps)`
+- **Referrals**: `PairFactory.setDibs(address)`
