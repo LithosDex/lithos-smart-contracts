@@ -12,3 +12,7 @@ out/
 
 # Broadcast
 broadcast/
+
+# macOS
+.DS_STORE
+/src/.DS_STORE
