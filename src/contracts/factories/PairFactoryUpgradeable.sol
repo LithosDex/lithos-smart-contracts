@@ -43,7 +43,7 @@ contract PairFactoryUpgradeable is IPairFactory, OwnableUpgradeable {
         feeManager = msg.sender;
         stableFee = 4; // 0.04%
         volatileFee = 18; // 0.18%
-        stakingNFTFee = 3000; // 30% of stable/volatileFee
+        stakingNFTFee = 0; // staking fee disabled
         MAX_REFERRAL_FEE = 1200; // 12%
     }
 
@@ -70,8 +70,8 @@ contract PairFactoryUpgradeable is IPairFactory, OwnableUpgradeable {
     }
 
     function setStakingFees(uint256 _newFee) external onlyManager {
-        require(_newFee <= 3000);
-        stakingNFTFee = _newFee;
+        require(_newFee == 0, "staking fee disabled");
+        stakingNFTFee = 0;
     }
 
     function setStakingFeeAddress(address _feehandler) external onlyManager {
