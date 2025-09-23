@@ -2,8 +2,9 @@
 pragma solidity 0.8.29;
 
 import "./interfaces/ILithos.sol";
+import "./layerzero/OFTCore.sol";
 
-contract Lithos is ILithos {
+contract Lithos is ILithos, OFTCore {
     string public constant name = "Lithos";
     string public constant symbol = "LITH";
     uint8 public constant decimals = 18;
@@ -18,7 +19,7 @@ contract Lithos is ILithos {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    constructor() {
+    constructor(address _lzEndpoint) OFTCore(_lzEndpoint) {
         minter = msg.sender;
         _mint(msg.sender, 0);
     }
@@ -76,5 +77,39 @@ contract Lithos is ILithos {
         require(msg.sender == minter, "not allowed");
         _mint(account, amount);
         return true;
+    }
+
+    // ========= LayerZero OFT overrides =========
+
+    function circulatingSupply() public view virtual override returns (uint256) {
+        return totalSupply;
+    }
+
+    function _debitFrom(
+        address _from,
+        uint16,
+        bytes memory,
+        uint256 _amount
+    ) internal virtual override returns (uint256) {
+        if (_from != msg.sender) {
+            uint256 allowed = allowance[_from][msg.sender];
+            if (allowed != type(uint256).max) {
+                allowance[_from][msg.sender] = allowed - _amount;
+            }
+        }
+
+        balanceOf[_from] -= _amount;
+        totalSupply -= _amount;
+        emit Transfer(_from, address(0), _amount);
+        return _amount;
+    }
+
+    function _creditTo(
+        uint16,
+        address _toAddress,
+        uint256 _amount
+    ) internal virtual override returns (uint256) {
+        _mint(_toAddress, _amount);
+        return _amount;
     }
 }
