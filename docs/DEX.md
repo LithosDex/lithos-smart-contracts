@@ -1,123 +1,85 @@
 # Lithos DEX Guide
 
-## Protocol Parameters
+## System Overview
+- Dual AMM design: stable pools use `x³y + y³x = k` for pegged assets, volatile pools use `xy = k` for non-correlated pairs.
+- Router-driven UX sends trades and liquidity adds through `RouterV2`, which delegates to `Pair` contracts deployed by `PairFactory`.
+- Gauges sit on top of `Pair` LP tokens; emissions only reach pools that have an active gauge and receive veNFT votes.
+- Fees flow from the pair to `PairFees`, then split between LPs, veNFT stakers, and referral handlers according to factory settings.
 
-### Admin Roles
-| Role | Function | Setting |
-|------|----------|------|
-| **Pauser** | Halt/resume trading | `setPauser()` → `acceptPauser()` |
-| **Fee Manager** | Control fees | `setFeeManager()` → `acceptFeeManager()` |
+## Admin Surfaces
 
-### Trading Fees
-| Type | Default | Max | Setting |
-|------|---------|-----|------|
-| **Stable** | 0.04% | 0.25% | `setFee(true, 4)` |
-| **Volatile** | 0.18% | 0.25% | `setFee(false, 18)` |
+### Roles & Addresses
+| Control | Purpose | How to Update |
+|---------|---------|---------------|
+| **Pauser** | Pause pair creation and router joins | `setPauser(address)` → new pauser calls `acceptPauser()` |
+| **Fee Manager** | Configure trading, staking, referral fees | `setFeeManager(address)` → new manager calls `acceptFeeManager()` |
+| **Staking Fee Recipient** | Receives veNFT staking share | `setStakingFeeAddress(address)` |
+| **Referral Handler (Dibs)** | Processes referral rebates | `setDibs(address)` |
 
-### Fee Distribution
-| Component | Default | Max | Setting |
-|-----------|---------|-----|------|
-| **Referral** | 12% of fee | 12% | `setReferralFee(1200)` |
-| **Staking** | 30% of remaining | 30% | `setStakingFees(3000)` |
-| **LP** | ~58% of fee | - | Automatic |
+### Trading & Fee Parameters
+| Parameter | Default | Max | Function |
+|-----------|---------|-----|----------|
+| Stable swap fee | 0.04% | 0.25% | `setFee(true, 4)` |
+| Volatile swap fee | 0.18% | 0.25% | `setFee(false, 18)` |
+| Referral share | 12% of total fee | 12% | `setReferralFee(1200)` |
+| Staking share | 30% of fees after referral cut | 30% | `setStakingFees(3000)` |
 
-### System Addresses
-- **Staking Handler**: `setStakingFeeAddress(address)`
-- **Referral Handler**: `setDibs(address)`
+## Architecture at a Glance
 
+| Component | Responsibility | Notes |
+|-----------|----------------|-------|
+| **PairFactoryUpgradeable** | Deploys pairs, holds global fee config, pause switch | Emits events consumed by off-chain indexers |
+| **Pair** | Holds reserves, executes swaps, accrues fees | Each pair mints ERC20 LP tokens |
+| **PairFees** | Escrows fee balances until claimed | Called by Pair to transfer owed fees |
+| **GaugeV2** | Stakes LP tokens and streams emissions | Created per pair via `VoterV3` |
+| **RouterV2 / GlobalRouter** | Adds/removes liquidity, multi-hop swaps | Immutable logic once deployed |
 
-## Core Contracts
+## Pair & Gauge Lifecycle
+1. **Create pair**: `PairFactory.createPair(tokenA, tokenB, stable)` deploys the AMM pool.
+2. **Whitelist tokens** (if not already): `VoterV3.whitelist(tokens[])` enables future gauges.
+3. **Create gauge**: `VoterV3.createGauge(pair, 0)` (type `0` for standard AMM) so LPs can stake and receive emissions.
+4. **Vote**: veNFT holders assign weight each epoch; only voted gauges receive weekly emissions from `Minter`.
+5. **Distribute fees**: LPs must trigger `Pair.claimFees()`; veNFT voters receive their share through `VoterV3.distribute()` flows.
 
-| Contract | Purpose | Admin Control |
-|----------|---------|---------------|
-| **GlobalRouter** | Main swap entry | None (immutable) |
-| **TradeHelper** | Route calculation | None (pure utility) |
-| **PairFactory** | Pair management | All fee parameters |
-| **Pair** | Trading pools | Inherits from factory |
-| **PairFees** | Fee distribution | Controlled by Pair |
+## Emission Mechanics
+See `docs/TOKENOMICS.md` for the full emission curve, bootstrap lock flow, and rebase math; operators only need to ensure `Minter.update_period()` runs weekly so gauges receive the funds they vote for.
 
 ## Fee Flow Example
-
-**$10,000 Volatile Swap (0.18% = $18)**
+`$10,000` volatile swap at `0.18%` fee → `$18` total:
 ```
-Total Fee: $18
-├── Referral (12%): $2.16
-├── Staking (30% of remaining): $4.75
-└── LPs: $11.09
+Referral (12%)           $2.16
+Staking share (30%)      $4.75
+LPs (balance)           $11.09
 ```
 
 ## LP Token Mechanics
 
-### Minting (Adding Liquidity)
-When liquidity is added via `RouterV2.addLiquidity()`:
-1. Router transfers tokens to the Pair contract
-2. Pair calculates LP tokens to mint:
-   - **First deposit**: `liquidity = sqrt(amount0 × amount1) - MINIMUM_LIQUIDITY`
-   - **Subsequent**: `liquidity = min((amount0 × totalSupply) / reserve0, (amount1 × totalSupply) / reserve1)`
-3. LP tokens are minted to the liquidity provider's address
+### Minting (Add Liquidity)
+1. `RouterV2.addLiquidity()` transfers tokens into the pair.
+2. Pair mints LP tokens using the constant-product formula (with `MINIMUM_LIQUIDITY` burned on first mint).
+3. LP balance is checkpointed against current fee indices before minting to keep earnings accurate.
 
-### Burning (Removing Liquidity)
-When liquidity is removed via `RouterV2.removeLiquidity()`:
-1. LP tokens are burned
-2. Proportional share is returned: `amount = (lpTokens × poolBalance) / totalSupply`
-3. **Important**: Fees are NOT automatically claimed - `claimFees()` must be called separately
+### Burning (Remove Liquidity)
+1. `RouterV2.removeLiquidity()` burns LP tokens.
+2. Pair returns proportional reserves using the latest balances.
+3. Fees are **not** auto-claimed; LPs must call `Pair.claimFees()` to pull accrued amounts.
 
-### Fee Accounting System
+### Fee Accounting Model
+| Mapping | Meaning |
+|---------|---------|
+| `index0/index1` | Global fee index per LP token (18 decimals) |
+| `supplyIndex0/1[account]` | Last index synced for an LP |
+| `claimable0/1[account]` | Stored, unclaimed fees owed |
 
-The protocol uses an index-based system to track fees without constant token transfers:
+An `_updateFor(account)` call (triggered on mint/burn/transfer) applies `delta = index - supplyIndex`, adds `balance * delta / 1e18` to `claimable`, and rewrites the stored index.
 
-| Component | Purpose |
-|-----------|---------|
-| `index0/index1` | Global fee accumulator per LP token |
-| `supplyIndex0/1[user]` | User's last synced position |
-| `claimable0/1[user]` | Accumulated unclaimed fees |
+## Operational Checklist
+- **Weekly**: ensure `Minter.update_period()` ran, then `VoterV3.distributeAll()` so gauges pull emissions and push fee rewards.
+- **Liquidity onboarding**: keep anchor assets whitelisted so partners can request pair + gauge creation ahead of launch.
+- **Parameter reviews**: compare swap volumes vs. fee levels; adjust `setFee` and `setReferralFee` if routing competitiveness slips.
+- **Monitoring**: track per-pair TVL, fee spillage, and gauge health via factory/gauge events.
 
-#### When Fee Accounting Updates
-Fee positions are automatically **calculated and stored** (but NOT claimed) when:
-- **Minting LP tokens**: Updates fee position before increasing balance
-- **Burning LP tokens**: Updates fee position before decreasing balance
-- **Transferring LP tokens**: Updates both sender and receiver positions
-
-#### How Fees Accumulate
-```
-1. Swap occurs → fees collected → global index increases
-2. User action triggers _updateFor(address)
-3. System calculates: delta = globalIndex - userIndex
-4. Adds to claimable: fees = (lpBalance × delta) / 1e18
-5. Updates user index to current global index
-```
-
-### Important: Manual Fee Claiming Required
-
-**Fees are NEVER automatically sent to users.** The protocol only tracks owed amounts in internal mappings:
-- `claimable0[address]`: Unclaimed token0 fees
-- `claimable1[address]`: Unclaimed token1 fees
-
-To receive fees, `Pair.claimFees()` must be explicitly called, which:
-1. Reads claimable balances
-2. Resets them to zero
-3. Transfers tokens from PairFees contract to the caller
-
-This design is gas-efficient and prevents dust attacks, but requires active claiming.
-
-## Actions
-
-### Traders
-- **Swap**: `GlobalRouter.swapExactTokensForTokens()`
-
-### Liquidity Providers
-- **Add**: `RouterV2.addLiquidity()` or `addLiquidityETH()`
-- **Claim**: `Pair.claimFees()` - must be called manually to receive fees
-- **Remove**: `RouterV2.removeLiquidity()` - burns LP tokens, returns liquidity (fees must be claimed separately)
-
-### Protocol
-- **Pair Creation**: `PairFactory.createPair(tokenA, tokenB, stable)`
-  - **Stable**: x³y+y³x=k (pegged assets)
-  - **Volatile**: xy=k (non-correlated)
-- **Collect staking fees**: `Pair.claimStakingFees()`
-
-### Emergency
-- **Halt trading**: `PairFactory.setPause(true)`
-- **Adjust stable fees**: `PairFactory.setFee(true, 1)` - sets to 0.01%
-- **Adjust volatile fees**: `PairFactory.setFee(false, 5)` - sets to 0.05%
-- **Resume trading**: `PairFactory.setPause(false)`
+## Emergency Tooling
+- Pause new pair creation and router joins: `PairFactory.setPause(true)`.
+- Disable a problematic gauge: `VoterV3.killGauge(gauge)`; revive with `reviveGauge` after remediation.
+- Enable withdrawals-only mode on a gauge: `GaugeV2.activateEmergencyMode()` then `stopEmergencyMode()` once safe.
