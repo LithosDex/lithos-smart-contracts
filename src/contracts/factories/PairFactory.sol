@@ -36,7 +36,7 @@ contract PairFactory is IPairFactory {
         feeManager = msg.sender;
         stableFee = 4; // 0.04%
         volatileFee = 18; // 0.18%
-        stakingNFTFee = 3000; // 30% of stable/volatileFee
+        stakingNFTFee = 0; // staking fee disabled
     }
 
     function allPairsLength() external view returns (uint256) {
@@ -74,8 +74,8 @@ contract PairFactory is IPairFactory {
 
     function setStakingFees(uint256 _newFee) external {
         require(msg.sender == feeManager, "not fee manager");
-        require(_newFee <= 3000);
-        stakingNFTFee = _newFee;
+        require(_newFee == 0, "staking fee disabled");
+        stakingNFTFee = 0;
     }
 
     function setStakingFeeAddress(address _feehandler) external {

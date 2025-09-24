@@ -58,7 +58,7 @@ contract VeArtProxyUpgradeable is IVeArtProxy, OwnableUpgradeable {
                     abi.encodePacked(
                         '{"name": "lock #',
                         toString(_tokenId),
-                        '", "description": "Thena locks, can be used to boost gauge yields, vote on token emission, and receive bribes", "image": "data:image/svg+xml;base64,',
+                        '", "description": "Lithos locks, can be used to boost gauge yields, vote on token emission, and receive bribes", "image": "data:image/svg+xml;base64,',
                         Base64.encode(bytes(output)),
                         '"}'
                     )
