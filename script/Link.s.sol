@@ -87,13 +87,30 @@ contract LinkScript is Script {
             console2.log("VoterV3 already wired to registry and minter");
         }
 
-        // Ensure Lithos minter is the Minter contract
+        // Handle initial mint before setting MinterUpgradeable as minter
         Lithos lithos = Lithos(deployed["Lithos"]);
+
+        // First, perform initial mint if not done yet
+        if (!lithos.initialMinted()) {
+            console2.log(
+                "Performing initial mint of 50M LITHOS to deployer..."
+            );
+            lithos.initialMint(deployer);
+            console2.log(
+                "Initial mint complete. Deployer balance:",
+                lithos.balanceOf(deployer) / 1e18,
+                "LITHOS"
+            );
+        } else {
+            console2.log("Initial mint already completed");
+        }
+
+        // Then set Lithos minter to the Minter contract
         if (lithos.minter() != deployed["MinterUpgradeable"]) {
             console2.log("Setting Lithos minter to MinterUpgradeable...");
             lithos.setMinter(deployed["MinterUpgradeable"]);
         } else {
-            console2.log("Lithos minter already set");
+            console2.log("Lithos minter already set to MinterUpgradeable");
         }
 
         // Allow the minter to checkpoint RewardsDistributor emissions

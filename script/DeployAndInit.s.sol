@@ -19,6 +19,18 @@ import {MinterUpgradeable} from "../src/contracts/MinterUpgradeable.sol";
 contract DeployAndInitScript is Script {
     mapping(string => address) public deployed;
 
+    // Add deployment phase tracking
+    enum Phase {
+        NotStarted,
+        CoreDeployed,
+        DexDeployed,
+        GaugeDeployed,
+        Initialized,
+        Complete
+    }
+
+    Phase public currentPhase = Phase.NotStarted;
+
     function run() external {
         string memory env = vm.envString("DEPLOY_ENV");
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
@@ -31,23 +43,123 @@ contract DeployAndInitScript is Script {
             "/state.json"
         );
 
+        // Load existing state and determine phase
         if (vm.exists(statePath)) {
             _loadState(statePath);
+            _determinePhase();
         }
 
         console2.log("=== Deploy & Initialize Lithos Protocol ===");
         console2.log("Environment:", env);
         console2.log("Deployer:", deployer);
+        console2.log("WXPL:", wxpl);
+        console2.log("Current Phase:", uint256(currentPhase));
+
+        // Check gas price is reasonable
+        uint256 gasPrice = vm.envOr("GAS_PRICE", uint256(1000000000)); // Default 1 gwei
+        if (gasPrice < 1000000000) {
+            console2.log("WARNING: Gas price too low:", gasPrice);
+            console2.log("Recommended minimum: 1 gwei (1000000000)");
+        }
 
         vm.startBroadcast(deployerKey);
 
-        _deployCore(statePath, wxpl);
-        _initializeCore(deployer);
+        // Deploy in phases based on current progress
+        if (currentPhase < Phase.CoreDeployed) {
+            _deployCore(statePath, wxpl);
+            currentPhase = Phase.CoreDeployed;
+        }
+
+        if (currentPhase < Phase.DexDeployed) {
+            _deployDex(statePath, wxpl);
+            currentPhase = Phase.DexDeployed;
+        }
+
+        if (currentPhase < Phase.GaugeDeployed) {
+            _deployGauge(statePath);
+            currentPhase = Phase.GaugeDeployed;
+        }
+
+        if (currentPhase < Phase.Initialized) {
+            _initializeAll(deployer);
+            currentPhase = Phase.Initialized;
+        }
 
         vm.stopBroadcast();
 
-        console2.log("\n=== Deploy & Initialize Complete ===");
-        console2.log("Run 'forge script script/Link.s.sol' to wire contracts");
+        // Final verification
+        if (_verifyDeployment()) {
+            currentPhase = Phase.Complete;
+            console2.log("\n=== Deploy & Initialize Complete ===");
+            console2.log(
+                "Run 'forge script script/Link.s.sol' to wire contracts"
+            );
+        } else {
+            console2.log("\n=== Deployment Verification Failed ===");
+            console2.log(
+                "Please check the deployment and try again with --resume"
+            );
+        }
+    }
+
+    function _determinePhase() private {
+        // Determine current phase based on what's deployed
+        if (deployed["MinterUpgradeable"] != address(0)) {
+            // Check if initialized
+            if (_isInitialized()) {
+                currentPhase = Phase.Initialized;
+            } else {
+                currentPhase = Phase.GaugeDeployed;
+            }
+        } else if (deployed["RouterV2"] != address(0)) {
+            currentPhase = Phase.DexDeployed;
+        } else if (deployed["VotingEscrow"] != address(0)) {
+            currentPhase = Phase.CoreDeployed;
+        }
+    }
+
+    function _isInitialized() private view returns (bool) {
+        if (deployed["VeArtProxyUpgradeable"] == address(0)) return false;
+        try
+            VeArtProxyUpgradeable(deployed["VeArtProxyUpgradeable"]).owner()
+        returns (address owner) {
+            return owner != address(0);
+        } catch {
+            return false;
+        }
+    }
+
+    function _verifyDeployment() private view returns (bool) {
+        // Verify all contracts are deployed and initialized
+        string[] memory requiredContracts = new string[](13);
+        requiredContracts[0] = "Lithos";
+        requiredContracts[1] = "VeArtProxyUpgradeable";
+        requiredContracts[2] = "VotingEscrow";
+        requiredContracts[3] = "PairFactoryUpgradeable";
+        requiredContracts[4] = "TradeHelper";
+        requiredContracts[5] = "GlobalRouter";
+        requiredContracts[6] = "RouterV2";
+        requiredContracts[7] = "GaugeFactoryV2";
+        requiredContracts[8] = "PermissionsRegistry";
+        requiredContracts[9] = "BribeFactoryV3";
+        requiredContracts[10] = "VoterV3";
+        requiredContracts[11] = "RewardsDistributor";
+        requiredContracts[12] = "MinterUpgradeable";
+
+        for (uint i = 0; i < requiredContracts.length; i++) {
+            if (deployed[requiredContracts[i]] == address(0)) {
+                console2.log("Missing:", requiredContracts[i]);
+                return false;
+            }
+
+            // Verify contract exists on chain
+            if (deployed[requiredContracts[i]].code.length == 0) {
+                console2.log("Not deployed on chain:", requiredContracts[i]);
+                return false;
+            }
+        }
+
+        return true;
     }
 
     function _deployCore(string memory statePath, address wxpl) private {
@@ -89,6 +201,10 @@ contract DeployAndInitScript is Script {
                 deployed["VotingEscrow"]
             );
         }
+    }
+
+    function _deployDex(string memory statePath, address wxpl) private {
+        console2.log("\n--- Deploying DEX Infrastructure ---");
 
         if (deployed["PairFactoryUpgradeable"] == address(0)) {
             PairFactoryUpgradeable pairFactory = new PairFactoryUpgradeable();
@@ -144,6 +260,10 @@ contract DeployAndInitScript is Script {
         } else {
             console2.log("RouterV2 already deployed:", deployed["RouterV2"]);
         }
+    }
+
+    function _deployGauge(string memory statePath) private {
+        console2.log("\n--- Deploying Gauge System ---");
 
         if (deployed["GaugeFactoryV2"] == address(0)) {
             GaugeFactoryV2 gaugeFactory = new GaugeFactoryV2();
@@ -223,13 +343,18 @@ contract DeployAndInitScript is Script {
         }
     }
 
-    function _initializeCore(address deployer) private {
+    function _initializeAll(address deployer) private {
+        console2.log("\n--- Initializing All Contracts ---");
+
+        // Initialize in dependency order
         _initializeVeArtProxy();
         _initializePairFactory();
         _initializeGaugeFactory();
         _initializeBribeFactory(deployer);
         _initializeVoter();
         _initializeMinter();
+
+        console2.log("All contracts initialized successfully");
     }
 
     function _initializeVeArtProxy() private {
