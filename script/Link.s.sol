@@ -18,11 +18,7 @@ contract LinkScript is Script {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerKey);
 
-        string memory statePath = string.concat(
-            "deployments/",
-            env,
-            "/state.json"
-        );
+        string memory statePath = string.concat("deployments/", env, "/state.json");
 
         // Load deployed addresses
         _loadState(statePath);
@@ -34,9 +30,7 @@ contract LinkScript is Script {
         vm.startBroadcast(deployerKey);
 
         // Configure PairFactory fees
-        PairFactoryUpgradeable pairFactory = PairFactoryUpgradeable(
-            deployed["PairFactoryUpgradeable"]
-        );
+        PairFactoryUpgradeable pairFactory = PairFactoryUpgradeable(deployed["PairFactoryUpgradeable"]);
         console2.log("Configuring PairFactoryUpgradeable fees...");
         if (pairFactory.getFee(true) != 4) {
             pairFactory.setFee(true, 4); // 0.04% stable
@@ -52,9 +46,7 @@ contract LinkScript is Script {
         }
 
         // Grant GOVERNANCE role to deployer for Phase 3 operations
-        PermissionsRegistry permissions = PermissionsRegistry(
-            deployed["PermissionsRegistry"]
-        );
+        PermissionsRegistry permissions = PermissionsRegistry(deployed["PermissionsRegistry"]);
         if (!permissions.hasRole("GOVERNANCE", deployer)) {
             console2.log("Granting GOVERNANCE role to deployer...");
             permissions.setRoleFor(deployer, "GOVERNANCE");
@@ -63,9 +55,7 @@ contract LinkScript is Script {
         }
 
         // Link BribeFactoryV3 to VoterV3
-        BribeFactoryV3 bribeFactory = BribeFactoryV3(
-            deployed["BribeFactoryV3"]
-        );
+        BribeFactoryV3 bribeFactory = BribeFactoryV3(deployed["BribeFactoryV3"]);
         if (bribeFactory.voter() != deployed["VoterV3"]) {
             console2.log("Setting BribeFactoryV3 voter...");
             bribeFactory.setVoter(deployed["VoterV3"]);
@@ -85,16 +75,12 @@ contract LinkScript is Script {
         // Link VoterV3 to MinterUpgradeable
         VoterV3 voterV3 = VoterV3(deployed["VoterV3"]);
         if (
-            voterV3.permissionRegistry() != deployed["PermissionsRegistry"] ||
-            voterV3.minter() != deployed["MinterUpgradeable"]
+            voterV3.permissionRegistry() != deployed["PermissionsRegistry"]
+                || voterV3.minter() != deployed["MinterUpgradeable"]
         ) {
             console2.log("Running VoterV3._init to set registry and minter...");
             address[] memory tokens = new address[](0);
-            voterV3._init(
-                tokens,
-                deployed["PermissionsRegistry"],
-                deployed["MinterUpgradeable"]
-            );
+            voterV3._init(tokens, deployed["PermissionsRegistry"], deployed["MinterUpgradeable"]);
         } else {
             console2.log("VoterV3 already wired to registry and minter");
         }
@@ -104,15 +90,9 @@ contract LinkScript is Script {
 
         // First, perform initial mint if not done yet
         if (!lithos.initialMinted()) {
-            console2.log(
-                "Performing initial mint of 50M LITHOS to deployer..."
-            );
+            console2.log("Performing initial mint of 50M LITHOS to deployer...");
             lithos.initialMint(deployer);
-            console2.log(
-                "Initial mint complete. Deployer balance:",
-                lithos.balanceOf(deployer) / 1e18,
-                "LITHOS"
-            );
+            console2.log("Initial mint complete. Deployer balance:", lithos.balanceOf(deployer) / 1e18, "LITHOS");
         } else {
             console2.log("Initial mint already completed");
         }
@@ -126,69 +106,37 @@ contract LinkScript is Script {
         }
 
         // Allow the minter to checkpoint RewardsDistributor emissions
-        RewardsDistributor rewardsDistributor = RewardsDistributor(
-            deployed["RewardsDistributor"]
-        );
+        RewardsDistributor rewardsDistributor = RewardsDistributor(deployed["RewardsDistributor"]);
         if (rewardsDistributor.depositor() != deployed["MinterUpgradeable"]) {
-            console2.log(
-                "Assigning RewardsDistributor depositor to MinterUpgradeable..."
-            );
+            console2.log("Assigning RewardsDistributor depositor to MinterUpgradeable...");
             rewardsDistributor.setDepositor(deployed["MinterUpgradeable"]);
         } else {
-            console2.log(
-                "RewardsDistributor depositor already set to MinterUpgradeable"
-            );
+            console2.log("RewardsDistributor depositor already set to MinterUpgradeable");
         }
 
         vm.stopBroadcast();
 
         console2.log("\n=== Linking Complete ===");
-        console2.log(
-            "Run 'forge script script/Ownership.s.sol' to transfer ownership"
-        );
+        console2.log("Run 'forge script script/Ownership.s.sol' to transfer ownership");
     }
 
     function _loadState(string memory path) private {
-        require(
-            vm.exists(path),
-            "State file not found. Run DeployAndInit.s.sol first!"
-        );
+        require(vm.exists(path), "State file not found. Run DeployAndInit.s.sol first!");
 
         string memory json = vm.readFile(path);
 
         deployed["Lithos"] = vm.parseJsonAddress(json, ".Lithos");
-        deployed["VeArtProxyUpgradeable"] = vm.parseJsonAddress(
-            json,
-            ".VeArtProxyUpgradeable"
-        );
+        deployed["VeArtProxyUpgradeable"] = vm.parseJsonAddress(json, ".VeArtProxyUpgradeable");
         deployed["VotingEscrow"] = vm.parseJsonAddress(json, ".VotingEscrow");
-        deployed["PairFactoryUpgradeable"] = vm.parseJsonAddress(
-            json,
-            ".PairFactoryUpgradeable"
-        );
+        deployed["PairFactoryUpgradeable"] = vm.parseJsonAddress(json, ".PairFactoryUpgradeable");
         deployed["TradeHelper"] = vm.parseJsonAddress(json, ".TradeHelper");
         deployed["GlobalRouter"] = vm.parseJsonAddress(json, ".GlobalRouter");
         deployed["RouterV2"] = vm.parseJsonAddress(json, ".RouterV2");
-        deployed["GaugeFactoryV2"] = vm.parseJsonAddress(
-            json,
-            ".GaugeFactoryV2"
-        );
-        deployed["PermissionsRegistry"] = vm.parseJsonAddress(
-            json,
-            ".PermissionsRegistry"
-        );
-        deployed["BribeFactoryV3"] = vm.parseJsonAddress(
-            json,
-            ".BribeFactoryV3"
-        );
+        deployed["GaugeFactoryV2"] = vm.parseJsonAddress(json, ".GaugeFactoryV2");
+        deployed["PermissionsRegistry"] = vm.parseJsonAddress(json, ".PermissionsRegistry");
+        deployed["BribeFactoryV3"] = vm.parseJsonAddress(json, ".BribeFactoryV3");
         deployed["VoterV3"] = vm.parseJsonAddress(json, ".VoterV3");
-        deployed["RewardsDistributor"] = vm.parseJsonAddress(
-            json,
-            ".RewardsDistributor"
-        );
-        deployed["MinterUpgradeable"] = vm.parseJsonAddress(
-            json,
-            ".MinterUpgradeable"
-        );
+        deployed["RewardsDistributor"] = vm.parseJsonAddress(json, ".RewardsDistributor");
+        deployed["MinterUpgradeable"] = vm.parseJsonAddress(json, ".MinterUpgradeable");
     }
 }

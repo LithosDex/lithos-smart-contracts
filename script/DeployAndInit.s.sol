@@ -37,11 +37,7 @@ contract DeployAndInitScript is Script {
         address deployer = vm.addr(deployerKey);
         address wxpl = vm.envAddress("WXPL");
 
-        string memory statePath = string.concat(
-            "deployments/",
-            env,
-            "/state.json"
-        );
+        string memory statePath = string.concat("deployments/", env, "/state.json");
 
         // Load existing state and determine phase
         if (vm.exists(statePath)) {
@@ -91,14 +87,10 @@ contract DeployAndInitScript is Script {
         if (_verifyDeployment()) {
             currentPhase = Phase.Complete;
             console2.log("\n=== Deploy & Initialize Complete ===");
-            console2.log(
-                "Run 'forge script script/Link.s.sol' to wire contracts"
-            );
+            console2.log("Run 'forge script script/Link.s.sol' to wire contracts");
         } else {
             console2.log("\n=== Deployment Verification Failed ===");
-            console2.log(
-                "Please check the deployment and try again with --resume"
-            );
+            console2.log("Please check the deployment and try again with --resume");
         }
     }
 
@@ -120,9 +112,7 @@ contract DeployAndInitScript is Script {
 
     function _isInitialized() private view returns (bool) {
         if (deployed["VeArtProxyUpgradeable"] == address(0)) return false;
-        try
-            VeArtProxyUpgradeable(deployed["VeArtProxyUpgradeable"]).owner()
-        returns (address owner) {
+        try VeArtProxyUpgradeable(deployed["VeArtProxyUpgradeable"]).owner() returns (address owner) {
             return owner != address(0);
         } catch {
             return false;
@@ -146,7 +136,7 @@ contract DeployAndInitScript is Script {
         requiredContracts[11] = "RewardsDistributor";
         requiredContracts[12] = "MinterUpgradeable";
 
-        for (uint i = 0; i < requiredContracts.length; i++) {
+        for (uint256 i = 0; i < requiredContracts.length; i++) {
             if (deployed[requiredContracts[i]] == address(0)) {
                 console2.log("Missing:", requiredContracts[i]);
                 return false;
@@ -175,31 +165,19 @@ contract DeployAndInitScript is Script {
         if (deployed["VeArtProxyUpgradeable"] == address(0)) {
             VeArtProxyUpgradeable veArtProxy = new VeArtProxyUpgradeable();
             deployed["VeArtProxyUpgradeable"] = address(veArtProxy);
-            console2.log(
-                "VeArtProxyUpgradeable deployed:",
-                address(veArtProxy)
-            );
+            console2.log("VeArtProxyUpgradeable deployed:", address(veArtProxy));
             _saveState(statePath);
         } else {
-            console2.log(
-                "VeArtProxyUpgradeable already deployed:",
-                deployed["VeArtProxyUpgradeable"]
-            );
+            console2.log("VeArtProxyUpgradeable already deployed:", deployed["VeArtProxyUpgradeable"]);
         }
 
         if (deployed["VotingEscrow"] == address(0)) {
-            VotingEscrow votingEscrow = new VotingEscrow(
-                deployed["Lithos"],
-                deployed["VeArtProxyUpgradeable"]
-            );
+            VotingEscrow votingEscrow = new VotingEscrow(deployed["Lithos"], deployed["VeArtProxyUpgradeable"]);
             deployed["VotingEscrow"] = address(votingEscrow);
             console2.log("VotingEscrow deployed:", address(votingEscrow));
             _saveState(statePath);
         } else {
-            console2.log(
-                "VotingEscrow already deployed:",
-                deployed["VotingEscrow"]
-            );
+            console2.log("VotingEscrow already deployed:", deployed["VotingEscrow"]);
         }
     }
 
@@ -209,51 +187,32 @@ contract DeployAndInitScript is Script {
         if (deployed["PairFactoryUpgradeable"] == address(0)) {
             PairFactoryUpgradeable pairFactory = new PairFactoryUpgradeable();
             deployed["PairFactoryUpgradeable"] = address(pairFactory);
-            console2.log(
-                "PairFactoryUpgradeable deployed:",
-                address(pairFactory)
-            );
+            console2.log("PairFactoryUpgradeable deployed:", address(pairFactory));
             _saveState(statePath);
         } else {
-            console2.log(
-                "PairFactoryUpgradeable already deployed:",
-                deployed["PairFactoryUpgradeable"]
-            );
+            console2.log("PairFactoryUpgradeable already deployed:", deployed["PairFactoryUpgradeable"]);
         }
 
         if (deployed["TradeHelper"] == address(0)) {
-            TradeHelper tradeHelper = new TradeHelper(
-                deployed["PairFactoryUpgradeable"]
-            );
+            TradeHelper tradeHelper = new TradeHelper(deployed["PairFactoryUpgradeable"]);
             deployed["TradeHelper"] = address(tradeHelper);
             console2.log("TradeHelper deployed:", address(tradeHelper));
             _saveState(statePath);
         } else {
-            console2.log(
-                "TradeHelper already deployed:",
-                deployed["TradeHelper"]
-            );
+            console2.log("TradeHelper already deployed:", deployed["TradeHelper"]);
         }
 
         if (deployed["GlobalRouter"] == address(0)) {
-            GlobalRouter globalRouter = new GlobalRouter(
-                deployed["TradeHelper"]
-            );
+            GlobalRouter globalRouter = new GlobalRouter(deployed["TradeHelper"]);
             deployed["GlobalRouter"] = address(globalRouter);
             console2.log("GlobalRouter deployed:", address(globalRouter));
             _saveState(statePath);
         } else {
-            console2.log(
-                "GlobalRouter already deployed:",
-                deployed["GlobalRouter"]
-            );
+            console2.log("GlobalRouter already deployed:", deployed["GlobalRouter"]);
         }
 
         if (deployed["RouterV2"] == address(0)) {
-            RouterV2 routerV2 = new RouterV2(
-                deployed["PairFactoryUpgradeable"],
-                wxpl
-            );
+            RouterV2 routerV2 = new RouterV2(deployed["PairFactoryUpgradeable"], wxpl);
             deployed["RouterV2"] = address(routerV2);
             console2.log("RouterV2 deployed:", address(routerV2));
             _saveState(statePath);
@@ -271,25 +230,16 @@ contract DeployAndInitScript is Script {
             console2.log("GaugeFactoryV2 deployed:", address(gaugeFactory));
             _saveState(statePath);
         } else {
-            console2.log(
-                "GaugeFactoryV2 already deployed:",
-                deployed["GaugeFactoryV2"]
-            );
+            console2.log("GaugeFactoryV2 already deployed:", deployed["GaugeFactoryV2"]);
         }
 
         if (deployed["PermissionsRegistry"] == address(0)) {
             PermissionsRegistry permissionsRegistry = new PermissionsRegistry();
             deployed["PermissionsRegistry"] = address(permissionsRegistry);
-            console2.log(
-                "PermissionsRegistry deployed:",
-                address(permissionsRegistry)
-            );
+            console2.log("PermissionsRegistry deployed:", address(permissionsRegistry));
             _saveState(statePath);
         } else {
-            console2.log(
-                "PermissionsRegistry already deployed:",
-                deployed["PermissionsRegistry"]
-            );
+            console2.log("PermissionsRegistry already deployed:", deployed["PermissionsRegistry"]);
         }
 
         if (deployed["BribeFactoryV3"] == address(0)) {
@@ -298,10 +248,7 @@ contract DeployAndInitScript is Script {
             console2.log("BribeFactoryV3 deployed:", address(bribeFactory));
             _saveState(statePath);
         } else {
-            console2.log(
-                "BribeFactoryV3 already deployed:",
-                deployed["BribeFactoryV3"]
-            );
+            console2.log("BribeFactoryV3 already deployed:", deployed["BribeFactoryV3"]);
         }
 
         if (deployed["VoterV3"] == address(0)) {
@@ -314,20 +261,12 @@ contract DeployAndInitScript is Script {
         }
 
         if (deployed["RewardsDistributor"] == address(0)) {
-            RewardsDistributor rewardsDistributor = new RewardsDistributor(
-                deployed["VotingEscrow"]
-            );
+            RewardsDistributor rewardsDistributor = new RewardsDistributor(deployed["VotingEscrow"]);
             deployed["RewardsDistributor"] = address(rewardsDistributor);
-            console2.log(
-                "RewardsDistributor deployed:",
-                address(rewardsDistributor)
-            );
+            console2.log("RewardsDistributor deployed:", address(rewardsDistributor));
             _saveState(statePath);
         } else {
-            console2.log(
-                "RewardsDistributor already deployed:",
-                deployed["RewardsDistributor"]
-            );
+            console2.log("RewardsDistributor already deployed:", deployed["RewardsDistributor"]);
         }
 
         if (deployed["MinterUpgradeable"] == address(0)) {
@@ -336,10 +275,7 @@ contract DeployAndInitScript is Script {
             console2.log("MinterUpgradeable deployed:", address(minter));
             _saveState(statePath);
         } else {
-            console2.log(
-                "MinterUpgradeable already deployed:",
-                deployed["MinterUpgradeable"]
-            );
+            console2.log("MinterUpgradeable already deployed:", deployed["MinterUpgradeable"]);
         }
     }
 
@@ -366,11 +302,7 @@ contract DeployAndInitScript is Script {
             console2.log("Initializing VeArtProxyUpgradeable...");
             veArtProxy.initialize();
         } else {
-            console2.log(
-                "VeArtProxyUpgradeable already initialized (owner:",
-                veArtProxy.owner(),
-                ")"
-            );
+            console2.log("VeArtProxyUpgradeable already initialized (owner:", veArtProxy.owner(), ")");
         }
     }
 
@@ -378,18 +310,12 @@ contract DeployAndInitScript is Script {
         address factoryAddr = deployed["PairFactoryUpgradeable"];
         if (factoryAddr == address(0)) return;
 
-        PairFactoryUpgradeable pairFactory = PairFactoryUpgradeable(
-            factoryAddr
-        );
+        PairFactoryUpgradeable pairFactory = PairFactoryUpgradeable(factoryAddr);
         if (pairFactory.owner() == address(0)) {
             console2.log("Initializing PairFactoryUpgradeable...");
             pairFactory.initialize();
         } else {
-            console2.log(
-                "PairFactoryUpgradeable already initialized (owner:",
-                pairFactory.owner(),
-                ")"
-            );
+            console2.log("PairFactoryUpgradeable already initialized (owner:", pairFactory.owner(), ")");
         }
     }
 
@@ -402,11 +328,7 @@ contract DeployAndInitScript is Script {
             console2.log("Initializing GaugeFactoryV2...");
             gaugeFactory.initialize(deployed["PermissionsRegistry"]);
         } else {
-            console2.log(
-                "GaugeFactoryV2 already initialized (owner:",
-                gaugeFactory.owner(),
-                ")"
-            );
+            console2.log("GaugeFactoryV2 already initialized (owner:", gaugeFactory.owner(), ")");
         }
     }
 
@@ -419,11 +341,7 @@ contract DeployAndInitScript is Script {
             console2.log("Initializing BribeFactoryV3...");
             bribeFactory.initialize(deployer, deployed["PermissionsRegistry"]);
         } else {
-            console2.log(
-                "BribeFactoryV3 already initialized (owner:",
-                bribeFactory.owner(),
-                ")"
-            );
+            console2.log("BribeFactoryV3 already initialized (owner:", bribeFactory.owner(), ")");
         }
     }
 
@@ -441,11 +359,7 @@ contract DeployAndInitScript is Script {
                 deployed["BribeFactoryV3"]
             );
         } else {
-            console2.log(
-                "VoterV3 already initialized (owner:",
-                voterV3.owner(),
-                ")"
-            );
+            console2.log("VoterV3 already initialized (owner:", voterV3.owner(), ")");
         }
     }
 
@@ -456,17 +370,9 @@ contract DeployAndInitScript is Script {
         MinterUpgradeable minter = MinterUpgradeable(minterAddr);
         if (minter.owner() == address(0)) {
             console2.log("Initializing MinterUpgradeable...");
-            minter.initialize(
-                deployed["VoterV3"],
-                deployed["VotingEscrow"],
-                deployed["RewardsDistributor"]
-            );
+            minter.initialize(deployed["VoterV3"], deployed["VotingEscrow"], deployed["RewardsDistributor"]);
         } else {
-            console2.log(
-                "MinterUpgradeable already initialized (owner:",
-                minter.owner(),
-                ")"
-            );
+            console2.log("MinterUpgradeable already initialized (owner:", minter.owner(), ")");
         }
     }
 
@@ -474,122 +380,36 @@ contract DeployAndInitScript is Script {
         string memory json = vm.readFile(path);
 
         deployed["Lithos"] = vm.parseJsonAddress(json, ".Lithos");
-        deployed["VeArtProxyUpgradeable"] = vm.parseJsonAddress(
-            json,
-            ".VeArtProxyUpgradeable"
-        );
+        deployed["VeArtProxyUpgradeable"] = vm.parseJsonAddress(json, ".VeArtProxyUpgradeable");
         deployed["VotingEscrow"] = vm.parseJsonAddress(json, ".VotingEscrow");
-        deployed["PairFactoryUpgradeable"] = vm.parseJsonAddress(
-            json,
-            ".PairFactoryUpgradeable"
-        );
+        deployed["PairFactoryUpgradeable"] = vm.parseJsonAddress(json, ".PairFactoryUpgradeable");
         deployed["TradeHelper"] = vm.parseJsonAddress(json, ".TradeHelper");
         deployed["GlobalRouter"] = vm.parseJsonAddress(json, ".GlobalRouter");
         deployed["RouterV2"] = vm.parseJsonAddress(json, ".RouterV2");
-        deployed["GaugeFactoryV2"] = vm.parseJsonAddress(
-            json,
-            ".GaugeFactoryV2"
-        );
-        deployed["PermissionsRegistry"] = vm.parseJsonAddress(
-            json,
-            ".PermissionsRegistry"
-        );
-        deployed["BribeFactoryV3"] = vm.parseJsonAddress(
-            json,
-            ".BribeFactoryV3"
-        );
+        deployed["GaugeFactoryV2"] = vm.parseJsonAddress(json, ".GaugeFactoryV2");
+        deployed["PermissionsRegistry"] = vm.parseJsonAddress(json, ".PermissionsRegistry");
+        deployed["BribeFactoryV3"] = vm.parseJsonAddress(json, ".BribeFactoryV3");
         deployed["VoterV3"] = vm.parseJsonAddress(json, ".VoterV3");
-        deployed["RewardsDistributor"] = vm.parseJsonAddress(
-            json,
-            ".RewardsDistributor"
-        );
-        deployed["MinterUpgradeable"] = vm.parseJsonAddress(
-            json,
-            ".MinterUpgradeable"
-        );
+        deployed["RewardsDistributor"] = vm.parseJsonAddress(json, ".RewardsDistributor");
+        deployed["MinterUpgradeable"] = vm.parseJsonAddress(json, ".MinterUpgradeable");
     }
 
     function _saveState(string memory path) private {
         string memory json = "{";
 
-        json = string.concat(
-            json,
-            '"Lithos":"',
-            vm.toString(deployed["Lithos"]),
-            '",'
-        );
-        json = string.concat(
-            json,
-            '"VeArtProxyUpgradeable":"',
-            vm.toString(deployed["VeArtProxyUpgradeable"]),
-            '",'
-        );
-        json = string.concat(
-            json,
-            '"VotingEscrow":"',
-            vm.toString(deployed["VotingEscrow"]),
-            '",'
-        );
-        json = string.concat(
-            json,
-            '"PairFactoryUpgradeable":"',
-            vm.toString(deployed["PairFactoryUpgradeable"]),
-            '",'
-        );
-        json = string.concat(
-            json,
-            '"TradeHelper":"',
-            vm.toString(deployed["TradeHelper"]),
-            '",'
-        );
-        json = string.concat(
-            json,
-            '"GlobalRouter":"',
-            vm.toString(deployed["GlobalRouter"]),
-            '",'
-        );
-        json = string.concat(
-            json,
-            '"RouterV2":"',
-            vm.toString(deployed["RouterV2"]),
-            '",'
-        );
-        json = string.concat(
-            json,
-            '"GaugeFactoryV2":"',
-            vm.toString(deployed["GaugeFactoryV2"]),
-            '",'
-        );
-        json = string.concat(
-            json,
-            '"PermissionsRegistry":"',
-            vm.toString(deployed["PermissionsRegistry"]),
-            '",'
-        );
-        json = string.concat(
-            json,
-            '"BribeFactoryV3":"',
-            vm.toString(deployed["BribeFactoryV3"]),
-            '",'
-        );
-        json = string.concat(
-            json,
-            '"VoterV3":"',
-            vm.toString(deployed["VoterV3"]),
-            '",'
-        );
-        json = string.concat(
-            json,
-            '"RewardsDistributor":"',
-            vm.toString(deployed["RewardsDistributor"]),
-            '",'
-        );
-        json = string.concat(
-            json,
-            '"MinterUpgradeable":"',
-            vm.toString(deployed["MinterUpgradeable"]),
-            '"'
-        );
+        json = string.concat(json, '"Lithos":"', vm.toString(deployed["Lithos"]), '",');
+        json = string.concat(json, '"VeArtProxyUpgradeable":"', vm.toString(deployed["VeArtProxyUpgradeable"]), '",');
+        json = string.concat(json, '"VotingEscrow":"', vm.toString(deployed["VotingEscrow"]), '",');
+        json = string.concat(json, '"PairFactoryUpgradeable":"', vm.toString(deployed["PairFactoryUpgradeable"]), '",');
+        json = string.concat(json, '"TradeHelper":"', vm.toString(deployed["TradeHelper"]), '",');
+        json = string.concat(json, '"GlobalRouter":"', vm.toString(deployed["GlobalRouter"]), '",');
+        json = string.concat(json, '"RouterV2":"', vm.toString(deployed["RouterV2"]), '",');
+        json = string.concat(json, '"GaugeFactoryV2":"', vm.toString(deployed["GaugeFactoryV2"]), '",');
+        json = string.concat(json, '"PermissionsRegistry":"', vm.toString(deployed["PermissionsRegistry"]), '",');
+        json = string.concat(json, '"BribeFactoryV3":"', vm.toString(deployed["BribeFactoryV3"]), '",');
+        json = string.concat(json, '"VoterV3":"', vm.toString(deployed["VoterV3"]), '",');
+        json = string.concat(json, '"RewardsDistributor":"', vm.toString(deployed["RewardsDistributor"]), '",');
+        json = string.concat(json, '"MinterUpgradeable":"', vm.toString(deployed["MinterUpgradeable"]), '"');
 
         json = string.concat(json, "}");
         vm.writeFile(path, json);
