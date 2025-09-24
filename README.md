@@ -17,40 +17,38 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 
 #### Core DEX
 
-- **PairFactory**: [0xF1471A005b7557C1d472f0a060040f93ae074297](https://testnet.plasmascan.to/address/0xF1471A005b7557C1d472f0a060040f93ae074297)
-- **RouterV2** (Main): [0x84E8a39C85F645c7f7671689a9337B33Bdc784f8](https://testnet.plasmascan.to/address/0x84E8a39C85F645c7f7671689a9337B33Bdc784f8)
-- **GlobalRouter**: [0x48406768424369b69Cc52886A6520a1839CC426E](https://testnet.plasmascan.to/address/0x48406768424369b69Cc52886A6520a1839CC426E)
-- **TradeHelper**: [0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e](https://testnet.plasmascan.to/address/0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e)
+- **PairFactory**: [0xa74848bAC41c4B1E6d1CFA6615Afb8893805075A](https://testnet.plasmascan.to/address/0xa74848bAC41c4B1E6d1CFA6615Afb8893805075A)
+- **RouterV2** (Main): [0xb7Be9aB86d1A18c0425C3f6ABbbD58d0Ef19f1a9](https://testnet.plasmascan.to/address/0xb7Be9aB86d1A18c0425C3f6ABbbD58d0Ef19f1a9)
+- **GlobalRouter**: [0x88C19a127aa22C7826546F34E63FE0e8995c88d0](https://testnet.plasmascan.to/address/0x88C19a127aa22C7826546F34E63FE0e8995c88d0)
+- **TradeHelper**: [0xf30E5cD4E25603fd2262Aa00bf78D1A4b9AEDeEF](https://testnet.plasmascan.to/address/0xf30E5cD4E25603fd2262Aa00bf78D1A4b9AEDeEF)
 
 #### ve(3,3) Governance
 
-- **VotingEscrow**: [0x349D59Dca5104189AF1fF2fac45108d66F44884F](https://testnet.plasmascan.to/address/0x349D59Dca5104189AF1fF2fac45108d66F44884F)
-- **VeArtProxyUpgradeable**: [0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1](https://testnet.plasmascan.to/address/0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1)
-- **RewardsDistributor**: [0x75c703c4BA4dcFdbc431250B30aaed1c111b330c](https://testnet.plasmascan.to/address/0x75c703c4BA4dcFdbc431250B30aaed1c111b330c)
-- **PermissionsRegistry**: [0x3A908c6095bD1A69b651D7B32AB42806528d88c8](https://testnet.plasmascan.to/address/0x3A908c6095bD1A69b651D7B32AB42806528d88c8)
-- **VoterV3**: [0x0b8Aaf2C51EA5c07566D96E334B37FEEcCAbac0d](https://testnet.plasmascan.to/address/0x0b8Aaf2C51EA5c07566D96E334B37FEEcCAbac0d)
-- **GaugeFactoryV2**: [0x23e7E5f66Ff4396F0D95ad630f4297D768193DE1](https://testnet.plasmascan.to/address/0x23e7E5f66Ff4396F0D95ad630f4297D768193DE1)
-- **BribeFactoryV3**: [0xBDF9948D5AE1D6e97CF29bD36cBaDF006EfD66CF](https://testnet.plasmascan.to/address/0xBDF9948D5AE1D6e97CF29bD36cBaDF006EfD66CF)
-- **MinterUpgradeable**: [0x3739bf532c0ACe36fB081599224c0f81676407E5](https://testnet.plasmascan.to/address/0x3739bf532c0ACe36fB081599224c0f81676407E5)
+- **VotingEscrow**: [0x516C42d4BcF32531Cb7cf5Eb89Bb8870A4a60011](https://testnet.plasmascan.to/address/0x516C42d4BcF32531Cb7cf5Eb89Bb8870A4a60011)
+- **VeArtProxyUpgradeable**: [0xbc1e64DBdF71AC6A7Df0FD656E2D4F5A628faf7F](https://testnet.plasmascan.to/address/0xbc1e64DBdF71AC6A7Df0FD656E2D4F5A628faf7F)
+- **RewardsDistributor**: [0xEa132AE719aa6280a0f72AF3E4ee44Dd6888B1Ec](https://testnet.plasmascan.to/address/0xEa132AE719aa6280a0f72AF3E4ee44Dd6888B1Ec)
+- **PermissionsRegistry**: [0xEcBb3aE0e0Cb7D5AdFa6F88c366Bb0D44Aba986A](https://testnet.plasmascan.to/address/0xEcBb3aE0e0Cb7D5AdFa6F88c366Bb0D44Aba986A)
+- **VoterV3**: [0x5C1f4391ad20475D76f4738d3faAF3B170A06919](https://testnet.plasmascan.to/address/0x5C1f4391ad20475D76f4738d3faAF3B170A06919)
+- **GaugeFactoryV2**: [0x4c7410dEd27c8DE462A288801F23ec08977f0F62](https://testnet.plasmascan.to/address/0x4c7410dEd27c8DE462A288801F23ec08977f0F62)
+- **BribeFactoryV3**: [0x7f38E9a5cA4F8279eCEb0ab02eA5291F23e350b8](https://testnet.plasmascan.to/address/0x7f38E9a5cA4F8279eCEb0ab02eA5291F23e350b8)
+- **MinterUpgradeable**: [0x4f00b43CD851ac5d5599834f71434f245A92D973](https://testnet.plasmascan.to/address/0x4f00b43CD851ac5d5599834f71434f245A92D973)
 
 #### Tokens
 
-- **LITH**: [0x82bF51B4f3036bA6c46d7195B4140c3CB6cCF0EA](https://testnet.plasmascan.to/address/0x82bF51B4f3036bA6c46d7195B4140c3CB6cCF0EA)
-- **WXPL**: [0x6100E367285b01F48D07953803A2d8dCA5D19873](https://testnet.plasmascan.to/address/0x6100E367285b01F48D07953803A2d8dCA5D19873)
+- **LITH**: [0x3a6a2309Bc05b9798CF46699Bba9F6536039B72D](https://testnet.plasmascan.to/address/0x3a6a2309Bc05b9798CF46699Bba9F6536039B72D)
+- **WXPL**: [0x3576E9157cF2e1dB071b3587dEbBFb67D9e0962d](https://testnet.plasmascan.to/address/0x3576E9157cF2e1dB071b3587dEbBFb67D9e0962d)
 - **TEST**: [0xb89cdFf170b45797BF93536773113861EBEABAfa](https://testnet.plasmascan.to/address/0xb89cdFf170b45797BF93536773113861EBEABAfa) _(Test token for bribes contract)_
 
 > **Note**: RouterV2 is the primary contract for frontend integration. It handles all liquidity and swap operations.
 
 #### Pairs/Gauge
 
-Pair Index 0
+LITHOS/WXPL Pair
 
-- Token0: 0x3576E9157cF2e1dB071b3587dEbBFb67D9e0962d (WXPL)
-- Token1: 0x726A66766A784A582F5f48E81A5772DD6bD1F34E (USDT)
-- Pair: 0xf89834bA86E8D74c7E691796F80badc817D0c764
-- Gauge: 0xaff8EF3a3aCfeF558cb6b32DB1d8b0C7d0Bd43ED
-- Internal Bribe: 0xf9ED85d7c293B9773f9f84A285f8a950A9C21d86
-- External Bribe: 0xf1f95E914cED73f95F1323CFd8F8f0bdf902bC06
+- Pair: [0xa9a6b6A0F249e90C999e96010554814907B8f9D7](https://testnet.plasmascan.to/address/0xa9a6b6A0F249e90C999e96010554814907B8f9D7)
+- Gauge: [0xa5471946F66c8eaFFa101feF465B912C0255D1f8](https://testnet.plasmascan.to/address/0xa5471946F66c8eaFFa101feF465B912C0255D1f8)
+- Internal Bribe: [0x17a7be2A7Ea0dcea799EA6f8d37FEE33Ff52636A](https://testnet.plasmascan.to/address/0x17a7be2A7Ea0dcea799EA6f8d37FEE33Ff52636A)
+- External Bribe: [0x2E3a318e5289f5C6f94A822c779d91D58c907fb4](https://testnet.plasmascan.to/address/0x2E3a318e5289f5C6f94A822c779d91D58c907fb4)
 - Pool Type: Volatile
 
 ## Frontend Integration Guide
@@ -350,7 +348,7 @@ function swapExactETHForTokensSupportingFeeOnTransferTokens(
 
 ## Integration Checklist
 
-- [ ] Import RouterV2 ABI and connect to `0x84E8a39C85F645c7f7671689a9337B33Bdc784f8`
+- [ ] Import RouterV2 ABI and connect to `0xb7Be9aB86d1A18c0425C3f6ABbbD58d0Ef19f1a9`
 - [ ] Implement token approval flows before liquidity/swap operations
 - [ ] Add slippage tolerance settings (recommend 0.5% for stable, 2% for volatile)
 - [ ] Implement deadline parameter (recommend current timestamp + 20 minutes)
@@ -444,7 +442,7 @@ await votingEscrow.transferFrom(userAddress, recipientAddress, tokenId);
 
 ### DEX Features
 
-- [ ] Import GlobalRouter ABI and connect to `0x48406768424369b69Cc52886A6520a1839CC426E`
+- [ ] Import GlobalRouter ABI and connect to `0x88C19a127aa22C7826546F34E63FE0e8995c88d0`
 - [ ] Implement token approval flows before liquidity/swap operations
 - [ ] Add slippage tolerance settings (recommend 0.5% for stable, 2% for volatile)
 - [ ] Implement deadline parameter (recommend current timestamp + 20 minutes)
@@ -455,8 +453,8 @@ await votingEscrow.transferFrom(userAddress, recipientAddress, tokenId);
 
 ### Voting Escrow (veNFT) Features
 
-- [ ] Import VotingEscrow ABI and connect to `0x592FA200950B053aCE9Be6d4FB3F58b1763898C0`
-- [ ] Import Lithos token ABI and connect to `0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51`
+- [ ] Import VotingEscrow ABI and connect to `0x516C42d4BcF32531Cb7cf5Eb89Bb8870A4a60011`
+- [ ] Import Lithos token ABI and connect to `0x3a6a2309Bc05b9798CF46699Bba9F6536039B72D`
 - [ ] Implement LITHOS token approval for locking operations
 - [ ] Add lock duration selector (1 week to 2 years)
 - [ ] Display voting power decay over time
