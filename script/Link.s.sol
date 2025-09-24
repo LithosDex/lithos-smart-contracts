@@ -8,6 +8,7 @@ import {VotingEscrow} from "../src/contracts/VotingEscrow.sol";
 import {VoterV3} from "../src/contracts/VoterV3.sol";
 import {Lithos} from "../src/contracts/Lithos.sol";
 import {RewardsDistributor} from "../src/contracts/RewardsDistributor.sol";
+import {PermissionsRegistry} from "../src/contracts/PermissionsRegistry.sol";
 
 contract LinkScript is Script {
     mapping(string => address) public deployed;
@@ -48,6 +49,17 @@ contract LinkScript is Script {
             pairFactory.setStakingFeeAddress(deployer);
         } else {
             console2.log("Staking fee handler already set to deployer");
+        }
+
+        // Grant GOVERNANCE role to deployer for Phase 3 operations
+        PermissionsRegistry permissions = PermissionsRegistry(
+            deployed["PermissionsRegistry"]
+        );
+        if (!permissions.hasRole("GOVERNANCE", deployer)) {
+            console2.log("Granting GOVERNANCE role to deployer...");
+            permissions.setRoleFor(deployer, "GOVERNANCE");
+        } else {
+            console2.log("Deployer already has GOVERNANCE role");
         }
 
         // Link BribeFactoryV3 to VoterV3
