@@ -1,251 +1,163 @@
-# Lithos DEX Deployment Guide
+# Lithos Protocol Deployment Scripts
 
-## Complete Deployment Checklist
+## Overview
+The deployment process is split into four distinct phases, each with its own script:
 
-This checklist provides the complete order of operations for deploying the Lithos ve(3,3) DEX protocol from scratch.
+1. **DeployAndInit.s.sol** - Deploys all contracts and initializes them in one atomic pass
+2. **Link.s.sol** - Wires contracts together and performs initial mint
+3. **InitialPairAndGauge.s.sol** - Creates the initial LITHOS/WXPL pair and gauge
+4. **Ownership.s.sol** - Transfers control to governance multisig
 
-### Phase 1: Core DEX Infrastructure
+## Quick Start
 
-- [ ] **1. Deploy WXPL (Wrapped Native Token)**
-  ```bash
-  # Deploy wrapped native token contract
-  ```
+### Prerequisites
+```bash
+# Required environment variables
+export DEPLOY_ENV=mainnet           # or testnet
+export PRIVATE_KEY=0x...            # Deployer private key
+export RPC_URL=https://...          # Network RPC endpoint
+export MULTISIG=0x...               # Governance multisig address
+export WXPL=0x...                   # Wrapped native token (XPL)
 
-- [ ] **2. Deploy PairFactory**
-  ```bash
-  # Deploy the factory contract for creating liquidity pairs
-  ```
+# Optional for contract verification
+export ETHERSCAN_API_KEY=...        # Enables contract verification via Routescan
 
-- [ ] **3. Deploy RouterV2**
-  ```bash
-  # Deploy main router for swaps and liquidity
-  ```
+# For Phase 3 (Initial Pair & Gauge)
+export INITIAL_LITHOS_AMOUNT=...    # Amount of LITHOS for initial liquidity
+export INITIAL_WXPL_AMOUNT=...      # Amount of WXPL for initial liquidity
 
-- [ ] **4. Deploy GlobalRouter**
-  ```bash
-  # Deploy global router for advanced routing
-  ```
+# Gas configuration (recommended for Plasma)
+export GAS_LIMIT=30000000           # 30M gas limit
+export GAS_PRICE=1000000000         # 1 gwei
+```
 
-- [ ] **5. Deploy TradeHelper**
-  ```bash
-  # Deploy trade helper for price calculations
-  ```
+### Run Deployment
+```bash
+# Phase 1: Deploy & initialize all contracts
+source .env
+forge script script/DeployAndInit.s.sol \
+  --rpc-url "$RPC_URL" \
+  --gas-limit "$GAS_LIMIT" \
+  --gas-price "$GAS_PRICE" \
+  --legacy \
+  --broadcast \
+  --slow
 
-### Phase 2: Governance Token
+# To resume if interrupted:
+forge script script/DeployAndInit.s.sol --rpc-url "$RPC_URL" --gas-limit "$GAS_LIMIT" --gas-price "$GAS_PRICE" --legacy --broadcast --resume --skip-simulation -vvv
 
-- [ ] **6. Deploy LITHOS Token**
-  ```bash
-  # Deploy the LITHOS governance token
-  ```
+# Phase 2: Link contracts
+forge script script/Link.s.sol \
+  --rpc-url "$RPC_URL" \
+  --gas-limit "$GAS_LIMIT" \
+  --gas-price "$GAS_PRICE" \
+  --legacy \
+  --broadcast \
+  --slow
 
-### Phase 3: Vote Escrow System
+# Phase 3: Create initial pair & gauge
+forge script script/InitialPairAndGauge.s.sol \
+  --rpc-url "$RPC_URL" \
+  --gas-limit "$GAS_LIMIT" \
+  --gas-price "$GAS_PRICE" \
+  --legacy \
+  --broadcast \
+  --slow
 
-- [ ] **7. Deploy VotingEscrow**
-  ```bash
-  forge create src/contracts/VotingEscrow.sol:VotingEscrow \
-    --constructor-args <TOKEN_ADDRESS> <VEARTPROXY_ADDRESS> \
-    --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --legacy --gas-price 25000000000 --verify
-  ```
+# Phase 4: Transfer ownership to multisig
+forge script script/Ownership.s.sol \
+  --rpc-url "$RPC_URL" \
+  --gas-limit "$GAS_LIMIT" \
+  --gas-price "$GAS_PRICE" \
+  --legacy \
+  --broadcast \
+  --slow
+```
 
-- [ ] **8. Deploy VeArtProxyUpgradeable**
-  ```bash
-  # Deploy the NFT art proxy for veNFTs
-  ```
+## State Management
+- Deployment state is saved to `deployments/<env>/state.json`
+- Scripts automatically resume from last successful deployment
+- State file contains all deployed contract addresses
+- Delete or rename state file to run a fresh deployment
 
-- [ ] **9. Deploy RewardsDistributor**
-  ```bash
-  # Deploy rewards distributor for veNFT holders
-  ```
+## Directory Structure
+```
+deployments/
+  ├── mainnet/
+  │   └── state.json
+  └── testnet/
+      └── state.json
+```
 
-- [ ] **10. Deploy PermissionsRegistry**
-  ```bash
-  # Deploy permissions registry for role management
-  ```
+## Contract Deployment Order
 
-### Phase 4: Gauge & Voting System
+### Phase 1: Deploy & Initialize
+Deploys every contract and executes its initializer in the same transaction bundle:
 
-- [ ] **11. Deploy GaugeFactoryV2**
-  ```bash
-  forge create src/contracts/factories/GaugeFactoryV2.sol:GaugeFactoryV2 \
-    --constructor-args <OWNER_ADDRESS> \
-    --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --legacy --gas-price 25000000000 --verify
-  ```
+1. **Core Token System**
+   - Lithos Token
+   - VeArtProxyUpgradeable (NFT metadata)
+   - VotingEscrow (veNFT system)
 
-- [ ] **12. Deploy BribeFactoryV3**
-  ```bash
-  forge create src/contracts/factories/BribeFactoryV3.sol:BribeFactoryV3 \
-    --constructor-args <VOTER_ADDRESS> <PERMISSIONS_REGISTRY> \
-    --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --legacy --gas-price 25000000000 --verify
-  ```
+2. **DEX Infrastructure**
+   - PairFactoryUpgradeable
+   - TradeHelper (depends on PairFactory)
+   - GlobalRouter (depends on TradeHelper)
+   - RouterV2 (legacy compatibility, depends on PairFactory & WXPL)
 
-- [ ] **13. Deploy VoterV3**
-  ```bash
-  forge create src/contracts/VoterV3.sol:VoterV3 \
-    --constructor-args <VE_ADDRESS> <PAIR_FACTORY> <GAUGE_FACTORY> <BRIBE_FACTORY> \
-    --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --legacy --gas-price 25000000000 --verify
-  ```
-  **Note**: Ensure VoterV3 includes the `ve()` getter function for IVoter interface compatibility
+3. **Gauge & Voting System**
+   - GaugeFactoryV2
+   - PermissionsRegistry
+   - BribeFactoryV3
+   - VoterV3
+   - RewardsDistributor
+   - MinterUpgradeable
 
-- [ ] **14. Update BribeFactory Voter Reference**
-  ```bash
-  forge script script/UpdateBribeFactoryVoter.s.sol:UpdateBribeFactoryVoter \
-    --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --legacy --gas-price 25000000000 --broadcast
-  ```
+### Phase 2: Link
+Wires contracts together once every initializer is complete:
+- Configure PairFactory trade fees (0.04% stable, 0.18% volatile)
+- Set staking fee handler to deployer (keeps fees accessible until ownership transfer)
+- Point BribeFactory at the live voter
+- Wire VotingEscrow → VoterV3 connections
+- **Perform initial mint of 50M LITHOS to deployer** (must be done before setting minter)
+- Set Lithos minter to MinterUpgradeable contract
+- Assign RewardsDistributor depositor rights to MinterUpgradeable
+- Configure emission parameters (990 decay, 300 rebase, 40 team rate)
 
-### Phase 5: Emissions & Minting
+### Phase 3: Initial Pair & Gauge
+Sets up the initial LITHOS/WXPL trading pair and gauge:
+- Create the LITHOS/WXPL volatile pair
+- Add initial liquidity to bootstrap the pair
+- Whitelist LITHOS and WXPL tokens in VoterV3
+- Create a gauge for the pair to receive emissions
+- Save pair and gauge addresses to state.json
 
-- [ ] **15. Deploy MinterUpgradeable**
-  ```bash
-  forge script script/DeployMinter.s.sol:DeployMinter \
-    --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --legacy --gas-price 25000000000 --broadcast
-  ```
+### Phase 4: Transfer Ownership
+Transfers ownership to multisig and finalizes control:
+- VoterV3 → Multisig
+- GaugeFactoryV2 → VoterV3 (special case: owned by VoterV3)
+- PairFactoryUpgradeable → Multisig
+- BribeFactoryV3 → Multisig
+- VeArtProxyUpgradeable → Multisig
+- VotingEscrow team → Multisig
+- Stage MinterUpgradeable team transfer (multisig must call `acceptTeam()`)
+- Confirms Lithos minter is the Minter contract
 
-- [ ] **16. Update Minter Voter Reference**
-  ```bash
-  forge script script/UpdateMinterVoter.s.sol:UpdateMinterVoter \
-    --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --legacy --gas-price 25000000000 --broadcast
-  ```
+## Security Notes
 
-### Phase 6: Contract Initialization & Linking
+- **Upgradeables**: All upgradeable contracts are deployed and initialized in the same transaction to prevent takeover
+- **Initial Mint**: 50M LITHOS minted to deployer in Phase 2, must be distributed according to tokenomics
+- **Ownership Transfer**: Phase 4 is critical - ensure multisig is ready to accept roles
+- **Two-Step Transfers**: Some roles (like MinterUpgradeable team) require the multisig to call `acceptTeam()` after Phase 4
 
-- [ ] **17. Initialize VoterV3**
-  ```bash
-  forge script script/InitializeVoter.s.sol:InitializeVoter \
-    --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --legacy --gas-price 25000000000 --broadcast
-  ```
-  - Sets Minter address
-  - Whitelists initial tokens (LITHOS, WXPL, stablecoins)
+## Additional Scripts
 
-- [ ] **18. Update VotingEscrow Voter**
-  ```bash
-  forge script script/UpdateVotingEscrowVoter.s.sol:UpdateVotingEscrowVoter \
-    --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --legacy --gas-price 25000000000 --broadcast
-  ```
+### WeeklyDistro.s.sol [TODO: Documentation]
+Handles weekly emission distribution after protocol launch.
 
-- [ ] **19. Update LITHOS Token Minter**
-  ```bash
-  forge script script/UpdateLithosMinter.s.sol:UpdateLithosMinter \
-    --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --legacy --gas-price 25000000000 --broadcast
-  ```
-
-### Phase 7: Permissions & Access Control
-
-- [ ] **20. Set Permissions in Registry**
-  ```bash
-  forge script script/SetPermissions.s.sol:SetPermissions \
-    --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --legacy --gas-price 25000000000 --broadcast
-  ```
-  - Configures VOTER_ADMIN role
-  - Configures GOVERNANCE role
-  - Configures GAUGE_ADMIN role
-  - Configures BRIBE_ADMIN role
-
-### Phase 8: Initial Liquidity & Gauges
-
-- [ ] **21. Create Initial Liquidity Pools**
-  - Deploy priority trading pairs through PairFactory
-  - Add initial liquidity to pairs
-
-- [ ] **22. Create Gauges for Pools**
-  ```bash
-  # For each pool, create a gauge (one at a time due to gas limits)
-  forge script script/CreateSingleGauge.s.sol:CreateSingleGauge \
-    --sig "run(uint256)" <PAIR_INDEX> \
-    --rpc-url $RPC_URL \
-    --private-key $PRIVATE_KEY \
-    --legacy --gas-price 25000000000 --gas-limit 8000000 --broadcast
-  ```
-
-- [ ] **23. Verify Gauge Contracts**
-  ```bash
-  # For each gauge created, verify the gauge and its bribe contracts
-  # 1. Encode constructor args
-  cast abi-encode "constructor(address,address,address,address,address,address,address,address[])" \
-    <STAKE_TOKEN> <VOTER> <PERMISSIONS> <VE> <REWARDS_DIST> <TEST_TOKEN> <LITHOS> "[]"
-
-  # 2. Verify gauge
-  forge verify-contract <GAUGE_ADDRESS> src/contracts/GaugeV2.sol:GaugeV2 \
-    --chain-id <CHAIN_ID> \
-    --constructor-args <ENCODED_ARGS>
-
-  # 3. Verify internal & external bribes (same process)
-  ```
-
-### Phase 9: Final Configuration
-
-- [ ] **24. Set Initial Emission Rate**
-  - Configure weekly emissions in Minter
-
-- [ ] **25. Transfer Ownership (if using multisig)**
-  - Transfer ownership of critical contracts to multisig
-  - Contracts: VoterV3, MinterUpgradeable, PermissionsRegistry
-
-- [ ] **26. Final Verification**
-  - Verify all contract addresses are correctly linked
-  - Test critical functions (swap, add liquidity, lock tokens, vote, claim rewards)
-  - Verify emissions are working correctly
-
-## Testnet Deployment Reference
-
-### Plasma Testnet (Chain ID: 9746)
-
-#### Core DEX
-- **PairFactory**: `0xF1471A005b7557C1d472f0a060040f93ae074297`
-- **RouterV2**: `0x84E8a39C85F645c7f7671689a9337B33Bdc784f8`
-- **GlobalRouter**: `0x48406768424369b69Cc52886A6520a1839CC426E`
-- **TradeHelper**: `0x08798C36d9e1d274Ab48C732B588d9eEE7526E0e`
-- **WXPL**: `0x6100E367285b01F48D07953803A2d8dCA5D19873`
-
-#### ve(3,3) Governance
-- **VotingEscrow**: `0x592FA200950B053aCE9Be6d4FB3F58b1763898C0`
-- **VeArtProxyUpgradeable**: `0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1`
-- **RewardsDistributor**: `0x3b32FEDe4309265Cacc601368787F4264C69070e`
-- **PermissionsRegistry**: `0x3A908c6095bD1A69b651D7B32AB42806528d88c8`
-- **VoterV3**: `0xb7cF73026b3a35955081BB8D9025aE13C50C74cd`
-- **GaugeFactoryV2**: `0x23e7E5f66Ff4396F0D95ad630f4297D768193DE1`
-- **BribeFactoryV3**: `0xC4B0BeCF35366629712FCEfcB4A88727236A531E`
-- **MinterUpgradeable**: `0x6e74245E7E7582790bE61a1a16b459945cCf65A2`
-
-#### Tokens
-- **LITHOS**: `0x45b7C44DC11c6b0E2399F4fd1730F2dB3A30aD51`
-- **TEST**: `0xb89cdFf170b45797BF93536773113861EBEABAfa`
-
-#### Example Gauge & Bribes (Pair 0)
-- **Pair**: `0xaFF8bE2810F056384e5E15dcF8AB8FAf5Aa92d8A`
-- **Gauge**: `0xaff8EF3a3aCfeF558cb6b32DB1d8b0C7d0Bd43ED` ✅
-- **Internal Bribe**: `0xf9ED85d7c293B9773f9f84A285f8a950A9C21d86` ✅
-- **External Bribe**: `0xf1f95E914cED73f95F1323CFd8F8f0bdf902bC06` ✅
-
-## Important Notes
-
-1. **Gas Settings**: Use `--legacy --gas-price 25000000000` flags for all deployments on Plasma
-2. **Gauge Creation**: Create gauges one at a time with 8M gas limit to avoid out-of-gas errors
-3. **VoterV3 Interface**: Ensure VoterV3 includes the `ve()` function to match IVoter interface
-4. **Token Whitelisting**: Whitelist all trading tokens in VoterV3 before creating gauges
-5. **Verification**: Verify contracts immediately after deployment for transparency
-
-## Scripts Available
-
-Current scripts in `/script` cover phases 4-8.
+### Post-Deployment Operations [TODO: Scripts]
+The following operational tasks from DEPLOYMENT.md still need scripts:
+- Token whitelisting for additional tokens beyond LITHOS/WXPL
+- Creating additional trading pairs and gauges
+- Emergency procedures (pause trading, kill/revive gauges)
+- Monitoring and metrics collection
