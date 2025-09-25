@@ -246,7 +246,11 @@ contract E2ETest is Script, Test {
         vm.startBroadcast(TEST_WALLET);
 
         tokens[0] = address(lithos);
-        voter._init(tokens, address(permissionsRegistry), TEST_WALLET); // need to change minter to minter upgradable?
+        voter._init(
+            tokens,
+            address(permissionsRegistry),
+            address(minterUpgradeable)
+        );
 
         vm.stopBroadcast();
         vm.startBroadcast(TEST_WALLET);
@@ -255,13 +259,6 @@ contract E2ETest is Script, Test {
         bribeFactory.setVoter(address(voter));
         console.log("Set voter address in BribeFactory to:", address(voter));
 
-        // Link the voter to the minter contract - this is crucial for bribe contracts to work
-        voter.setMinter(address(minterUpgradeable));
-        console.log(
-            "Set minter address in Voter to:",
-            address(minterUpgradeable)
-        );
-        
         // Set the voter address in VotingEscrow so it can call the voting function
         votingEscrow.setVoter(address(voter));
         console.log("Set voter address in VotingEscrow to:", address(voter));
