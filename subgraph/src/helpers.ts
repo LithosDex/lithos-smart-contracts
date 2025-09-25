@@ -64,6 +64,8 @@ export function getOrCreateToken(address: Address): Token {
       let symbolResult = contract.try_symbol()
       if (!symbolResult.reverted) {
         token.symbol = symbolResult.value
+        // Use symbol as name if no name available
+        token.name = symbolResult.value
       }
       
       let decimalsResult = contract.try_decimals()
@@ -83,10 +85,12 @@ export function createLiquidityPosition(user: Address, pair: Address): Liquidity
   let liquidityPosition = LiquidityPosition.load(id)
   
   if (liquidityPosition === null) {
-    let pairEntity = Pair.load(pair.toHexString())
+    // Ensure user entity exists
+    let userEntity = createUser(user)
+    
     liquidityPosition = new LiquidityPosition(id)
     liquidityPosition.liquidityTokenBalance = ZERO_BD
-    liquidityPosition.user = user.toHexString()
+    liquidityPosition.user = userEntity.id  // Reference to User entity
     liquidityPosition.pair = pair.toHexString()
     liquidityPosition.supplyIndex0 = ZERO_BD
     liquidityPosition.supplyIndex1 = ZERO_BD

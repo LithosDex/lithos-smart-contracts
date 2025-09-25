@@ -8,9 +8,9 @@ dataSources:
     name: PairFactory
     network: plasma-testnet # or polygon, base, etc.
     source:
-      address: "0xF1471A005b7557C1d472f0a060040f93ae074297" # Replace with actual deployed factory address
+      address: "0xa74848bAC41c4B1E6d1CFA6615Afb8893805075A" # Replace with actual deployed factory address
       abi: PairFactory
-      startBlock: 1702976 # Replace with actual deployment block
+      startBlock: 2893469 # Replace with actual deployment block
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -37,9 +37,9 @@ dataSources:
     name: RouterV2
     network: plasma-testnet # or polygon, base, etc.
     source:
-      address: "0x84E8a39C85F645c7f7671689a9337B33Bdc784f8" # Replace with actual deployed router address
+      address: "0xb7Be9aB86d1A18c0425C3f6ABbbD58d0Ef19f1a9" # Replace with actual deployed router address
       abi: RouterV2
-      startBlock: 1705255 # Replace with actual deployment block
+      startBlock: 2893474 # Replace with actual deployment block
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -64,9 +64,9 @@ dataSources:
     name: VotingEscrow
     network: plasma-testnet
     source:
-      address: "0x349D59Dca5104189AF1fF2fac45108d66F44884F"
+      address: "0x516C42d4BcF32531Cb7cf5Eb89Bb8870A4a60011"
       abi: VotingEscrow
-      startBlock: 2389220
+      startBlock: 2893467
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -113,9 +113,9 @@ dataSources:
     name: MinterUpgradeable
     network: plasma-testnet
     source:
-      address: "0x3739bf532c0ACe36fB081599224c0f81676407E5"
+      address: "0x4f00b43CD851ac5d5599834f71434f245A92D973"
       abi: MinterUpgradeable
-      startBlock: 2389220
+      startBlock: 2893485
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -140,9 +140,9 @@ dataSources:
     name: VoterV3
     network: plasma-testnet
     source:
-      address: "0x0b8Aaf2C51EA5c07566D96E334B37FEEcCAbac0d"
+      address: "0x5C1f4391ad20475D76f4738d3faAF3B170A06919"
       abi: VoterV3
-      startBlock: 2390358
+      startBlock: 2893482
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

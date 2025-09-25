@@ -1,127 +1,103 @@
 # Lithos Tokenomics Guide
 
-## Protocol Parameters
+## System Flywheel
 
-### Emissions
-| Parameter | Default | Range | Setting |
-|-----------|---------|-------|---------|
-| **Weekly** | 2.6M LITHOS | 2-3M | `Minter.setEmission()` |
-| **Decay** | 99% | 98-99.5% | `Minter.setEmission(990)` |
-| **Tail** | 0.2% supply | Min | Automatic |
-| **Rebase** | 30% max | 20-30% | `Minter.setRebase(300)` |
-| **Team** | 4% | Max 5% | `Minter.setTeamRate(40)` |
+1. **Lock**: Stake LITHOS into `VotingEscrow` to mint veNFT voting power (max lock 104 weeks).
+2. **Vote**: veNFT holders direct emissions toward gauges attached to liquidity pools.
+3. **Emit**: `MinterUpgradeable.update_period()` mints weekly LITHOS, allocates to team, rebases, then pushes the rest to `VoterV3`.
+4. **Distribute**: `VoterV3.distribute()` streams emissions to gauges; LPs stake to capture rewards and pool fees.
+5. **Recycle**: Trading fees flow back to veNFT voters, incentivizing deeper locks and higher participation.
 
-### Voting
-| Parameter | Default | Max | Setting |
-|-----------|---------|-----|---------|
-| **Vote Delay** | 0 | 7 days | `VoterV3.setVoteDelay()` |
-| **Whitelist** | - | - | `VoterV3.whitelist(tokens[])` |
+## Key Parameters
 
-### System Constants
-| Constant | Value |
-|----------|-------|
-| **Epoch Duration** | 1 week (604,800 seconds) |
-| **Max Lock Period** | 104 weeks (2 years) |
-| **Min Lock Period** | 1 week |
-| **Vote Reset** | Weekly at epoch boundary |
+### Emission Controls
 
-## Core Contracts
+| Parameter       | Default                    | Bounds                        | Function                                                                    |
+| --------------- | -------------------------- | ----------------------------- | --------------------------------------------------------------------------- |
+| Weekly emission | 2.6M LITHOS                | 2-3M suggested                | `Minter.setEmission(uint256)` sets the starting weekly figure (18 decimals) |
+| Decay           | 99%                        | 98-99.5% typical              | `Minter.setEmission(990)` → next week = `current * 990 / 1000`              |
+| Tail emission   | 0.2% of circulating supply | Hard floor                    | `Minter.setTailEmission(2)`                                                 |
+| Max rebase      | 30% of weekly              | 20-30% recommended            | `Minter.setRebase(300)`                                                     |
+| Team allocation | 4%                         | Hard max 5% (`MAX_TEAM_RATE`) | `Minter.setTeamRate(40)`                                                    |
 
-| Contract | Purpose | Key Functions |
-|----------|---------|---------------|
-| **LITHOS** | ERC20 token (50M initial) | `initialMint()`, `setMinter()` |
-| **VotingEscrow** | veNFT lock management | `create_lock()`, `merge()`, `split()` |
-| **Minter** | Emission controller | `update_period()`, `setEmission()` |
-| **VoterV3** | Voting & distribution hub | `vote()`, `claimFees()`, `claimBribes()` |
-| **Gauges** | LP staking rewards | `deposit()`, `getReward()` |
-| **Bribes** | Vote incentives | `notifyRewardAmount()` |
+### veNFT & Voting
 
-## Emissions & Fees
+| Parameter     | Default          | Cap    | Function                                              |
+| ------------- | ---------------- | ------ | ----------------------------------------------------- |
+| Vote delay    | 0 seconds        | 7 days | `VoterV3.setVoteDelay(uint256)`                       |
+| Whitelist     | Project-specific | -      | `VoterV3.whitelist(address[])` enables gauge creation |
+| Epoch cadence | 604,800 seconds  | Fixed  | Epoch ticks drive emission and vote resets            |
+| Lock window   | 1-104 weeks      | Fixed  | Enforced in `VotingEscrow`                            |
 
-### Weekly Emission Distribution
+## Launch Checklist
+
+- **Mint supply**: `LITHOS.initialMint(treasury)` (one-time 50M).
+- **Bootstrap locks**: `Minter._initialize(recipients, amounts, total)` runs exactly once while `_initializer` is true; it mints up to `total`, approves `VotingEscrow`, and `create_lock_for` stakes each amount for the full two-year term so supply grows without increasing float.
+- **Transfer control**: `LITHOS.setMinter(minter)`, `VotingEscrow.setVoter(voter)`, `VoterV3.setMinter(minter)`.
+- **Confirm parameters**: Run `setEmission`, `setRebase`, `setTeamRate`, and factory fee calls prior to opening voting.
+
+## Emission Mechanics
+
+- **One-time mints**: `initialMint` drops a single 50M tranche to the treasury after `setMinter`, and `_initialize(claimants, amounts, max)` (callable once) streams up to `max` into two-year veNFT locks via `create_lock_for`; any remainder idles on the minter (`contracts/Thena.sol:34-39`, `contracts/MinterUpgradeable.sol:72-88`, `contracts/VotingEscrow.sol:764-776`).
+- **Baseline schedule**: `update_period()` begins at 2.6M and applies `next = current * EMISSION / 1000` (default 0.99 multiplier) but never drops below `tail = circulating * 2 / 1000`, with circulating defined as total supply minus ve escrow (`contracts/MinterUpgradeable.sol:125-138`).
+- **Allocation formulae**: `team = weekly * teamRate / 1000` (default 40, max 50), `lockedShare = veSupply * 1000 / totalSupply`, `rebase = weekly * min(lockedShare, REBASEMAX) / 1000`, `gauges = weekly - team - rebase`; rebases pipe through `RewardsDistributor` and relock when positions stay active (`contracts/MinterUpgradeable.sol:145-190`, `contracts/RewardsDistributor.sol:283-323`).
+
+## Weekly Emission Lifecycle
+
+1. **Trigger epoch**: Anyone may call `Minter.update_period()`; do so after the Thursday 00:00 UTC boundary.
+2. **Team share**: Mint `team = weekly * teamRate / 1000` to the configured wallet.
+3. **Rebase computation**: Apply the `lockedShare` cap (`min(..., REBASEMAX)`) and forward the result to `RewardsDistributor`; zero locks → zero rebase.
+4. **Gauge budget**: Route `gauges = weekly - team - rebase` to `VoterV3`, where `distribute` pushes funds into gauges.
+5. **Gauge distribution**: Each gauge receives `weight / totalWeight * emissions` for the epoch; LPs then claim via `GaugeV2.getReward()`.
+
+### Example Split (2.6M weekly, 50% locked)
+
 ```
-Weekly Emission (2.6M LITHOS, 99% decay/week)
-├── Team: 4%
-├── Rebase: min(locked%, 30%)
-└── Gauges: ~66% to voted pools
+Team (4%)                104,000
+Rebase (min(50%,30%))    780,000
+Gauge emissions        1,716,000
+Tail emission floor ensures emissions never drop below 0.2% of circulating supply.
 ```
 
-### Trading Fee Split
-```
-Total Fee (0.04% stable, 0.18% volatile)
-├── Referral: 12% of fee
-├── Staking (veNFT voters): 30% of remaining
-└── LPs: ~58% of total
-```
+Locked balances routed through `RewardsDistributor` re-lock automatically while positions stay active, so long-term lockers absorb inflation while shrinking the circulating base (`contracts/RewardsDistributor.sol:283-323`).
 
-## Referral System (Dibs)
+## Fee & Incentive Streams
 
-| Component | Description |
-|-----------|-------------|
-| **Interface** | `IDibs.reward()` processes referral payments |
-| **Fee Share** | 12% of trading fees (max configurable) |
-| **Integration** | Auto-processed during swaps via `Pair._sendFees()` |
-| **Configuration** | `PairFactory.setDibs(address)` |
+| Stream           | Who receives it                                   | How it accrues                                                          |
+| ---------------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
+| Trading fees     | LPs (≈58%), veNFT voters (≈30%), referrals (≤12%) | Set via factory parameters `setFee`, `setStakingFees`, `setReferralFee` |
+| Emission rewards | Gauge stakers                                     | Pulled from `Minter → Voter → Gauge` each epoch                         |
+| Rebases          | veNFT holders                                     | `Minter` mints pro-rata to `VotingEscrow` lockers (anti-dilution)       |
+| Bribes           | veNFT holders who voted                           | Deposited via `Bribe.notifyRewardAmount` for next epoch                 |
 
-## Voting & Rewards
+### Referral System (Dibs)
 
-### Voting Mechanics
-- **Frequency**: Weekly reset at epoch boundary
-- **Weight**: Must sum to 10000 (100%)
-- **Power**: Based on veNFT balance at vote time
+- `PairFactory.setDibs(address)` wires the handler.
+- During swaps `Pair._sendFees()` forwards up to 12% of the collected fee to the handler, which settles user-level rewards.
 
-### Gauge Types
-- **Type 0**: Standard AMM pairs
-- **Type 1**: Concentrated liquidity pools
+## Governance & Voting Notes
 
-### Bribes
-Projects incentivize votes by depositing rewards that voters claim proportionally:
+- Votes must sum to 10,000 (basis points); weights can be reused every epoch via `poke(tokenId)`.
+- Gauge types: `0` standard AMM (default), `1` reserved for specialized pools (e.g., concentrated liquidity).
+- `VoterV3.blacklist()` removes malicious tokens, while `killGauge()` halts emissions but keeps LP withdrawals open.
 
-| Efficiency | Ratio | Description |
-|------------|-------|-------------|
-| **Good** | >1.2x | $1 bribe → $1.20+ emissions |
-| **Break-even** | 1.0x | $1 bribe → $1 emissions |
-| **Poor** | <1.0x | Bribe cost exceeds emissions |
+## Operations & Monitoring
 
-## Operations
+- **Weekly**: run `update_period` then `VoterV3.distributeAll()`; verify `Gauge.notifyRewardAmount` events fire for active pools.
+- **KPIs**: lock rate (>40%), vote participation (>60%), bribe efficiency (>1.2x), emission decay vs. fee growth.
+- **Adjustments**: use `setEmission` for macro emission changes, `setRebase` if lock share deviates, and rebalance fee tiers to stay competitive.
+- **Analytics**: track `VoterV3` vote weights and `GaugeV2` TVL to spot concentration risks early.
 
-### Initial Configuration
-| Parameter | Setting |
-|-----------|---------|
-| **Weekly Emission** | 2.6M LITHOS |
-| **Decay Rate** | 99% |
-| **Max Rebase** | 30% |
-| **Team Share** | 4% |
+## Emergency Toolkit
 
-### Weekly Maintenance (Thursday 00:00 UTC)
-- **Start Epoch**: `Minter.update_period()`
-- **Distribute**: `VoterV3.distributeAll()`
+- Slow vote swings: `VoterV3.setVoteDelay(86400-604800)` enforces a cooldown between re-votes.
+- Halt emissions to a pool: `VoterV3.killGauge(gauge)`; revive with `reviveGauge` after mitigation.
+- Gauge withdrawals-only: `GaugeV2.activateEmergencyMode()` lets LPs exit without compounding rewards until resolved.
+- Token abuse: `VoterV3.blacklist(tokens[])` removes assets from new gauge eligibility.
 
-### Monitoring Targets
-| Metric | Target | Alert |
-|--------|--------|-------|
-| **Lock Rate** | >40% | <25% |
-| **Vote Participation** | >60% | <40% |
-| **Bribe Efficiency** | >1.2x | <1.0x |
+## User & Admin Actions Snapshot
 
-### Emergency Actions
-- **Stop Gauge**: `VoterV3.killGauge(gauge)`
-- **Emergency Mode**: `Gauge.activateEmergencyMode()`
-- **Vote Delay**: `VoterV3.setVoteDelay(604800)`
-- **Block Tokens**: `VoterV3.blacklist(tokens[])`
-
-## Actions
-
-### Users
-- **Create Lock**: `VotingEscrow.create_lock(amount, weeks)`
-- **Vote**: `VoterV3.vote(tokenId, pools[], weights[])`
-- **Claim Fees**: `VoterV3.claimFees(pairs[], tokens[][], tokenId)`
-- **Claim Bribes**: `VoterV3.claimBribes(bribes[], tokens[][], tokenId)`
-- **Stake LP**: `Gauge.deposit(amount)`
-- **Claim Rewards**: `Gauge.getReward()`
-
-### Admin
-- **Emissions**: `Minter.setEmission(weeklyAmount)`
-- **Gauges**: `VoterV3.createGauge(pool, type)`
-- **Fees**: `PairFactory.setReferralFee(bps)`
-- **Referrals**: `PairFactory.setDibs(address)`
+| Actor          | Key Calls                                                                                                                                       |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| User           | `VotingEscrow.create_lock`, `VoterV3.vote`, `GaugeV2.deposit`, `GaugeV2.getReward`, `VoterV3.claimFees/claimBribes`                             |
+| Protocol Admin | `Minter.setEmission/setRebase/setTeamRate`, `VoterV3.createGauge`, `PairFactory.setReferralFee`, `PairFactory.setDibs`, `VoterV3.distributeAll` |

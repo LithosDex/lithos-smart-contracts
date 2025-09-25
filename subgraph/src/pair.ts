@@ -74,6 +74,17 @@ export function handleMint(event: MintEvent): void {
   // Update pair
   pair.txCount = pair.txCount.plus(ONE_BI);
 
+  // Get LP token amount minted
+  let liquidityAmount = ZERO_BD;
+  let contract = PairContract.bind(event.address);
+  let totalSupplyResult = contract.try_totalSupply();
+  if (!totalSupplyResult.reverted) {
+    let totalSupply = convertTokenToDecimal(totalSupplyResult.value, BigInt.fromI32(18));
+    // Estimate liquidity minted (this is approximate, better to get from Transfer events)
+    liquidityAmount = totalSupply.minus(pair.totalSupply);
+    pair.totalSupply = totalSupply;
+  }
+
   // Create mint entity
   let mint = new Mint(
     event.transaction.hash
@@ -84,13 +95,20 @@ export function handleMint(event: MintEvent): void {
   mint.transaction = transaction.id;
   mint.pair = pair.id;
   mint.to = event.params.sender;
-  mint.liquidity = ZERO_BD; // Will be updated when we get liquidity amount
+  mint.liquidity = liquidityAmount;
   mint.timestamp = transaction.timestamp;
   mint.amount0 = amount0;
   mint.amount1 = amount1;
   mint.logIndex = event.logIndex;
   mint.amountUSD = amountTotalUSD;
   mint.sender = event.transaction.from;
+
+  // Create or update liquidity position
+  let position = createLiquidityPosition(event.transaction.from, event.address);
+  if (liquidityAmount.gt(ZERO_BD)) {
+    position.liquidityTokenBalance = position.liquidityTokenBalance.plus(liquidityAmount);
+    position.save();
+  }
 
   // Update hourly and daily data
   updatePairHourData(event);
@@ -132,6 +150,17 @@ export function handleBurn(event: BurnEvent): void {
   // Update pair
   pair.txCount = pair.txCount.plus(ONE_BI);
 
+  // Get LP token amount burned
+  let liquidityAmount = ZERO_BD;
+  let contract = PairContract.bind(event.address);
+  let totalSupplyResult = contract.try_totalSupply();
+  if (!totalSupplyResult.reverted) {
+    let totalSupply = convertTokenToDecimal(totalSupplyResult.value, BigInt.fromI32(18));
+    // Estimate liquidity burned
+    liquidityAmount = pair.totalSupply.minus(totalSupply);
+    pair.totalSupply = totalSupply;
+  }
+
   // Create burn entity
   let burn = new Burn(
     event.transaction.hash
@@ -141,7 +170,7 @@ export function handleBurn(event: BurnEvent): void {
   );
   burn.transaction = transaction.id;
   burn.pair = pair.id;
-  burn.liquidity = ZERO_BD; // Will be updated when we get liquidity amount
+  burn.liquidity = liquidityAmount;
   burn.timestamp = transaction.timestamp;
   burn.amount0 = amount0;
   burn.amount1 = amount1;
@@ -149,6 +178,13 @@ export function handleBurn(event: BurnEvent): void {
   burn.logIndex = event.logIndex;
   burn.amountUSD = amountTotalUSD;
   burn.sender = event.transaction.from;
+
+  // Update liquidity position
+  let position = createLiquidityPosition(event.params.to, event.address);
+  if (liquidityAmount.gt(ZERO_BD)) {
+    position.liquidityTokenBalance = position.liquidityTokenBalance.minus(liquidityAmount);
+    position.save();
+  }
 
   // Update hourly and daily data
   updatePairHourData(event);
