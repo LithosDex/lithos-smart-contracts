@@ -30,10 +30,10 @@ contract VoterV3 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
 
     address public _ve; // the ve token that governs these contracts
     address[] internal _factories; // Array with all the pair factories
-    address internal base; // $the token
+    address internal base; // $LITH token
     address[] internal _gaugeFactories; // array with all the gauge factories
     address public bribefactory; // bribe factory (internal and external)
-    address public minter; // minter mints $the each epoch
+    address public minter; // minter mints $LITH each epoch
     address public permissionRegistry; // registry to check accesses
     address[] public pools; // all pools viable for incentives
 
@@ -43,7 +43,7 @@ contract VoterV3 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
     uint256 public constant MAX_VOTE_DELAY = 7 days; // Max vote delay allowed
 
     mapping(address => uint256) internal supplyIndex; // gauge    => index
-    mapping(address => uint256) public claimable; // gauge    => claimable $the
+    mapping(address => uint256) public claimable; // gauge    => claimable $LITH
     mapping(address => address) public gauges; // pool     => gauge
     mapping(address => uint256) public gaugesDistributionTimestmap; // gauge    => last Distribution Time
     mapping(address => address) public poolForGauge; // gauge    => pool
@@ -132,7 +132,7 @@ contract VoterV3 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
 
     /// @notice initialize the voter contract
     /// @param  _tokens array of tokens to whitelist
-    /// @param  _minter the minter of $the
+    /// @param  _minter the minter of $LITH
     function _init(address[] memory _tokens, address _permissionsRegistry, address _minter) external {
         require(msg.sender == minter || IPermissionsRegistry(permissionRegistry).hasRole("VOTER_ADMIN", msg.sender));
         require(!initflag);
@@ -582,7 +582,7 @@ contract VoterV3 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
             base, _ve, _pool, address(this), _internal_bribe, _external_bribe, isPair
         );
 
-        // approve spending for $the
+        // approve spending for $LITH
         IERC20Metadata(base).approve(_gauge, type(uint256).max);
 
         // save data
@@ -752,7 +752,7 @@ contract VoterV3 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
     ----------------------------------------------------------------------------- */
 
     /// @notice update info for gauges
-    /// @dev    this function track the gauge index to emit the correct $the amount after the distribution
+    /// @dev    this function track the gauge index to emit the correct $LITH amount after the distribution
     function _updateForAfterDistribution(address _gauge) private {
         address _pool = poolForGauge[_gauge];
         uint256 _time = _epochTimestamp() - 604800;
