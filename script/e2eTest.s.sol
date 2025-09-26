@@ -226,7 +226,7 @@ contract E2ETest is Script, Test {
         vm.stopBroadcast();
         vm.startBroadcast(TEST_WALLET);
         minterUpgradeable.initialize(
-            TEST_WALLET,
+            address(voter),
             address(votingEscrow),
             address(rewardsDistributor)
         );
@@ -263,6 +263,18 @@ contract E2ETest is Script, Test {
         // Set the voter address in VotingEscrow so it can call the voting function
         votingEscrow.setVoter(address(voter));
         console.log("Set voter address in VotingEscrow to:", address(voter));
+
+        lithos.setMinter((address(minterUpgradeable)));
+        console.log(
+            "Set Minter address in Lithos to:",
+            address(minterUpgradeable)
+        );
+
+        rewardsDistributor.setDepositor(address(minterUpgradeable));
+        console.log(
+            "Set Depositor address in rewardsDistributor to:",
+            address(minterUpgradeable)
+        );
     }
 
     // Step 2: Create pools
