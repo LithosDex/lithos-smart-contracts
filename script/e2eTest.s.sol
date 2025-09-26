@@ -81,6 +81,7 @@ contract E2ETest is Script, Test {
         step4_RunSwaps();
         step5_createLocks();
         step6_createGaugesAndVote();
+        step7_epochFlipAndDistribute();
 
         vm.stopBroadcast();
         console.log("All contracts deployed successfully!");
@@ -530,9 +531,156 @@ contract E2ETest is Script, Test {
         console.log("Gauge creation and voting completed successfully!");
     }
 
+    // Step 7: Epoch flip and emissions distribution
+    function step7_epochFlipAndDistribute() internal {
+        console.log("\n=== Step 7: Epoch Flip and Emissions Distribution ===");
+
+        // We're currently at Oct 10, 2024 from step5
+        // The minter was initialized on Oct 1, which sets active_period to that Friday
+        // Oct 1, 2024 is a Tuesday, so Friday would be Oct 4, 2024
+        // We need to be at least Oct 11, 2024 (Oct 4 + 7 days) to trigger the epoch
+        // Since we're at Oct 10, we need to advance by at least 1 day
+
+        // Roll time forward to Oct 11, 2024 to trigger epoch flip (1 day forward)
+        vm.warp(block.timestamp + 86400); // Add 1 day
+        console.log("Time rolled forward to Oct 11, 2024");
+        console.log("Current timestamp:", block.timestamp);
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Check if we can update period
+        console.log("\n--- Checking emission period ---");
+        bool canUpdate = minterUpgradeable.check();
+
+        if (canUpdate) {
+            console.log("New emission period available!");
+
+            // Get emissions info before distribution
+            uint256 weeklyBefore = minterUpgradeable.weekly();
+            uint256 circulatingBefore = minterUpgradeable.circulating_supply();
+            uint256 activePeriodBefore = minterUpgradeable.active_period();
+
+            console.log("Before distribution:");
+            console.log("- Weekly emissions:", weeklyBefore / 1e18, "LITHOS");
+            console.log(
+                "- Circulating supply:",
+                circulatingBefore / 1e18,
+                "LITHOS"
+            );
+            console.log("- Active period:", activePeriodBefore);
+
+            vm.stopBroadcast();
+            vm.startBroadcast(TEST_WALLET);
+
+            // Distribute emissions to all gauges (this calls update_period internally)
+            console.log("\n--- Distributing emissions to gauges ---");
+            voter.distributeAll();
+            console.log("Emissions distributed successfully!");
+
+            vm.stopBroadcast();
+            vm.startBroadcast(TEST_WALLET);
+
+            // Get emissions info after distribution
+            uint256 weeklyAfter = minterUpgradeable.weekly();
+            uint256 circulatingAfter = minterUpgradeable.circulating_supply();
+            uint256 activePeriodAfter = minterUpgradeable.active_period();
+
+            console.log("\nAfter distribution:");
+            console.log("- Weekly emissions:", weeklyAfter / 1e18, "LITHOS");
+            console.log(
+                "- Circulating supply:",
+                circulatingAfter / 1e18,
+                "LITHOS"
+            );
+            console.log("- Active period:", activePeriodAfter);
+            console.log("- Next period:", activePeriodAfter + 604800);
+        } else {
+            console.log("Not time for new emission period yet.");
+            console.log(
+                "Next period starts at:",
+                minterUpgradeable.active_period() + 604800
+            );
+        }
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Distribute fees for active gauges
+        console.log("\n--- Distributing fees to gauges ---");
+
+        // Get all pools and their gauges
+        uint256 poolCount = voter.length();
+        uint256 activeGaugeCount = 0;
+
+        // First pass: count active gauges
+        for (uint256 i = 0; i < poolCount; i++) {
+            address pool = voter.pools(i);
+            address gauge = voter.gauges(pool);
+            if (gauge != address(0) && voter.isAlive(gauge)) {
+                activeGaugeCount++;
+            }
+        }
+
+        if (activeGaugeCount > 0) {
+            // Create array of only active gauges
+            address[] memory activeGauges = new address[](activeGaugeCount);
+            uint256 j = 0;
+
+            // Second pass: collect active gauges
+            for (uint256 i = 0; i < poolCount; i++) {
+                address pool = voter.pools(i);
+                address gauge = voter.gauges(pool);
+                if (gauge != address(0) && voter.isAlive(gauge)) {
+                    activeGauges[j] = gauge;
+                    console.log("  - Gauge:", gauge, "for pool:", pool);
+                    j++;
+                }
+            }
+
+            console.log(
+                "Distributing fees for",
+                activeGaugeCount,
+                "active gauges..."
+            );
+            voter.distributeFees(activeGauges);
+            console.log("Fees distributed successfully!");
+        } else {
+            console.log("No active gauges found.");
+        }
+
+        // Log summary
+        console.log("\n--- Emission Distribution Summary ---");
+        console.log(
+            "Weekly emissions:",
+            minterUpgradeable.weekly() / 1e18,
+            "LITHOS"
+        );
+        console.log(
+            "Current circulating supply:",
+            minterUpgradeable.circulating_supply() / 1e18,
+            "LITHOS"
+        );
+        console.log("Active period:", minterUpgradeable.active_period());
+        console.log("Next period:", minterUpgradeable.active_period() + 604800);
+
+        uint256 timeToNext = (minterUpgradeable.active_period() + 604800) >
+            block.timestamp
+            ? (minterUpgradeable.active_period() + 604800 - block.timestamp) /
+                3600
+            : 0;
+        console.log("Hours until next period:", timeToNext);
+
+        console.log("\nEpoch flip and distribution completed successfully!");
+    }
+
     function logResults() internal view {
         console.log("\n=== FINAL TEST RESULTS ===");
-        console.log("Timestamp:", block.timestamp, "(Oct 1, 2024)");
+        console.log(
+            "Timestamp:",
+            block.timestamp,
+            "(Oct 11, 2024 after epoch flip)"
+        );
         console.log("");
         console.log("Deployed Contracts:");
         console.log("- PairFactory:", address(pairFactory));
@@ -540,10 +688,35 @@ contract E2ETest is Script, Test {
         console.log("- GlobalRouter:", address(globalRouter));
         console.log("- Lithos:", address(lithos));
         console.log("- VotingEscrow:", address(votingEscrow));
+        console.log("- VoterV3:", address(voter));
+        console.log("- MinterUpgradeable:", address(minterUpgradeable));
+        console.log("- RewardsDistributor:", address(rewardsDistributor));
         console.log("");
         console.log("Pool Created:");
         console.log("- USDT/WETH Pair:", pairAddress);
         console.log("- LP Tokens Minted:", lpTokenBalance);
+        console.log("");
+        console.log("Gauge Information:");
+        address gauge = voter.gauges(pairAddress);
+        console.log("- Gauge for USDT/WETH:", gauge);
+        console.log("- Gauge is alive:", voter.isAlive(gauge));
+        console.log("");
+        console.log("Emissions Data:");
+        console.log(
+            "- Weekly emissions:",
+            minterUpgradeable.weekly() / 1e18,
+            "LITHOS"
+        );
+        console.log(
+            "- Circulating supply:",
+            minterUpgradeable.circulating_supply() / 1e18,
+            "LITHOS"
+        );
+        console.log("- Active period:", minterUpgradeable.active_period());
+        console.log(
+            "- Next period:",
+            minterUpgradeable.active_period() + 604800
+        );
         console.log("");
         console.log("Final Balances:");
         console.log("- USDT:", ERC20(USDT).balanceOf(TEST_WALLET));
