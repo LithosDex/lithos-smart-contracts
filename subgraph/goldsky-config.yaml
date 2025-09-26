@@ -1,0 +1,29 @@
+# Goldsky configuration for Plasma Network
+name: lithos-subgraph
+version: "1.0.0"
+
+# Network configuration for Plasma
+network:
+  name: plasma-testnet
+  chain_id: 9746 # Actual Plasma testnet chain ID
+  rpc_url: https://testnet-rpc.plasma.to
+
+# Subgraph configuration
+subgraph:
+  schema: schema.graphql
+  manifest: subgraph.yaml
+
+# Data sources
+sources:
+  - name: PairFactory
+    address: "0xF1471A005b7557C1d472f0a060040f93ae074297"
+    start_block: 2810500
+
+  - name: RouterV2
+    address: "0x84E8a39C85F645c7f7671689a9337B33Bdc784f8"
+    start_block: 2810500
+
+# Deployment settings
+deployment:
+  env: production
+  auto_sync: true

@@ -1,0 +1,37 @@
+{
+  "name": "plasma-dex-subgraph",
+  "version": "1.0.0",
+  "description": "Subgraph for Plasma DEX - A V3 fork with AMM functionality",
+  "main": "index.js",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "create-local": "graph create --node http://localhost:8020/ plasma-dex/subgraph",
+    "remove-local": "graph remove --node http://localhost:8020/ plasma-dex/subgraph",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 plasma-dex/subgraph",
+    "auth": "graph auth",
+    "deploy": "graph deploy --studio plasma-dex-subgraph",
+    "deploy:goldsky": "./deploy-goldsky.sh",
+    "deploy:goldsky-manual": "goldsky subgraph deploy lithos-subgraph/1.0.0 --path . --chain-id 7777 --rpc-url https://testnet-rpc.plasma.to --network-name plasma-testnet",
+    "test": "graph test"
+  },
+  "keywords": [
+    "graphql",
+    "subgraph",
+    "defi",
+    "dex",
+    "amm",
+    "v3",
+    "ethereum",
+    "plasma"
+  ],
+  "author": "Plasma DEX Team",
+  "license": "MIT",
+  "dependencies": {
+    "@graphprotocol/graph-cli": "0.56.0",
+    "@graphprotocol/graph-ts": "0.30.0"
+  },
+  "devDependencies": {
+    "matchstick-as": "0.5.0"
+  }
+}

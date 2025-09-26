@@ -9,3 +9,10 @@ out/
 
 # Dotenv file
 .env
+
+# Broadcast
+broadcast/
+
+# macOS
+.DS_STORE
+/src/.DS_STORE
