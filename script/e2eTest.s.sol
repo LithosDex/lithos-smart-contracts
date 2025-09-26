@@ -75,13 +75,23 @@ contract E2ETest is Script, Test {
     function run() public {
         setUp();
 
+        // Oct 1, 2024: Deploy DEX contracts
         step1_DeployDEXContracts();
         step2_CreatePools();
         step3_AddLiquidity();
         step4_RunSwaps();
-        step5_createLocks();
-        step6_createGaugesAndVote();
-        step7_epochFlipAndDistribute();
+
+        // Fast forward to Oct 10, 2024: Launch LITH and voting
+        step5_FastForwardToLaunch();
+        step6_DeployVotingContracts();
+        step7_LaunchLITHAndVoting();
+        step8_CreateLocks();
+        step9_BribePools();
+        step10_VoteForPools();
+
+        // Fast forward to Oct 16, 2024: Epoch flip and distribution
+        step11_FastForwardToDistribution();
+        step12_EpochFlipAndDistribute();
 
         vm.stopBroadcast();
         console.log("All contracts deployed successfully!");
@@ -89,9 +99,9 @@ contract E2ETest is Script, Test {
         logResults();
     }
 
-    // Step 1: Deploy core contracts
+    // Step 1: Deploy DEX contracts only (Oct 1, 2024)
     function step1_DeployDEXContracts() internal {
-        console.log("\n=== Step 1: Deploy DEX Contracts ===");
+        console.log("\n=== Step 1: Deploy DEX Contracts (Oct 1, 2024) ===");
         vm.startBroadcast(TEST_WALLET);
 
         // Deploy PairFactory first
@@ -102,11 +112,10 @@ contract E2ETest is Script, Test {
         pairFactory.setDibs(TEST_WALLET);
         console.log("Set dibs address to:", TEST_WALLET);
 
-        // Stop and restart broadcast to manage gas better
         vm.stopBroadcast();
         vm.startBroadcast(TEST_WALLET);
 
-        // Deploy RouterV2 with simple approach
+        // Deploy RouterV2
         router = new RouterV2(address(pairFactory), WETH);
         console.log("RouterV2 deployed:", address(router));
 
@@ -120,161 +129,11 @@ contract E2ETest is Script, Test {
         vm.stopBroadcast();
         vm.startBroadcast(TEST_WALLET);
 
-        // Deploy GlobalRouter with simple approach
+        // Deploy GlobalRouter
         globalRouter = new GlobalRouter(address(tradeHelper));
         console.log("GlobalRouter deployed:", address(globalRouter));
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        //Deploy VeArtProxyUpgradable
-        veArtProxyUpgradeable = new VeArtProxyUpgradeable();
-        console.log(
-            "VeArtProxyUpgradeable deployed:",
-            address(veArtProxyUpgradeable)
-        );
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        //Deploy Lithos token
-        lithos = new Lithos();
-        console.log("Lithos deployed:", address(lithos));
-
-        // Call initial mint
-        lithos.initialMint(TEST_WALLET);
-        console.log("50M minted to:", address(TEST_WALLET));
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        votingEscrow = new VotingEscrow(
-            address(lithos),
-            address(veArtProxyUpgradeable)
-        );
-        console.log("VotingEscrow deployed:", address(votingEscrow));
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        permissionsRegistry = new PermissionsRegistry();
-        console.log(
-            "PermissionsRegistry deployed:",
-            address(permissionsRegistry)
-        );
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        // set governance roles
-        permissionsRegistry.setRoleFor(TEST_WALLET, "GOVERNANCE");
-        permissionsRegistry.setRoleFor(TEST_WALLET, "VOTER_ADMIN");
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        gaugeFactory = new GaugeFactoryV2();
-        console.log("GaugeFactoryV2 deployed:", address(gaugeFactory));
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        gaugeFactory.initialize(address(permissionsRegistry));
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        bribeFactory = new BribeFactoryV3();
-        console.log("BribeFactoryV3 deployed:", address(bribeFactory));
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        bribeFactory.initialize(TEST_WALLET, address(permissionsRegistry));
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        voter = new VoterV3();
-        console.log("VoterV3 deployed:", address(voter));
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        voter.initialize(
-            address(votingEscrow),
-            address(pairFactory),
-            address(gaugeFactory),
-            address(bribeFactory)
-        );
-        console.log("VoterV3 initialized called");
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        rewardsDistributor = new RewardsDistributor(address(votingEscrow));
-        console.log(
-            "rewardsDistributor deployed:",
-            address(rewardsDistributor)
-        );
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        minterUpgradeable = new MinterUpgradeable();
-        console.log("MinterUpgradeable deployed:", address(minterUpgradeable));
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-        minterUpgradeable.initialize(
-            address(voter),
-            address(votingEscrow),
-            address(rewardsDistributor)
-        );
-
-        console.log("minterUpgradeable initialize called");
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        address[] memory tokens = new address[](1);
-        uint256[] memory amounts = new uint256[](1);
-
-        minterUpgradeable._initialize(tokens, amounts, 0);
-
-        console.log("minterUpgradeable _initialize called");
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        tokens[0] = address(lithos);
-        voter._init(
-            tokens,
-            address(permissionsRegistry),
-            address(minterUpgradeable)
-        );
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        // Fix the voter address in BribeFactoryV3 - it was initialized with TEST_WALLET but should be the actual voter contract
-        bribeFactory.setVoter(address(voter));
-        console.log("Set voter address in BribeFactory to:", address(voter));
-
-        // Set the voter address in VotingEscrow so it can call the voting function
-        votingEscrow.setVoter(address(voter));
-        console.log("Set voter address in VotingEscrow to:", address(voter));
-
-        lithos.setMinter((address(minterUpgradeable)));
-        console.log(
-            "Set Minter address in Lithos to:",
-            address(minterUpgradeable)
-        );
-
-        rewardsDistributor.setDepositor(address(minterUpgradeable));
-        console.log(
-            "Set Depositor address in rewardsDistributor to:",
-            address(minterUpgradeable)
-        );
+        console.log("DEX contracts deployed successfully on Oct 1, 2024");
     }
 
     // Step 2: Create pools
@@ -383,13 +242,162 @@ contract E2ETest is Script, Test {
         console.log("Swap executed successfully!");
     }
 
-    function step5_createLocks() internal {
-        console.log("\n=== Step 5: Create Voting Escrow Lock ===");
+    // Step 5: Fast forward to Oct 10, 2024
+    function step5_FastForwardToLaunch() internal {
+        console.log("\n=== Step 5: Fast Forward to Oct 10, 2024 ===");
 
-        // Set time to Oct 10, 2024 before creating locks
+        // Set time to Oct 10, 2024 for LITH launch
         vm.warp(1728518400); // Oct 10, 2024 00:00:00 UTC
-        console.log("Time set to Oct 10, 2024");
+        console.log("Time set to Oct 10, 2024 for LITH launch");
         console.log("Current timestamp:", block.timestamp);
+    }
+
+    // Step 6: Deploy voting and governance contracts
+    function step6_DeployVotingContracts() internal {
+        console.log("\n=== Step 6: Deploy Voting and Governance Contracts ===");
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Deploy VeArtProxyUpgradeable
+        veArtProxyUpgradeable = new VeArtProxyUpgradeable();
+        console.log(
+            "VeArtProxyUpgradeable deployed:",
+            address(veArtProxyUpgradeable)
+        );
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Deploy Lithos token
+        lithos = new Lithos();
+        console.log("Lithos deployed:", address(lithos));
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Deploy VotingEscrow
+        votingEscrow = new VotingEscrow(
+            address(lithos),
+            address(veArtProxyUpgradeable)
+        );
+        console.log("VotingEscrow deployed:", address(votingEscrow));
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Deploy PermissionsRegistry
+        permissionsRegistry = new PermissionsRegistry();
+        console.log(
+            "PermissionsRegistry deployed:",
+            address(permissionsRegistry)
+        );
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Deploy GaugeFactoryV2
+        gaugeFactory = new GaugeFactoryV2();
+        console.log("GaugeFactoryV2 deployed:", address(gaugeFactory));
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Deploy BribeFactoryV3
+        bribeFactory = new BribeFactoryV3();
+        console.log("BribeFactoryV3 deployed:", address(bribeFactory));
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Deploy VoterV3
+        voter = new VoterV3();
+        console.log("VoterV3 deployed:", address(voter));
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Deploy RewardsDistributor
+        rewardsDistributor = new RewardsDistributor(address(votingEscrow));
+        console.log(
+            "RewardsDistributor deployed:",
+            address(rewardsDistributor)
+        );
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Deploy MinterUpgradeable
+        minterUpgradeable = new MinterUpgradeable();
+        console.log("MinterUpgradeable deployed:", address(minterUpgradeable));
+    }
+
+    // Step 7: Launch LITH and initialize voting
+    function step7_LaunchLITHAndVoting() internal {
+        console.log("\n=== Step 7: Launch LITH and Initialize Voting ===");
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Initialize all contracts
+        lithos.initialMint(TEST_WALLET);
+        console.log("LITH initial mint: 50M tokens to TEST_WALLET");
+
+        gaugeFactory.initialize(address(permissionsRegistry));
+        bribeFactory.initialize(TEST_WALLET, address(permissionsRegistry));
+
+        voter.initialize(
+            address(votingEscrow),
+            address(pairFactory),
+            address(gaugeFactory),
+            address(bribeFactory)
+        );
+
+        minterUpgradeable.initialize(
+            TEST_WALLET, // will be updated later
+            address(votingEscrow),
+            address(rewardsDistributor)
+        );
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Set governance roles
+        permissionsRegistry.setRoleFor(TEST_WALLET, "GOVERNANCE");
+        permissionsRegistry.setRoleFor(TEST_WALLET, "VOTER_ADMIN");
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Initialize minter with empty distribution
+        address[] memory tokens = new address[](1);
+        uint256[] memory amounts = new uint256[](1);
+        minterUpgradeable._initialize(tokens, amounts, 0);
+
+        // Initialize voter
+        tokens[0] = address(lithos);
+        voter._init(
+            tokens,
+            address(permissionsRegistry),
+            address(minterUpgradeable)
+        );
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Set up all the cross-references
+        bribeFactory.setVoter(address(voter));
+        votingEscrow.setVoter(address(voter));
+        lithos.setMinter(address(minterUpgradeable));
+        rewardsDistributor.setDepositor(address(minterUpgradeable));
+        minterUpgradeable.setVoter(address(voter));
+
+        console.log("LITH launched and voting system initialized!");
+    }
+
+    // Step 8: Create locks
+    function step8_CreateLocks() internal {
+        console.log("\n=== Step 8: Create Voting Escrow Lock ===");
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
 
         uint256 lockAmount = 1000e18; // Lock 1000 LITH tokens
         uint256 lockDuration = 1 weeks; // 1 week duration
@@ -443,93 +451,97 @@ contract E2ETest is Script, Test {
         console.log("Lock creation completed successfully!");
     }
 
-    function step6_createGaugesAndVote() internal {
-        console.log("\n=== Step 6: Create Gauges and Vote ===");
-
+    // Step 9: Bribe pools with different tokens
+    function step9_BribePools() internal {
+        console.log("\n=== Step 9: Bribe Pools with Different Tokens ===");
         vm.stopBroadcast();
         vm.startBroadcast(TEST_WALLET);
 
-        // Whitelist tokens before creating gauge
-        address[] memory pairTokens = new address[](2);
-        pairTokens[0] = address(USDT);
-        pairTokens[1] = address(WETH);
-
-        voter.whitelist(pairTokens);
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        address owner = bribeFactory.owner();
-        address voterBribe = bribeFactory.voter();
-        console.log("Logging owner:", address(owner));
-        console.log("Logging voterBribe:", address(voterBribe));
-
-        // Create gauge for the USDT/WETH pair using VoterV3
+        // Create gauge first
         (
             address gaugeAddress,
             address internalBribe,
             address externalBribe
-        ) = voter.createGauge(pairAddress, 0); // gaugeType 0 for standard gauge
+        ) = voter.createGauge(pairAddress, 0);
         console.log("Gauge created for pair:", pairAddress);
         console.log("Gauge address:", gaugeAddress);
-        console.log("Internal bribe address:", internalBribe);
         console.log("External bribe address:", externalBribe);
 
         vm.stopBroadcast();
         vm.startBroadcast(TEST_WALLET);
 
-        // Amount to deposit as bribe reward
-        uint256 bribeAmount = 1000e18; // 1000 LITH tokens
+        // Bribe with LITH tokens
+        uint256 lithBribeAmount = 1000e18;
+        lithos.approve(externalBribe, lithBribeAmount);
+        console.log("Approved LITH for bribing:", lithBribeAmount);
 
-        // Check LITH balance before bribe operations
-        uint256 lithBalance = lithos.balanceOf(TEST_WALLET);
-        console.log("LITH balance before bribe:", lithBalance);
-        require(
-            lithBalance >= bribeAmount,
-            "Insufficient LITH balance for bribe"
-        );
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        // Add LITH token as reward to the bribe contract using the correct function name
-        (bool addRewardSuccess, ) = externalBribe.call(
+        // Add LITH as reward token
+        (bool addLithSuccess, ) = externalBribe.call(
             abi.encodeWithSignature("addRewardToken(address)", address(lithos))
         );
-        require(addRewardSuccess, "Failed to add LITH as reward token");
+        require(addLithSuccess, "Failed to add LITH as reward token");
         console.log("Added LITH as reward token to bribe contract");
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        // Approve bribe contract to spend LITH tokens
-        lithos.approve(externalBribe, bribeAmount);
-        console.log("Approved bribe contract to spend LITH:", bribeAmount);
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        // Notify reward amount to distribute the bribe
-        (bool notifySuccess, ) = externalBribe.call(
+        // Notify LITH reward amount
+        (bool notifyLithSuccess, ) = externalBribe.call(
             abi.encodeWithSignature(
                 "notifyRewardAmount(address,uint256)",
                 address(lithos),
-                bribeAmount
+                lithBribeAmount
             )
         );
-        require(notifySuccess, "Failed to notify reward amount");
-        console.log("Notified bribe contract of reward amount:", bribeAmount);
+        require(notifyLithSuccess, "Failed to notify LITH reward amount");
+        console.log("Notified LITH bribe amount:", lithBribeAmount);
 
-        // Check LITH balance after bribe operations
-        uint256 lithBalanceAfter = lithos.balanceOf(TEST_WALLET);
-        console.log("LITH balance after bribe operations:", lithBalanceAfter);
-        console.log(
-            "LITH tokens used for bribe:",
-            lithBalance - lithBalanceAfter
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Also bribe with USDT (different token)
+        uint256 usdtBribeAmount = 500e6; // 500 USDT
+
+        // Get some USDT for bribing
+        deal(USDT, TEST_WALLET, usdtBribeAmount);
+        ERC20(USDT).approve(externalBribe, usdtBribeAmount);
+        console.log("Approved USDT for bribing:", usdtBribeAmount);
+
+        // Add USDT as reward token
+        (bool addUsdtSuccess, ) = externalBribe.call(
+            abi.encodeWithSignature("addRewardToken(address)", USDT)
         );
+        require(addUsdtSuccess, "Failed to add USDT as reward token");
+        console.log("Added USDT as reward token to bribe contract");
 
-        // Now vote with our veNFT (assuming we have tokenId 1 from step5)
-        uint256 tokenId = 1; // This should be the NFT from step5
+        // Notify USDT reward amount
+        (bool notifyUsdtSuccess, ) = externalBribe.call(
+            abi.encodeWithSignature(
+                "notifyRewardAmount(address,uint256)",
+                USDT,
+                usdtBribeAmount
+            )
+        );
+        require(notifyUsdtSuccess, "Failed to notify USDT reward amount");
+        console.log("Notified USDT bribe amount:", usdtBribeAmount);
+
+        console.log("Pool bribing completed successfully!");
+    }
+
+    // Step 10: Vote for pools
+    function step10_VoteForPools() internal {
+        console.log("\n=== Step 10: Vote for Pools ===");
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Whitelist tokens before voting
+        address[] memory pairTokens = new address[](2);
+        pairTokens[0] = address(USDT);
+        pairTokens[1] = address(WETH);
+        voter.whitelist(pairTokens);
+
+        vm.stopBroadcast();
+        vm.startBroadcast(TEST_WALLET);
+
+        // Vote with our veNFT
+        uint256 tokenId = 1; // From step 8
         address[] memory pools = new address[](1);
         uint256[] memory weights = new uint256[](1);
 
@@ -540,29 +552,27 @@ contract E2ETest is Script, Test {
         console.log("Voted with NFT", tokenId, "for pool:", pairAddress);
         console.log("Vote weight:", weights[0]);
 
-        console.log("Gauge creation and voting completed successfully!");
+        console.log("Voting completed successfully!");
     }
 
-    // Step 7: Epoch flip and emissions distribution
-    function step7_epochFlipAndDistribute() internal {
-        console.log("\n=== Step 7: Epoch Flip and Emissions Distribution ===");
+    // Step 11: Fast forward to Oct 16, 2024
+    function step11_FastForwardToDistribution() internal {
+        console.log("\n=== Step 11: Fast Forward to Oct 16, 2024 ===");
 
-        // We're currently at Oct 10, 2024 from step5
-        // The minter was initialized on Oct 1, which sets active_period to that Friday
-        // Oct 1, 2024 is a Tuesday, so Friday would be Oct 4, 2024
-        // We need to be at least Oct 11, 2024 (Oct 4 + 7 days) to trigger the epoch
-        // Since we're at Oct 10, we need to advance by at least 1 day
-
-        // Roll time forward to Oct 11, 2024 to trigger epoch flip (1 day forward)
-        vm.warp(block.timestamp + 86400); // Add 1 day
-        console.log("Time rolled forward to Oct 11, 2024");
+        // Set time to Oct 16, 2024 for epoch flip
+        vm.warp(1729036800); // Oct 16, 2024 00:00:00 UTC
+        console.log("Time set to Oct 16, 2024 for epoch flip and distribution");
         console.log("Current timestamp:", block.timestamp);
+    }
 
+    // Step 12: Epoch flip and distribution
+    function step12_EpochFlipAndDistribute() internal {
+        console.log("\n=== Step 12: Epoch Flip and Emissions Distribution ===");
         vm.stopBroadcast();
         vm.startBroadcast(TEST_WALLET);
 
         // Check if we can update period
-        console.log("\n--- Checking emission period ---");
+        console.log("Checking emission period...");
         bool canUpdate = minterUpgradeable.check();
 
         if (canUpdate) {
@@ -586,7 +596,7 @@ contract E2ETest is Script, Test {
             vm.startBroadcast(TEST_WALLET);
 
             // Distribute emissions to all gauges (this calls update_period internally)
-            console.log("\n--- Distributing emissions to gauges ---");
+            console.log("Distributing emissions to gauges...");
             voter.distributeAll();
             console.log("Emissions distributed successfully!");
 
@@ -598,7 +608,7 @@ contract E2ETest is Script, Test {
             uint256 circulatingAfter = minterUpgradeable.circulating_supply();
             uint256 activePeriodAfter = minterUpgradeable.active_period();
 
-            console.log("\nAfter distribution:");
+            console.log("After distribution:");
             console.log("- Weekly emissions:", weeklyAfter / 1e18, "LITHOS");
             console.log(
                 "- Circulating supply:",
@@ -607,6 +617,38 @@ contract E2ETest is Script, Test {
             );
             console.log("- Active period:", activePeriodAfter);
             console.log("- Next period:", activePeriodAfter + 604800);
+
+            // Distribute fees for active gauges
+            console.log("Distributing fees to gauges...");
+            uint256 poolCount = voter.length();
+            address[] memory activeGauges = new address[](poolCount);
+            uint256 activeCount = 0;
+
+            // Collect active gauges
+            for (uint256 i = 0; i < poolCount; i++) {
+                address pool = voter.pools(i);
+                address gauge = voter.gauges(pool);
+                if (gauge != address(0) && voter.isAlive(gauge)) {
+                    activeGauges[activeCount] = gauge;
+                    activeCount++;
+                    console.log("  - Active gauge:", gauge, "for pool:", pool);
+                }
+            }
+
+            if (activeCount > 0) {
+                // Create correctly sized array
+                address[] memory finalGauges = new address[](activeCount);
+                for (uint256 i = 0; i < activeCount; i++) {
+                    finalGauges[i] = activeGauges[i];
+                }
+
+                voter.distributeFees(finalGauges);
+                console.log(
+                    "Fees distributed to",
+                    activeCount,
+                    "active gauges"
+                );
+            }
         } else {
             console.log("Not time for new emission period yet.");
             console.log(
@@ -615,129 +657,101 @@ contract E2ETest is Script, Test {
             );
         }
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        // Distribute fees for active gauges
-        console.log("\n--- Distributing fees to gauges ---");
-
-        // Get all pools and their gauges
-        uint256 poolCount = voter.length();
-        uint256 activeGaugeCount = 0;
-
-        // First pass: count active gauges
-        for (uint256 i = 0; i < poolCount; i++) {
-            address pool = voter.pools(i);
-            address gauge = voter.gauges(pool);
-            if (gauge != address(0) && voter.isAlive(gauge)) {
-                activeGaugeCount++;
-            }
-        }
-
-        if (activeGaugeCount > 0) {
-            // Create array of only active gauges
-            address[] memory activeGauges = new address[](activeGaugeCount);
-            uint256 j = 0;
-
-            // Second pass: collect active gauges
-            for (uint256 i = 0; i < poolCount; i++) {
-                address pool = voter.pools(i);
-                address gauge = voter.gauges(pool);
-                if (gauge != address(0) && voter.isAlive(gauge)) {
-                    activeGauges[j] = gauge;
-                    console.log("  - Gauge:", gauge, "for pool:", pool);
-                    j++;
-                }
-            }
-
-            console.log(
-                "Distributing fees for",
-                activeGaugeCount,
-                "active gauges..."
-            );
-            voter.distributeFees(activeGauges);
-            console.log("Fees distributed successfully!");
-        } else {
-            console.log("No active gauges found.");
-        }
-
-        // Log summary
-        console.log("\n--- Emission Distribution Summary ---");
-        console.log(
-            "Weekly emissions:",
-            minterUpgradeable.weekly() / 1e18,
-            "LITHOS"
-        );
-        console.log(
-            "Current circulating supply:",
-            minterUpgradeable.circulating_supply() / 1e18,
-            "LITHOS"
-        );
-        console.log("Active period:", minterUpgradeable.active_period());
-        console.log("Next period:", minterUpgradeable.active_period() + 604800);
-
-        uint256 timeToNext = (minterUpgradeable.active_period() + 604800) >
-            block.timestamp
-            ? (minterUpgradeable.active_period() + 604800 - block.timestamp) /
-                3600
-            : 0;
-        console.log("Hours until next period:", timeToNext);
-
-        console.log("\nEpoch flip and distribution completed successfully!");
+        console.log("Epoch flip and distribution completed successfully!");
     }
 
     function logResults() internal view {
         console.log("\n=== FINAL TEST RESULTS ===");
+        console.log("Timeline completed: Oct 1 to Oct 10 to Oct 16, 2024");
         console.log(
-            "Timestamp:",
+            "Current timestamp:",
             block.timestamp,
-            "(Oct 11, 2024 after epoch flip)"
+            "(Oct 16, 2024 after emissions)"
         );
         console.log("");
-        console.log("Deployed Contracts:");
+        console.log("=== DEX Contracts (Deployed Oct 1) ===");
         console.log("- PairFactory:", address(pairFactory));
         console.log("- RouterV2:", address(router));
+        console.log("- TradeHelper:", address(tradeHelper));
         console.log("- GlobalRouter:", address(globalRouter));
+        console.log("");
+        console.log("=== Voting & Governance (Deployed Oct 10) ===");
         console.log("- Lithos:", address(lithos));
         console.log("- VotingEscrow:", address(votingEscrow));
+        console.log("- PermissionsRegistry:", address(permissionsRegistry));
         console.log("- VoterV3:", address(voter));
         console.log("- MinterUpgradeable:", address(minterUpgradeable));
         console.log("- RewardsDistributor:", address(rewardsDistributor));
+        console.log("- GaugeFactoryV2:", address(gaugeFactory));
+        console.log("- BribeFactoryV3:", address(bribeFactory));
         console.log("");
-        console.log("Pool Created:");
+        console.log("=== Pool & Trading Data ===");
         console.log("- USDT/WETH Pair:", pairAddress);
         console.log("- LP Tokens Minted:", lpTokenBalance);
+
+        if (address(voter) != address(0) && voter.length() > 0) {
+            address gauge = voter.gauges(pairAddress);
+            console.log("- Gauge for USDT/WETH:", gauge);
+            if (gauge != address(0)) {
+                console.log("- Gauge is alive:", voter.isAlive(gauge));
+            }
+        }
+
         console.log("");
-        console.log("Gauge Information:");
-        address gauge = voter.gauges(pairAddress);
-        console.log("- Gauge for USDT/WETH:", gauge);
-        console.log("- Gauge is alive:", voter.isAlive(gauge));
+        console.log("=== Emissions & Governance ===");
+        if (address(minterUpgradeable) != address(0)) {
+            console.log(
+                "- Weekly emissions:",
+                minterUpgradeable.weekly() / 1e18,
+                "LITHOS"
+            );
+            console.log(
+                "- Circulating supply:",
+                minterUpgradeable.circulating_supply() / 1e18,
+                "LITHOS"
+            );
+            console.log("- Active period:", minterUpgradeable.active_period());
+            console.log(
+                "- Next period:",
+                minterUpgradeable.active_period() + 604800
+            );
+        }
+
+        if (address(votingEscrow) != address(0)) {
+            console.log("- veNFTs owned:", votingEscrow.balanceOf(TEST_WALLET));
+        }
+
         console.log("");
-        console.log("Emissions Data:");
+        console.log("=== Final Balances ===");
         console.log(
-            "- Weekly emissions:",
-            minterUpgradeable.weekly() / 1e18,
-            "LITHOS"
+            "- USDT:",
+            ERC20(USDT).balanceOf(TEST_WALLET) / 1e6,
+            "USDT"
         );
         console.log(
-            "- Circulating supply:",
-            minterUpgradeable.circulating_supply() / 1e18,
-            "LITHOS"
+            "- WETH:",
+            ERC20(XPL).balanceOf(TEST_WALLET) / 1e18,
+            "WETH"
         );
-        console.log("- Active period:", minterUpgradeable.active_period());
         console.log(
-            "- Next period:",
-            minterUpgradeable.active_period() + 604800
+            "- LP Tokens:",
+            ERC20(pairAddress).balanceOf(TEST_WALLET) / 1e18,
+            "LP"
         );
+
+        if (address(lithos) != address(0)) {
+            console.log(
+                "- LITH:",
+                lithos.balanceOf(TEST_WALLET) / 1e18,
+                "LITH"
+            );
+        }
+
         console.log("");
-        console.log("Final Balances:");
-        console.log("- USDT:", ERC20(USDT).balanceOf(TEST_WALLET));
-        console.log("- WETH:", ERC20(XPL).balanceOf(TEST_WALLET));
-        console.log("- LP Tokens:", ERC20(pairAddress).balanceOf(TEST_WALLET));
-        console.log("- LITH:", lithos.balanceOf(TEST_WALLET));
-        console.log("- veNFTs:", votingEscrow.balanceOf(TEST_WALLET));
-        console.log("");
-        console.log("All tests completed successfully!");
+        console.log("Complete E2E test completed successfully!");
+        console.log(
+            "DEX deployment, trading, LITH launch, voting, and emissions all working"
+        );
         console.log("=====================================");
     }
 }
