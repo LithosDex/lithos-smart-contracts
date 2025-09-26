@@ -3,24 +3,24 @@
 ## Four Types of Rewards
 
 ### 1. LP Trading Fees
-**Source**: Traders pay 0.18% (volatile) or 0.04% (stable) on swaps
-**Recipients**: LP token holders (88% after referral fees, which LITH team is taking as protocol fee atm)
-**Claim**: Directly from Pair contract
+- **Source**: Traders pay 0.18% (volatile) or 0.04% (stable) on swaps
+- **Recipients**: LP token holders (88% after referral fees, which LITH team is taking as protocol fee atm)
+- **Claim**: Directly from Pair contract
 
 ### 2. Gauge Emissions (LITH rewards)
-**Source**: Weekly LITH emissions from Minter
-**Recipients**: LP tokens staked in gauges
-**Claim**: From Gauge contract
+- **Source**: Weekly LITH emissions from Minter
+- **Recipients**: LP tokens staked in gauges
+- **Claim**: From Gauge contract
 
 ### 3. Bribe Rewards
-**Source**: External incentives added by projects/users
-**Recipients**: veNFT holders who vote for specific gauges
-**Claim**: From Bribe contracts
+- **Source**: External incentives added by projects/users
+- **Recipients**: veNFT holders who vote for specific gauges
+- **Claim**: From Bribe contracts
 
 ### 4. Rebase Rewards (Compounding)
-**Source**: Weekly LITH emissions from Minter
-**Recipients**: All veNFT holders (proportional to locked amount)
-**Claim**: Manual claim required via RewardsDistributor.claim() or claim_many() - compounds into veNFT if still locked
+- **Source**: Weekly LITH emissions from Minter
+- **Recipients**: All veNFT holders (proportional to locked amount)
+- **Claim**: Manual claim required via RewardsDistributor.claim() or claim_many() - compounds into veNFT if still locked
 
 ---
 
