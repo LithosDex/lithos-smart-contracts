@@ -26,8 +26,8 @@ contract E2ETest is Test {
     address constant WXPL = 0x6100E367285b01F48D07953803A2d8dCA5D19873; // Wrapped XPL
     address constant USDe = 0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34; // Ethena USDe
 
-    // Test wallet
-    address constant TEST_WALLET = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
+    // deployer
+    address constant DEPLOYER = 0xa9040c08B0FA3D5cf8B1534A0686261Da948F82a;
 
     // DEX Contract instances
     PairFactory public pairFactory;
@@ -65,12 +65,12 @@ contract E2ETest is Test {
         console.log("Time set to Oct 1, 2024");
         console.log("Current timestamp:", block.timestamp);
 
-        // Give test wallet some ETH
-        vm.deal(TEST_WALLET, 100 ether);
+        // Give deployer some ETH
+        vm.deal(DEPLOYER, 100 ether);
 
         console.log("=== DEX E2E Test on Plasma Mainnet Beta Fork ===");
         console.log("Chain ID: 9745");
-        console.log("Test wallet:", TEST_WALLET);
+        console.log("deployer:", DEPLOYER);
         console.log("USDT:", USDT);
         console.log("WETH:", WETH);
     }
@@ -94,9 +94,6 @@ contract E2ETest is Test {
         step11_FastForwardToDistribution();
         step12_EpochFlipAndDistribute();
 
-        // Claim all rewards types
-        step13_ClaimAllRewards();
-
         console.log("All contracts deployed successfully!");
 
         logResults();
@@ -107,15 +104,15 @@ contract E2ETest is Test {
         console.log("\n=== Step 1: Deploy DEX Contracts (Oct 1, 2024) ===");
 
         // Act as TEST_WALLET for all deployments
-        vm.startPrank(TEST_WALLET);
+        vm.startPrank(DEPLOYER);
 
         // Deploy PairFactory first
         pairFactory = new PairFactory();
         console.log("PairFactory deployed:", address(pairFactory));
 
         // Set dibs address to prevent zero address transfer error
-        pairFactory.setDibs(TEST_WALLET);
-        console.log("Set dibs address to:", TEST_WALLET);
+        pairFactory.setDibs(DEPLOYER);
+        console.log("Set dibs address to:", DEPLOYER);
 
         // Deploy RouterV2
         router = new RouterV2(address(pairFactory), WETH);
@@ -138,7 +135,7 @@ contract E2ETest is Test {
     function step2_CreatePools() internal {
         console.log("\n=== Step 2: Create Trading Pools ===");
 
-        vm.startPrank(TEST_WALLET);
+        vm.startPrank(DEPLOYER);
 
         // Create USDT/WETH volatile pair
         pairAddress = pairFactory.createPair(
@@ -184,7 +181,7 @@ contract E2ETest is Test {
         (bool mintSuccess, ) = USDT.call(
             abi.encodeWithSignature(
                 "mint(address,uint256)",
-                TEST_WALLET,
+                DEPLOYER,
                 USDT_AMOUNT * 2
             )
         );
@@ -212,7 +209,7 @@ contract E2ETest is Test {
         (bool wethMintSuccess, ) = WETH.call(
             abi.encodeWithSignature(
                 "mint(address,uint256)",
-                TEST_WALLET,
+                DEPLOYER,
                 WETH_AMOUNT * 2
             )
         );
@@ -223,7 +220,7 @@ contract E2ETest is Test {
         vm.stopPrank();
 
         // For WXPL, use deposit function (it's a wrapped token)
-        vm.startPrank(TEST_WALLET);
+        vm.startPrank(DEPLOYER);
         // Deposit XPL to get WXPL (send native XPL)
         (bool wxplDepositSuccess, ) = WXPL.call{value: WXPL_AMOUNT * 2}("");
         require(wxplDepositSuccess, "WXPL deposit failed");
@@ -237,17 +234,17 @@ contract E2ETest is Test {
         vm.startPrank(usdeWhale);
 
         // Transfer USDe from whale to TEST_WALLET
-        ERC20(USDe).transfer(TEST_WALLET, USDE_AMOUNT * 2);
+        ERC20(USDe).transfer(DEPLOYER, USDE_AMOUNT * 2);
         console.log("Successfully transferred USDe from whale:", usdeWhale);
 
         vm.stopPrank();
 
-        console.log("USDT balance:", ERC20(USDT).balanceOf(TEST_WALLET));
-        console.log("WETH balance:", ERC20(WETH).balanceOf(TEST_WALLET));
-        console.log("WXPL balance:", ERC20(WXPL).balanceOf(TEST_WALLET));
-        console.log("USDe balance:", ERC20(USDe).balanceOf(TEST_WALLET));
+        console.log("USDT balance:", ERC20(USDT).balanceOf(DEPLOYER));
+        console.log("WETH balance:", ERC20(WETH).balanceOf(DEPLOYER));
+        console.log("WXPL balance:", ERC20(WXPL).balanceOf(DEPLOYER));
+        console.log("USDe balance:", ERC20(USDe).balanceOf(DEPLOYER));
 
-        vm.startPrank(TEST_WALLET);
+        vm.startPrank(DEPLOYER);
 
         // Approve RouterV2 to spend tokens
         ERC20(USDT).approve(address(router), USDT_AMOUNT);
@@ -265,7 +262,7 @@ contract E2ETest is Test {
                 WETH_AMOUNT, // amountBDesired
                 0, // amountAMin
                 0, // amountBMin
-                TEST_WALLET, // to
+                DEPLOYER, // to
                 deadline // deadline
             );
 
@@ -276,7 +273,7 @@ contract E2ETest is Test {
         console.log("- LP tokens minted:", liquidity);
 
         // Verify LP balance
-        uint256 pairBalance = ERC20(pairAddress).balanceOf(TEST_WALLET);
+        uint256 pairBalance = ERC20(pairAddress).balanceOf(DEPLOYER);
         console.log("LP token balance:", pairBalance);
 
         vm.stopPrank();
@@ -286,11 +283,11 @@ contract E2ETest is Test {
     function step4_RunSwaps() internal {
         console.log("\n=== Step 4: Run Swaps ===");
 
-        vm.startPrank(TEST_WALLET);
+        vm.startPrank(DEPLOYER);
 
         // Check balances before swap
-        uint256 usdtBefore = ERC20(USDT).balanceOf(TEST_WALLET);
-        uint256 wethBefore = ERC20(WETH).balanceOf(TEST_WALLET);
+        uint256 usdtBefore = ERC20(USDT).balanceOf(DEPLOYER);
+        uint256 wethBefore = ERC20(WETH).balanceOf(DEPLOYER);
         console.log("Before swap - USDT:", usdtBefore, "WETH:", wethBefore);
 
         // Approve GlobalRouter to spend USDT for swap
@@ -307,14 +304,14 @@ contract E2ETest is Test {
             SWAP_AMOUNT, // amountIn
             0, // amountOutMin
             routes, // routes
-            TEST_WALLET, // to
+            DEPLOYER, // to
             deadline, // deadline
             true // _type (true = V2 pools)
         );
 
         // Check balances after swap
-        uint256 usdtAfter = ERC20(USDT).balanceOf(TEST_WALLET);
-        uint256 wethAfter = ERC20(WETH).balanceOf(TEST_WALLET);
+        uint256 usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
+        uint256 wethAfter = ERC20(WETH).balanceOf(DEPLOYER);
         console.log("After swap - USDT:", usdtAfter, "WETH:", wethAfter);
 
         // Calculate swap results
@@ -349,7 +346,7 @@ contract E2ETest is Test {
     function step6_DeployVotingContracts() internal {
         console.log("\n=== Step 6: Deploy Voting and Governance Contracts ===");
 
-        vm.startPrank(TEST_WALLET);
+        vm.startPrank(DEPLOYER);
 
         // Deploy VeArtProxyUpgradeable
         veArtProxyUpgradeable = new VeArtProxyUpgradeable();
@@ -406,14 +403,14 @@ contract E2ETest is Test {
     function step7_LaunchLITHAndVoting() internal {
         console.log("\n=== Step 7: Launch LITH and Initialize Voting ===");
 
-        vm.startPrank(TEST_WALLET);
+        vm.startPrank(DEPLOYER);
 
         // Initialize all contracts
-        lithos.initialMint(TEST_WALLET);
+        lithos.initialMint(DEPLOYER);
         console.log("LITH initial mint: 50M tokens to TEST_WALLET");
 
         gaugeFactory.initialize(address(permissionsRegistry));
-        bribeFactory.initialize(TEST_WALLET, address(permissionsRegistry));
+        bribeFactory.initialize(DEPLOYER, address(permissionsRegistry));
 
         voter.initialize(
             address(votingEscrow),
@@ -423,14 +420,14 @@ contract E2ETest is Test {
         );
 
         minterUpgradeable.initialize(
-            TEST_WALLET, // will be updated later
+            DEPLOYER, // will be updated later
             address(votingEscrow),
             address(rewardsDistributor)
         );
 
         // Set governance roles
-        permissionsRegistry.setRoleFor(TEST_WALLET, "GOVERNANCE");
-        permissionsRegistry.setRoleFor(TEST_WALLET, "VOTER_ADMIN");
+        permissionsRegistry.setRoleFor(DEPLOYER, "GOVERNANCE");
+        permissionsRegistry.setRoleFor(DEPLOYER, "VOTER_ADMIN");
 
         // Initialize minter with empty distribution
         address[] memory tokens = new address[](1);
@@ -469,13 +466,13 @@ contract E2ETest is Test {
     function step8_CreateLocks() internal {
         console.log("\n=== Step 8: Create Voting Escrow Lock ===");
 
-        vm.startPrank(TEST_WALLET);
+        vm.startPrank(DEPLOYER);
 
         uint256 lockAmount = 1000e18; // Lock 1000 LITH tokens
         uint256 lockDuration = 1 weeks; // 1 week duration
 
         // Check LITH balance before lock
-        uint256 lithBalanceBefore = lithos.balanceOf(TEST_WALLET);
+        uint256 lithBalanceBefore = lithos.balanceOf(DEPLOYER);
         console.log("LITH balance before lock:", lithBalanceBefore);
         require(
             lithBalanceBefore >= lockAmount,
@@ -496,14 +493,14 @@ contract E2ETest is Test {
         // Check veNFT minted - verify ownership
         address nftOwner = votingEscrow.ownerOf(tokenId);
         console.log("veNFT owner:", nftOwner);
-        require(nftOwner == TEST_WALLET, "veNFT not minted to test wallet");
+        require(nftOwner == DEPLOYER, "veNFT not minted to deployer");
 
-        // Check veNFT balance of test wallet
-        uint256 veNFTBalance = votingEscrow.balanceOf(TEST_WALLET);
-        console.log("veNFT balance of test wallet:", veNFTBalance);
+        // Check veNFT balance of deployer
+        uint256 veNFTBalance = votingEscrow.balanceOf(DEPLOYER);
+        console.log("veNFT balance of deployer:", veNFTBalance);
 
         // Check LITH balance after lock
-        uint256 lithBalanceAfter = lithos.balanceOf(TEST_WALLET);
+        uint256 lithBalanceAfter = lithos.balanceOf(DEPLOYER);
         console.log("LITH balance after lock:", lithBalanceAfter);
         console.log(
             "LITH tokens locked:",
@@ -529,7 +526,7 @@ contract E2ETest is Test {
     function step9_BribePools() internal {
         console.log("\n=== Step 9: Bribe Pools with Different Tokens ===");
 
-        vm.startPrank(TEST_WALLET);
+        vm.startPrank(DEPLOYER);
 
         // Create gauge first
         (
@@ -568,11 +565,11 @@ contract E2ETest is Test {
         address usdtOwner = 0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8;
         vm.startPrank(usdtOwner);
         (bool mintSuccess, ) = USDT.call(
-            abi.encodeWithSignature("mint(address,uint256)", TEST_WALLET, 500e6)
+            abi.encodeWithSignature("mint(address,uint256)", DEPLOYER, 500e6)
         );
         if (!mintSuccess) {
             // Owner should already have USDT from minting
-            ERC20(USDT).transfer(TEST_WALLET, 500e6);
+            ERC20(USDT).transfer(DEPLOYER, 500e6);
         }
         vm.stopPrank();
 
@@ -634,7 +631,7 @@ contract E2ETest is Test {
     function step10_VoteForPools() internal {
         console.log("\n=== Step 10: Vote for Pools ===");
 
-        vm.startPrank(TEST_WALLET);
+        vm.startPrank(DEPLOYER);
 
         // Whitelist tokens before voting
         address[] memory pairTokens = new address[](2);
@@ -677,7 +674,7 @@ contract E2ETest is Test {
     function step12_EpochFlipAndDistribute() internal {
         console.log("\n=== Step 12: Epoch Flip and Emissions Distribution ===");
 
-        vm.startPrank(TEST_WALLET);
+        vm.startPrank(DEPLOYER);
 
         // Check if we can update period
         console.log("Checking emission period...");
@@ -822,33 +819,21 @@ contract E2ETest is Test {
         }
 
         if (address(votingEscrow) != address(0)) {
-            console.log("- veNFTs owned:", votingEscrow.balanceOf(TEST_WALLET));
+            console.log("- veNFTs owned:", votingEscrow.balanceOf(DEPLOYER));
         }
 
         console.log("");
         console.log("=== Final Balances ===");
-        console.log(
-            "- USDT:",
-            ERC20(USDT).balanceOf(TEST_WALLET) / 1e6,
-            "USDT"
-        );
-        console.log(
-            "- WETH:",
-            ERC20(WETH).balanceOf(TEST_WALLET) / 1e18,
-            "WETH"
-        );
+        console.log("- USDT:", ERC20(USDT).balanceOf(DEPLOYER) / 1e6, "USDT");
+        console.log("- WETH:", ERC20(WETH).balanceOf(DEPLOYER) / 1e18, "WETH");
         console.log(
             "- LP Tokens:",
-            ERC20(pairAddress).balanceOf(TEST_WALLET) / 1e18,
+            ERC20(pairAddress).balanceOf(DEPLOYER) / 1e18,
             "LP"
         );
 
         if (address(lithos) != address(0)) {
-            console.log(
-                "- LITH:",
-                lithos.balanceOf(TEST_WALLET) / 1e18,
-                "LITH"
-            );
+            console.log("- LITH:", lithos.balanceOf(DEPLOYER) / 1e18, "LITH");
         }
 
         console.log("");
