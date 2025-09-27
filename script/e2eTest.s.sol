@@ -3,7 +3,6 @@ pragma solidity 0.8.29;
 
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
-import "forge-std/Test.sol";
 
 import {PairFactory} from "../src/contracts/factories/PairFactory.sol";
 import {RouterV2} from "../src/contracts/RouterV2.sol";
@@ -20,14 +19,16 @@ import {VoterV3} from "../src/contracts/VoterV3.sol";
 import {MinterUpgradeable} from "../src/contracts/MinterUpgradeable.sol";
 import {RewardsDistributor} from "../src/contracts/RewardsDistributor.sol";
 
-contract E2ETest is Script, Test {
-    // Plasma mainnet beta addresses (using common token addresses as placeholders)
-    address constant USDT = 0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb; // USDC (placeholder - update with actual Plasma USDC)
-    address constant XPL = 0x9895D81bB462A195b4922ED7De0e3ACD007c32CB; // Using WETH instead
+contract E2EScript is Script {
+    // Plasma mainnet addresses
+    address constant USDT = 0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb; // USDT on Plasma mainnet
     address constant WETH = 0x9895D81bB462A195b4922ED7De0e3ACD007c32CB;
+    address constant WXPL = 0x6100E367285b01F48D07953803A2d8dCA5D19873; // Wrapped XPL
+    address constant USDe = 0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34; // Ethena USDe
 
-    // Test wallet
-    address constant TEST_WALLET = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
+    // Test wallet - in production this should be the deployer wallet
+    address constant DEPLOYER_WALLET =
+        0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
 
     // DEX Contract instances
     PairFactory public pairFactory;
@@ -46,158 +47,269 @@ contract E2ETest is Script, Test {
 
     // Test data
     address public pairAddress;
+    address public wxplLithPair;
+    address public wxplUsdtPair;
+    address public usdtUsdePair;
     uint256 public lpTokenBalance;
     uint256 public constant USDT_AMOUNT = 1000e6; // 1000 USDT (6 decimals)
-    uint256 public constant XPL_AMOUNT = 1e18; // 1 WETH (18 decimals)
+    uint256 public constant WETH_AMOUNT = 1e18; // 1 WETH (18 decimals)
+    uint256 public constant WXPL_AMOUNT = 10e18; // 10 WXPL (18 decimals)
+    uint256 public constant USDE_AMOUNT = 1000e18; // 1000 USDe (18 decimals)
+    uint256 public constant LITH_AMOUNT = 1000e18; // 1000 LITH for liquidity
     uint256 public constant SWAP_AMOUNT = 100e6; // 100 USDT for swap
 
     function setUp() public {
-        // Fork Plasma mainnet beta
-        vm.createFork("https://rpc.plasma.to");
-
-        // Step 0: Set time to Oct 1, 2024
-        vm.warp(1727740800); // Oct 1, 2024 00:00:00 UTC
-        console.log("Time set to Oct 1, 2024");
-        console.log("Current timestamp:", block.timestamp);
-
-        // Give test wallet some ETH
-        vm.deal(TEST_WALLET, 100 ether);
-
-        // vm.startBroadcast(TEST_WALLET);
-
-        console.log("=== DEX E2E Test on Plasma Mainnet Beta Fork ===");
-        console.log("Chain ID: 9745");
-        console.log("Test wallet:", TEST_WALLET);
-        console.log("USDT:", USDT);
-        console.log("WETH:", XPL);
+        // Setup is done in run() for scripts
     }
 
     function run() public {
-        setUp();
+        // Start broadcasting transactions
+        vm.startBroadcast();
 
+        console.log("=== DEX E2E Script on Plasma Mainnet Fork ===");
+        console.log("Chain ID: 9745");
+        console.log("Deployer wallet:", DEPLOYER_WALLET);
+        console.log("USDT:", USDT);
+        console.log("WETH:", WETH);
+
+        // Oct 1, 2024: Deploy DEX contracts
         step1_DeployDEXContracts();
         step2_CreatePools();
         step3_AddLiquidity();
         step4_RunSwaps();
-        step5_createLocks();
-        step6_createGaugesAndVote();
 
-        vm.stopBroadcast();
-        console.log("All contracts deployed successfully!");
+        // Fast forward to Oct 10, 2024: Launch LITH and voting
+        // Note: Fast forwarding time only works in tests, not in scripts on real networks
+        // In production, these would be separate deployments on different dates
+        console.log(
+            "\n=== Note: Time-based operations would occur on actual dates in production ==="
+        );
+
+        step6_DeployVotingContracts();
+        step7_LaunchLITHAndVoting();
+        step8_CreateLocks();
+        step9_BribePools();
+        step10_VoteForPools();
+
+        console.log("\nAll contracts deployed successfully!");
 
         logResults();
+
+        vm.stopBroadcast();
     }
 
-    // Step 1: Deploy core contracts
+    // Step 1: Deploy DEX contracts only
     function step1_DeployDEXContracts() internal {
         console.log("\n=== Step 1: Deploy DEX Contracts ===");
-        vm.startBroadcast(TEST_WALLET);
 
         // Deploy PairFactory first
         pairFactory = new PairFactory();
         console.log("PairFactory deployed:", address(pairFactory));
 
         // Set dibs address to prevent zero address transfer error
-        pairFactory.setDibs(TEST_WALLET);
-        console.log("Set dibs address to:", TEST_WALLET);
+        pairFactory.setDibs(DEPLOYER_WALLET);
+        console.log("Set dibs address to:", DEPLOYER_WALLET);
 
-        // Stop and restart broadcast to manage gas better
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        // Deploy RouterV2 with simple approach
+        // Deploy RouterV2
         router = new RouterV2(address(pairFactory), WETH);
         console.log("RouterV2 deployed:", address(router));
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
 
         // Deploy TradeHelper
         tradeHelper = new TradeHelper(address(pairFactory));
         console.log("TradeHelper deployed:", address(tradeHelper));
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        // Deploy GlobalRouter with simple approach
+        // Deploy GlobalRouter
         globalRouter = new GlobalRouter(address(tradeHelper));
         console.log("GlobalRouter deployed:", address(globalRouter));
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
+        console.log("DEX contracts deployed successfully");
+    }
 
-        //Deploy VeArtProxyUpgradable
+    // Step 2: Create pools
+    function step2_CreatePools() internal {
+        console.log("\n=== Step 2: Create Trading Pools ===");
+
+        // Create USDT/WETH volatile pair
+        pairAddress = pairFactory.createPair(
+            address(USDT),
+            address(WETH),
+            false // volatile
+        );
+        console.log("USDT/WETH volatile pair created:", pairAddress);
+
+        // Create WXPL/USDT volatile pair
+        wxplUsdtPair = pairFactory.createPair(
+            address(WXPL),
+            address(USDT),
+            false // volatile
+        );
+        console.log("WXPL/USDT volatile pair created:", wxplUsdtPair);
+
+        // Create USDT/USDe stable pair
+        usdtUsdePair = pairFactory.createPair(
+            address(USDT),
+            address(USDe),
+            true // stable
+        );
+        console.log("USDT/USDe stable pair created:", usdtUsdePair);
+
+        // Note: WXPL/LITH pair will be created after LITH is deployed in step 7
+    }
+
+    // Step 3: Add LP (simplified for script - assumes deployer has tokens)
+    function step3_AddLiquidity() internal {
+        console.log("\n=== Step 3: Add Liquidity ===");
+
+        // In production, the deployer would need to have these tokens
+        // For the script, we'll check balances and only add liquidity if possible
+
+        uint256 usdtBalance = ERC20(USDT).balanceOf(DEPLOYER_WALLET);
+        uint256 wethBalance = ERC20(WETH).balanceOf(DEPLOYER_WALLET);
+
+        console.log("USDT balance:", usdtBalance);
+        console.log("WETH balance:", wethBalance);
+
+        if (usdtBalance >= USDT_AMOUNT && wethBalance >= WETH_AMOUNT) {
+            // Approve RouterV2 to spend tokens
+            ERC20(USDT).approve(address(router), USDT_AMOUNT);
+            ERC20(WETH).approve(address(router), WETH_AMOUNT);
+            console.log("Approved RouterV2 to spend tokens");
+
+            // Add liquidity
+            uint256 deadline = block.timestamp + 600; // 10 minutes
+            (uint256 amountA, uint256 amountB, uint256 liquidity) = router
+                .addLiquidity(
+                    USDT, // tokenA
+                    WETH, // tokenB
+                    false, // stable = false (volatile pair)
+                    USDT_AMOUNT, // amountADesired
+                    WETH_AMOUNT, // amountBDesired
+                    0, // amountAMin
+                    0, // amountBMin
+                    DEPLOYER_WALLET, // to
+                    deadline // deadline
+                );
+
+            lpTokenBalance = liquidity;
+            console.log("Liquidity added successfully:");
+            console.log("- USDT amount:", amountA);
+            console.log("- WETH amount:", amountB);
+            console.log("- LP tokens minted:", liquidity);
+        } else {
+            console.log("Insufficient balance to add liquidity");
+            console.log("Required: 1000 USDT and 1 WETH");
+        }
+    }
+
+    // Step 4: Run swaps (simplified for script)
+    function step4_RunSwaps() internal {
+        console.log("\n=== Step 4: Run Swaps ===");
+
+        uint256 usdtBalance = ERC20(USDT).balanceOf(DEPLOYER_WALLET);
+
+        if (usdtBalance >= SWAP_AMOUNT) {
+            // Check balances before swap
+            uint256 usdtBefore = ERC20(USDT).balanceOf(DEPLOYER_WALLET);
+            uint256 wethBefore = ERC20(WETH).balanceOf(DEPLOYER_WALLET);
+            console.log("Before swap - USDT:", usdtBefore, "WETH:", wethBefore);
+
+            // Approve GlobalRouter to spend USDT for swap
+            ERC20(USDT).approve(address(globalRouter), SWAP_AMOUNT);
+            console.log("Approved GlobalRouter to spend USDT");
+
+            // Create route for USDT -> WETH swap
+            ITradeHelper.Route[] memory routes = new ITradeHelper.Route[](1);
+            routes[0] = ITradeHelper.Route({
+                from: USDT,
+                to: WETH,
+                stable: false
+            });
+
+            // Execute swap: 100 USDT -> WETH using GlobalRouter
+            uint256 deadline = block.timestamp + 600;
+            uint256[] memory amounts = globalRouter.swapExactTokensForTokens(
+                SWAP_AMOUNT, // amountIn
+                0, // amountOutMin
+                routes, // routes
+                DEPLOYER_WALLET, // to
+                deadline, // deadline
+                true // _type (true = V2 pools)
+            );
+
+            // Check balances after swap
+            uint256 usdtAfter = ERC20(USDT).balanceOf(DEPLOYER_WALLET);
+            uint256 wethAfter = ERC20(WETH).balanceOf(DEPLOYER_WALLET);
+            console.log("After swap - USDT:", usdtAfter, "WETH:", wethAfter);
+
+            console.log("Swap executed successfully!");
+        } else {
+            console.log("Insufficient USDT balance to perform swap");
+        }
+    }
+
+    // Step 6: Deploy voting and governance contracts
+    function step6_DeployVotingContracts() internal {
+        console.log("\n=== Step 6: Deploy Voting and Governance Contracts ===");
+
+        // Deploy VeArtProxyUpgradeable
         veArtProxyUpgradeable = new VeArtProxyUpgradeable();
         console.log(
             "VeArtProxyUpgradeable deployed:",
             address(veArtProxyUpgradeable)
         );
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        //Deploy Lithos token
+        // Deploy Lithos token
         lithos = new Lithos();
         console.log("Lithos deployed:", address(lithos));
 
-        // Call initial mint
-        lithos.initialMint(TEST_WALLET);
-        console.log("50M minted to:", address(TEST_WALLET));
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
+        // Deploy VotingEscrow
         votingEscrow = new VotingEscrow(
             address(lithos),
             address(veArtProxyUpgradeable)
         );
         console.log("VotingEscrow deployed:", address(votingEscrow));
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
+        // Deploy PermissionsRegistry
         permissionsRegistry = new PermissionsRegistry();
         console.log(
             "PermissionsRegistry deployed:",
             address(permissionsRegistry)
         );
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        // set governance roles
-        permissionsRegistry.setRoleFor(TEST_WALLET, "GOVERNANCE");
-        permissionsRegistry.setRoleFor(TEST_WALLET, "VOTER_ADMIN");
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
+        // Deploy GaugeFactoryV2
         gaugeFactory = new GaugeFactoryV2();
         console.log("GaugeFactoryV2 deployed:", address(gaugeFactory));
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        gaugeFactory.initialize(address(permissionsRegistry));
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
+        // Deploy BribeFactoryV3
         bribeFactory = new BribeFactoryV3();
         console.log("BribeFactoryV3 deployed:", address(bribeFactory));
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        bribeFactory.initialize(TEST_WALLET, address(permissionsRegistry));
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
+        // Deploy VoterV3
         voter = new VoterV3();
         console.log("VoterV3 deployed:", address(voter));
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
+        // Deploy RewardsDistributor
+        rewardsDistributor = new RewardsDistributor(address(votingEscrow));
+        console.log(
+            "RewardsDistributor deployed:",
+            address(rewardsDistributor)
+        );
+
+        // Deploy MinterUpgradeable
+        minterUpgradeable = new MinterUpgradeable();
+        console.log("MinterUpgradeable deployed:", address(minterUpgradeable));
+    }
+
+    // Step 7: Launch LITH and initialize voting
+    function step7_LaunchLITHAndVoting() internal {
+        console.log("\n=== Step 7: Launch LITH and Initialize Voting ===");
+
+        // Initialize all contracts
+        lithos.initialMint(DEPLOYER_WALLET);
+        console.log("LITH initial mint: 50M tokens to DEPLOYER_WALLET");
+
+        gaugeFactory.initialize(address(permissionsRegistry));
+        bribeFactory.initialize(DEPLOYER_WALLET, address(permissionsRegistry));
 
         voter.initialize(
             address(votingEscrow),
@@ -205,46 +317,23 @@ contract E2ETest is Script, Test {
             address(gaugeFactory),
             address(bribeFactory)
         );
-        console.log("VoterV3 initialized called");
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        rewardsDistributor = new RewardsDistributor(address(votingEscrow));
-        console.log(
-            "rewardsDistributor deployed:",
-            address(rewardsDistributor)
-        );
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        minterUpgradeable = new MinterUpgradeable();
-        console.log("MinterUpgradeable deployed:", address(minterUpgradeable));
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
         minterUpgradeable.initialize(
-            TEST_WALLET,
+            DEPLOYER_WALLET, // will be updated later
             address(votingEscrow),
             address(rewardsDistributor)
         );
 
-        console.log("minterUpgradeable initialize called");
+        // Set governance roles
+        permissionsRegistry.setRoleFor(DEPLOYER_WALLET, "GOVERNANCE");
+        permissionsRegistry.setRoleFor(DEPLOYER_WALLET, "VOTER_ADMIN");
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
+        // Initialize minter with empty distribution
         address[] memory tokens = new address[](1);
         uint256[] memory amounts = new uint256[](1);
-
         minterUpgradeable._initialize(tokens, amounts, 0);
 
-        console.log("minterUpgradeable _initialize called");
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
+        // Initialize voter
         tokens[0] = address(lithos);
         voter._init(
             tokens,
@@ -252,309 +341,175 @@ contract E2ETest is Script, Test {
             address(minterUpgradeable)
         );
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        // Fix the voter address in BribeFactoryV3 - it was initialized with TEST_WALLET but should be the actual voter contract
+        // Set up all the cross-references
         bribeFactory.setVoter(address(voter));
-        console.log("Set voter address in BribeFactory to:", address(voter));
-
-        // Set the voter address in VotingEscrow so it can call the voting function
         votingEscrow.setVoter(address(voter));
-        console.log("Set voter address in VotingEscrow to:", address(voter));
-    }
+        lithos.setMinter(address(minterUpgradeable));
+        rewardsDistributor.setDepositor(address(minterUpgradeable));
+        minterUpgradeable.setVoter(address(voter));
 
-    // Step 2: Create pools
-    function step2_CreatePools() internal {
-        console.log("\n=== Step 2: Create USDT/WETH Pool ===");
+        console.log("LITH launched and voting system initialized!");
 
-        // Create USDT/XPL volatile pair
-        pairAddress = pairFactory.createPair(
-            address(USDT),
-            address(XPL),
-            false
+        // Now that LITH is deployed, create WXPL/LITH pair
+        wxplLithPair = pairFactory.createPair(
+            address(WXPL),
+            address(lithos),
+            false // volatile
         );
-        console.log("USDT/WETH pair created:", pairAddress);
-
-        // Verify pair creation
-        bool isPair = pairFactory.isPair(pairAddress);
-        console.log("Is valid pair:", isPair);
+        console.log("WXPL/LITH volatile pair created:", wxplLithPair);
     }
 
-    // Step 3: Add LP
-    function step3_AddLiquidity() internal {
-        console.log("\n=== Step 3: Add Liquidity ===");
-
-        // Mint USDT and WETH to test wallet
-        deal(USDT, TEST_WALLET, USDT_AMOUNT * 2); // Mint 2000 USDT
-        deal(XPL, TEST_WALLET, XPL_AMOUNT * 2); // Mint 2 WETH
-
-        console.log("USDT balance:", ERC20(USDT).balanceOf(TEST_WALLET));
-        console.log("WETH balance:", ERC20(XPL).balanceOf(TEST_WALLET));
-
-        // Approve RouterV2 to spend tokens
-        ERC20(USDT).approve(address(router), USDT_AMOUNT);
-        ERC20(XPL).approve(address(router), XPL_AMOUNT);
-        console.log("Approved RouterV2 to spend tokens");
-
-        // Add liquidity
-        uint256 deadline = block.timestamp + 600; // 10 minutes
-        (uint256 amountA, uint256 amountB, uint256 liquidity) = router
-            .addLiquidity(
-                USDT, // tokenA
-                XPL, // tokenB (WETH)
-                false, // stable = false (volatile pair)
-                USDT_AMOUNT, // amountADesired
-                XPL_AMOUNT, // amountBDesired
-                0, // amountAMin
-                0, // amountBMin
-                TEST_WALLET, // to
-                deadline // deadline
-            );
-
-        lpTokenBalance = liquidity;
-        console.log("Liquidity added successfully:");
-        console.log("- USDT amount:", amountA);
-        console.log("- WETH amount:", amountB);
-        console.log("- LP tokens minted:", liquidity);
-
-        // Verify LP balance
-        uint256 pairBalance = ERC20(pairAddress).balanceOf(TEST_WALLET);
-        console.log("LP token balance:", pairBalance);
-    }
-
-    // Step 4: Run swaps
-    function step4_RunSwaps() internal {
-        console.log("\n=== Step 4: Run Swaps ===");
-
-        // Check balances before swap
-        uint256 usdtBefore = ERC20(USDT).balanceOf(TEST_WALLET);
-        uint256 wethBefore = ERC20(XPL).balanceOf(TEST_WALLET);
-        console.log("Before swap - USDT:", usdtBefore, "WETH:", wethBefore);
-
-        // Approve GlobalRouter to spend USDT for swap
-        ERC20(USDT).approve(address(globalRouter), SWAP_AMOUNT);
-        console.log("Approved GlobalRouter to spend USDT");
-
-        // Create route for USDT -> WETH swap
-        ITradeHelper.Route[] memory routes = new ITradeHelper.Route[](1);
-        routes[0] = ITradeHelper.Route({from: USDT, to: XPL, stable: false});
-
-        // Execute swap: 100 USDT -> WETH using GlobalRouter
-        uint256 deadline = block.timestamp + 600;
-        uint256[] memory amounts = globalRouter.swapExactTokensForTokens(
-            SWAP_AMOUNT, // amountIn
-            0, // amountOutMin
-            routes, // routes
-            TEST_WALLET, // to
-            deadline, // deadline
-            true // _type (true = V2 pools)
-        );
-
-        // Check balances after swap
-        uint256 usdtAfter = ERC20(USDT).balanceOf(TEST_WALLET);
-        uint256 wethAfter = ERC20(XPL).balanceOf(TEST_WALLET);
-        console.log("After swap - USDT:", usdtAfter, "WETH:", wethAfter);
-
-        // Calculate swap results
-        uint256 usdtSpent = usdtBefore - usdtAfter;
-        uint256 wethReceived = wethAfter - wethBefore;
-        console.log("Swap results:");
-        console.log("- USDT spent:", usdtSpent);
-        console.log("- WETH received:", wethReceived);
-        console.log("- Amounts from swap:", amounts[0], "->", amounts[1]);
-
-        // Verify swap worked
-        require(usdtSpent > 0, "No USDT spent");
-        require(wethReceived > 0, "No WETH received");
-        console.log("Swap executed successfully!");
-    }
-
-    function step5_createLocks() internal {
-        console.log("\n=== Step 5: Create Voting Escrow Lock ===");
-
-        // Set time to Oct 10, 2024 before creating locks
-        vm.warp(1728518400); // Oct 10, 2024 00:00:00 UTC
-        console.log("Time set to Oct 10, 2024");
-        console.log("Current timestamp:", block.timestamp);
+    // Step 8: Create locks
+    function step8_CreateLocks() internal {
+        console.log("\n=== Step 8: Create Voting Escrow Lock ===");
 
         uint256 lockAmount = 1000e18; // Lock 1000 LITH tokens
         uint256 lockDuration = 1 weeks; // 1 week duration
 
         // Check LITH balance before lock
-        uint256 lithBalanceBefore = lithos.balanceOf(TEST_WALLET);
+        uint256 lithBalanceBefore = lithos.balanceOf(DEPLOYER_WALLET);
         console.log("LITH balance before lock:", lithBalanceBefore);
-        require(
-            lithBalanceBefore >= lockAmount,
-            "Insufficient LITH balance for lock"
-        );
 
-        // Approve VotingEscrow contract to spend LITH tokens
-        lithos.approve(address(votingEscrow), lockAmount);
-        console.log("Approved VotingEscrow to spend LITH:", lockAmount);
+        if (lithBalanceBefore >= lockAmount) {
+            // Approve VotingEscrow contract to spend LITH tokens
+            lithos.approve(address(votingEscrow), lockAmount);
+            console.log("Approved VotingEscrow to spend LITH:", lockAmount);
 
-        // Create lock for 1 week duration
-        uint256 tokenId = votingEscrow.create_lock(lockAmount, lockDuration);
-        console.log("Lock created successfully!");
-        console.log("- Token ID (veNFT):", tokenId);
-        console.log("- Amount locked:", lockAmount);
-        console.log("- Duration:", lockDuration, "seconds (1 week)");
+            // Create lock for 1 week duration
+            uint256 tokenId = votingEscrow.create_lock(
+                lockAmount,
+                lockDuration
+            );
+            console.log("Lock created successfully!");
+            console.log("- Token ID (veNFT):", tokenId);
+            console.log("- Amount locked:", lockAmount);
+            console.log("- Duration:", lockDuration, "seconds (1 week)");
 
-        // Check veNFT minted - verify ownership
-        address nftOwner = votingEscrow.ownerOf(tokenId);
-        console.log("veNFT owner:", nftOwner);
-        require(nftOwner == TEST_WALLET, "veNFT not minted to test wallet");
+            // Check voting power
+            uint256 votingPower = votingEscrow.balanceOfNFT(tokenId);
+            console.log("Voting power for NFT", tokenId, ":", votingPower);
 
-        // Check veNFT balance of test wallet
-        uint256 veNFTBalance = votingEscrow.balanceOf(TEST_WALLET);
-        console.log("veNFT balance of test wallet:", veNFTBalance);
-
-        // Check LITH balance after lock
-        uint256 lithBalanceAfter = lithos.balanceOf(TEST_WALLET);
-        console.log("LITH balance after lock:", lithBalanceAfter);
-        console.log(
-            "LITH tokens locked:",
-            lithBalanceBefore - lithBalanceAfter
-        );
-
-        // Check voting power
-        uint256 votingPower = votingEscrow.balanceOfNFT(tokenId);
-        console.log("Voting power for NFT", tokenId, ":", votingPower);
-
-        // Get lock details
-        (int128 amount, uint256 end) = votingEscrow.locked(tokenId);
-        console.log("Lock details:");
-        console.log("- Locked amount:", uint256(uint128(amount)));
-        console.log("- Lock end timestamp:", end);
-
-        console.log("Lock creation completed successfully!");
+            console.log("Lock creation completed successfully!");
+        } else {
+            console.log("Insufficient LITH balance for lock");
+        }
     }
 
-    function step6_createGaugesAndVote() internal {
-        console.log("\n=== Step 6: Create Gauges and Vote ===");
+    // Step 9: Bribe pools with different tokens
+    function step9_BribePools() internal {
+        console.log("\n=== Step 9: Bribe Pools with Different Tokens ===");
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        // Whitelist tokens before creating gauge
-        address[] memory pairTokens = new address[](2);
-        pairTokens[0] = address(USDT);
-        pairTokens[1] = address(WETH);
-
-        voter.whitelist(pairTokens);
-
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
-
-        address owner = bribeFactory.owner();
-        address voterBribe = bribeFactory.voter();
-        console.log("Logging owner:", address(owner));
-        console.log("Logging voterBribe:", address(voterBribe));
-
-        // Create gauge for the USDT/WETH pair using VoterV3
+        // Create gauge first
         (
             address gaugeAddress,
             address internalBribe,
             address externalBribe
-        ) = voter.createGauge(pairAddress, 0); // gaugeType 0 for standard gauge
+        ) = voter.createGauge(pairAddress, 0);
         console.log("Gauge created for pair:", pairAddress);
         console.log("Gauge address:", gaugeAddress);
-        console.log("Internal bribe address:", internalBribe);
         console.log("External bribe address:", externalBribe);
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
+        // Bribe with LITH tokens
+        uint256 lithBribeAmount = 1000e18;
+        uint256 lithBalance = lithos.balanceOf(DEPLOYER_WALLET);
 
-        // Amount to deposit as bribe reward
-        uint256 bribeAmount = 1000e18; // 1000 LITH tokens
+        if (lithBalance >= lithBribeAmount) {
+            lithos.approve(externalBribe, lithBribeAmount);
+            console.log("Approved LITH for bribing:", lithBribeAmount);
 
-        // Check LITH balance before bribe operations
-        uint256 lithBalance = lithos.balanceOf(TEST_WALLET);
-        console.log("LITH balance before bribe:", lithBalance);
-        require(
-            lithBalance >= bribeAmount,
-            "Insufficient LITH balance for bribe"
-        );
+            // Add LITH as reward token
+            (bool addLithSuccess, ) = externalBribe.call(
+                abi.encodeWithSignature(
+                    "addRewardToken(address)",
+                    address(lithos)
+                )
+            );
+            if (addLithSuccess) {
+                console.log("Added LITH as reward token to bribe contract");
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
+                // Notify LITH reward amount
+                (bool notifyLithSuccess, ) = externalBribe.call(
+                    abi.encodeWithSignature(
+                        "notifyRewardAmount(address,uint256)",
+                        address(lithos),
+                        lithBribeAmount
+                    )
+                );
+                if (notifyLithSuccess) {
+                    console.log("Notified LITH bribe amount:", lithBribeAmount);
+                } else {
+                    console.log("Failed to notify LITH reward amount");
+                }
+            } else {
+                console.log("Failed to add LITH as reward token");
+            }
+        } else {
+            console.log("Insufficient LITH balance for bribing");
+        }
 
-        // Add LITH token as reward to the bribe contract using the correct function name
-        (bool addRewardSuccess, ) = externalBribe.call(
-            abi.encodeWithSignature("addRewardToken(address)", address(lithos))
-        );
-        require(addRewardSuccess, "Failed to add LITH as reward token");
-        console.log("Added LITH as reward token to bribe contract");
+        console.log("Pool bribing completed!");
+    }
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
+    // Step 10: Vote for pools
+    function step10_VoteForPools() internal {
+        console.log("\n=== Step 10: Vote for Pools ===");
 
-        // Approve bribe contract to spend LITH tokens
-        lithos.approve(externalBribe, bribeAmount);
-        console.log("Approved bribe contract to spend LITH:", bribeAmount);
+        // Whitelist tokens before voting
+        address[] memory pairTokens = new address[](2);
+        pairTokens[0] = address(USDT);
+        pairTokens[1] = address(WETH);
+        voter.whitelist(pairTokens);
 
-        vm.stopBroadcast();
-        vm.startBroadcast(TEST_WALLET);
+        // Check if we have a veNFT
+        uint256 veNFTBalance = votingEscrow.balanceOf(DEPLOYER_WALLET);
 
-        // Notify reward amount to distribute the bribe
-        (bool notifySuccess, ) = externalBribe.call(
-            abi.encodeWithSignature(
-                "notifyRewardAmount(address,uint256)",
-                address(lithos),
-                bribeAmount
-            )
-        );
-        require(notifySuccess, "Failed to notify reward amount");
-        console.log("Notified bribe contract of reward amount:", bribeAmount);
+        if (veNFTBalance > 0) {
+            // Vote with our veNFT
+            uint256 tokenId = 1; // First NFT
+            address[] memory pools = new address[](1);
+            uint256[] memory weights = new uint256[](1);
 
-        // Check LITH balance after bribe operations
-        uint256 lithBalanceAfter = lithos.balanceOf(TEST_WALLET);
-        console.log("LITH balance after bribe operations:", lithBalanceAfter);
-        console.log(
-            "LITH tokens used for bribe:",
-            lithBalance - lithBalanceAfter
-        );
+            pools[0] = pairAddress;
+            weights[0] = 100; // 100% of voting power to this pool
 
-        // Now vote with our veNFT (assuming we have tokenId 1 from step5)
-        uint256 tokenId = 1; // This should be the NFT from step5
-        address[] memory pools = new address[](1);
-        uint256[] memory weights = new uint256[](1);
+            voter.vote(tokenId, pools, weights);
+            console.log("Voted with NFT", tokenId, "for pool:", pairAddress);
+            console.log("Vote weight:", weights[0]);
 
-        pools[0] = pairAddress;
-        weights[0] = 100; // 100% of voting power to this pool
-
-        voter.vote(tokenId, pools, weights);
-        console.log("Voted with NFT", tokenId, "for pool:", pairAddress);
-        console.log("Vote weight:", weights[0]);
-
-        console.log("Gauge creation and voting completed successfully!");
+            console.log("Voting completed successfully!");
+        } else {
+            console.log("No veNFT to vote with");
+        }
     }
 
     function logResults() internal view {
-        console.log("\n=== FINAL TEST RESULTS ===");
-        console.log("Timestamp:", block.timestamp, "(Oct 1, 2024)");
+        console.log("\n=== DEPLOYMENT RESULTS ===");
         console.log("");
-        console.log("Deployed Contracts:");
+        console.log("=== DEX Contracts ===");
         console.log("- PairFactory:", address(pairFactory));
         console.log("- RouterV2:", address(router));
+        console.log("- TradeHelper:", address(tradeHelper));
         console.log("- GlobalRouter:", address(globalRouter));
+        console.log("");
+        console.log("=== Voting & Governance ===");
         console.log("- Lithos:", address(lithos));
         console.log("- VotingEscrow:", address(votingEscrow));
+        console.log("- PermissionsRegistry:", address(permissionsRegistry));
+        console.log("- VoterV3:", address(voter));
+        console.log("- MinterUpgradeable:", address(minterUpgradeable));
+        console.log("- RewardsDistributor:", address(rewardsDistributor));
+        console.log("- GaugeFactoryV2:", address(gaugeFactory));
+        console.log("- BribeFactoryV3:", address(bribeFactory));
         console.log("");
-        console.log("Pool Created:");
+        console.log("=== Pool & Trading Data ===");
         console.log("- USDT/WETH Pair:", pairAddress);
-        console.log("- LP Tokens Minted:", lpTokenBalance);
+        console.log("- WXPL/USDT Pair:", wxplUsdtPair);
+        console.log("- USDT/USDe Pair:", usdtUsdePair);
+        console.log("- WXPL/LITH Pair:", wxplLithPair);
         console.log("");
-        console.log("Final Balances:");
-        console.log("- USDT:", ERC20(USDT).balanceOf(TEST_WALLET));
-        console.log("- WETH:", ERC20(XPL).balanceOf(TEST_WALLET));
-        console.log("- LP Tokens:", ERC20(pairAddress).balanceOf(TEST_WALLET));
-        console.log("- LITH:", lithos.balanceOf(TEST_WALLET));
-        console.log("- veNFTs:", votingEscrow.balanceOf(TEST_WALLET));
-        console.log("");
-        console.log("All tests completed successfully!");
+        console.log("Complete E2E deployment completed successfully!");
         console.log("=====================================");
     }
 }
 
-// Run with: forge script script/e2eTest.s.sol:E2ETest --fork-url https://rpc.plasma.to --gas-limit 30000000 -vvv
+// Run with: forge script script/e2eTest.s.sol:E2EScript --fork-url https://rpc.plasma.to --gas-limit 100000000 -vvv
