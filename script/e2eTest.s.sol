@@ -100,7 +100,7 @@ contract E2ETest is Script, Test {
         step3_AddLiquidity();
         step4_RunSwaps();
 
-        // Fast forward to Oct 10, 2025: Launch LITH and voting
+        // Fast forward to Oct 9, 2025: Launch LITH and voting prep
         step5_FastForwardToLaunch();
         step6_DeployVotingContracts();
         step7_LaunchLITHAndVoting();
@@ -271,13 +271,13 @@ contract E2ETest is Script, Test {
         vm.stopBroadcast();
     }
 
-    // Step 5: Fast forward to Oct 10, 2025
+    // Step 5: Fast forward to Oct 9, 2025
     function step5_FastForwardToLaunch() internal {
-        console.log("\n=== Step 5: Fast Forward to Oct 10, 2025 ===");
+        console.log("\n=== Step 5: Fast Forward to Oct 9, 2025 ===");
 
-        // Set time to Oct 10, 2025 for LITH launch
-        vm.warp(1760054400); // Oct 10, 2025 00:00:00 UTC
-        console.log("Time set to Oct 10, 2025 for LITH launch");
+        // Set time to Oct 9, 2025 to prepare veNFT + bribes ahead of the Oct 16 epoch flip
+        vm.warp(1759968000); // Oct 9, 2025 00:00:00 UTC
+        console.log("Time set to Oct 9, 2025 for LITH launch preparation");
         console.log("Current timestamp:", block.timestamp);
     }
 
@@ -361,7 +361,7 @@ contract E2ETest is Script, Test {
 
     // Step 7: Launch LITH and initialize voting
     function step7_LaunchLITHAndVoting() internal {
-        console.log("\n=== Step 7: Launch LITH and Initialize Voting ===");
+        console.log("\n=== Step 7: Launch LITH and Initialize Voting (Oct 9 prep) ===");
         vm.stopBroadcast();
         vm.startBroadcast(DEPLOYER);
 
@@ -490,6 +490,10 @@ contract E2ETest is Script, Test {
     function step9_BribePools() internal {
         console.log("\n=== Step 9: Bribe Pools with Different Tokens ===");
         vm.startBroadcast(DEPLOYER);
+
+        // NOTE: We execute this step on Oct 9, 2025. Bribes are queued for the next epoch
+        // (Oct 16, 2025). Claiming in step13 then advances to Oct 23 so only rewards from
+        // this Oct 9 notification become claimable at the Oct 16 flip.
 
         // Create gauge first
         (
@@ -722,6 +726,18 @@ contract E2ETest is Script, Test {
         require(externalBribeAddress != address(0), "Bribes not configured");
         require(voterTokenId != 0, "veNFT not created");
 
+        // Allow emissions and bribes to accrue after distribution
+        // Rewards notified on Oct 9 unlock at the Oct 16 epoch boundary. We advance to the
+        // first full epoch after distribution (>= Oct 23) so the bribes we queued become claimable.
+        uint256 nextEpochStart = minterUpgradeable.active_period() + 604800;
+        if (block.timestamp <= nextEpochStart) {
+            vm.warp(nextEpochStart + 1 hours);
+            console.log("Advanced time to next epoch (+1h) for reward accrual");
+        } else {
+            vm.warp(block.timestamp + 1 hours);
+            console.log("Already past next epoch, advanced an extra hour");
+        }
+
         console.log("\n--- Claiming Gauge Emissions (LP Rewards) ---");
         vm.startBroadcast(LP);
         uint256 pendingEmissions = GaugeV2(gaugeAddress).earned(LP);
@@ -810,7 +826,7 @@ contract E2ETest is Script, Test {
 
     function logResults() internal view {
         console.log("\n=== FINAL TEST RESULTS ===");
-        console.log("Timeline completed: Oct 1 to Oct 10 to Oct 16, 2025");
+        console.log("Timeline completed: Oct 1 to Oct 9 to Oct 16/23, 2025");
         console.log(
             "Current timestamp:",
             block.timestamp,
@@ -823,7 +839,7 @@ contract E2ETest is Script, Test {
         console.log("- TradeHelper:", address(tradeHelper));
         console.log("- GlobalRouter:", address(globalRouter));
         console.log("");
-        console.log("=== Voting & Governance (Deployed Oct 10) ===");
+        console.log("=== Voting & Governance (Prepared Oct 9) ===");
         console.log("- Lithos:", address(lithos));
         console.log("- VotingEscrow:", address(votingEscrow));
         console.log("- PermissionsRegistry:", address(permissionsRegistry));
