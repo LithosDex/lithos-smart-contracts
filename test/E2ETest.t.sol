@@ -221,7 +221,7 @@ contract E2ETest is Test {
         uint256 amountToLpUSDe = 250_000e18;
 
         // Approve RouterV2 to spend tokens
-        ERC20(USDT).approve(address(router), amountToLpUSDT);
+        ERC20(USDT).approve(address(router), amountToLpUSDT * 3); // Used in 3 pairs
         ERC20(WETH).approve(address(router), amountToLpWETH);
         ERC20(WXPL).approve(address(router), amountToLpWXPL);
         ERC20(USDe).approve(address(router), amountToLpUSDe);
@@ -549,6 +549,11 @@ contract E2ETest is Test {
         uint256 deadline = block.timestamp + 600; // 10 minutes
         uint256 amountToLpWXPL = 100_000e18;
         uint256 amountToLpLITH = 100_000e18;
+
+        // Approve RouterV2 to spend WXPL and LITH
+        ERC20(WXPL).approve(address(router), amountToLpWXPL);
+        lithos.approve(address(router), amountToLpLITH);
+        console.log("Approved RouterV2 to spend WXPL and LITH");
 
         console.log("Adding liquidity to WXPL/LITH pair:");
         (uint256 amountA, uint256 amountB, uint256 liquidity) = router
