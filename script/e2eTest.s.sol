@@ -18,7 +18,9 @@ import {GaugeFactoryV2} from "../src/contracts/factories/GaugeFactoryV2.sol";
 import {BribeFactoryV3} from "../src/contracts/factories/BribeFactoryV3.sol";
 import {VoterV3} from "../src/contracts/VoterV3.sol";
 import {MinterUpgradeable} from "../src/contracts/MinterUpgradeable.sol";
+import {GaugeV2} from "../src/contracts/GaugeV2.sol";
 import {RewardsDistributor} from "../src/contracts/RewardsDistributor.sol";
+import {Bribe} from "../src/contracts/Bribes.sol";
 
 contract E2ETest is Script, Test {
     // Plasma mainnet beta addresses (using common token addresses as placeholders)
@@ -33,10 +35,12 @@ contract E2ETest is Script, Test {
     address constant VOTER = address(4);
 
     // DEX Contract instances
-    PairFactory public pairFactory;
-    RouterV2 public router;
-    GlobalRouter public globalRouter;
-    TradeHelper public tradeHelper;
+    // real mainnet deployments
+    PairFactory public pairFactory = PairFactory(0xD209Cc008C3A26664B21138B425556D1c7e41d6D);
+    RouterV2 public router = RouterV2(payable(0x0c746e15F626681Fab319a520dB8066D29Ab3730));
+    GlobalRouter public globalRouter = GlobalRouter(0x34c62c36713bDEb2e387B3321f0de5DF8623ab82);
+    TradeHelper public tradeHelper = TradeHelper(0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1);
+
     VeArtProxyUpgradeable public veArtProxyUpgradeable;
     Lithos public lithos;
     VotingEscrow public votingEscrow;
@@ -49,6 +53,10 @@ contract E2ETest is Script, Test {
 
     // Test data
     address public pairAddress;
+    address public gaugeAddress;
+    address public internalBribeAddress;
+    address public externalBribeAddress;
+    uint256 public voterTokenId;
     uint256 public lpTokenBalance;
     uint256 public constant USDT_AMOUNT = 1000e6; // 1000 USDT (6 decimals)
     uint256 public constant XPL_AMOUNT = 1e18; // 1 WETH (18 decimals)
@@ -85,7 +93,9 @@ contract E2ETest is Script, Test {
         setUp();
 
         // Oct 1, 2025: Deploy DEX contracts
-        step1_DeployDEXContracts();
+
+        // use mainnet versions
+        // step1_DeployDEXContracts();
         step2_CreatePools();
         step3_AddLiquidity();
         step4_RunSwaps();
@@ -101,8 +111,7 @@ contract E2ETest is Script, Test {
         // Fast forward to Oct 16, 2025: Epoch flip and distribution
         step11_FastForwardToDistribution();
         step12_EpochFlipAndDistribute();
-
-        vm.stopBroadcast();
+        step13_ClaimRewards();
         console.log("All contracts deployed successfully!");
 
         logResults();
@@ -440,14 +449,14 @@ contract E2ETest is Script, Test {
         console.log("Approved VotingEscrow to spend LITH:", lockAmount);
 
         // Create lock for 1 week duration
-        uint256 tokenId = votingEscrow.create_lock(lockAmount, lockDuration);
+        voterTokenId = votingEscrow.create_lock(lockAmount, lockDuration);
         console.log("Lock created successfully!");
-        console.log("- Token ID (veNFT):", tokenId);
+        console.log("- Token ID (veNFT):", voterTokenId);
         console.log("- Amount locked:", lockAmount);
         console.log("- Duration:", lockDuration, "seconds (1 week)");
 
         // Check veNFT minted - verify ownership
-        address nftOwner = votingEscrow.ownerOf(tokenId);
+        address nftOwner = votingEscrow.ownerOf(voterTokenId);
         console.log("veNFT owner:", nftOwner);
         require(nftOwner == VOTER, "veNFT not minted to test wallet");
 
@@ -464,11 +473,11 @@ contract E2ETest is Script, Test {
         );
 
         // Check voting power
-        uint256 votingPower = votingEscrow.balanceOfNFT(tokenId);
-        console.log("Voting power for NFT", tokenId, ":", votingPower);
+        uint256 votingPower = votingEscrow.balanceOfNFT(voterTokenId);
+        console.log("Voting power for NFT", voterTokenId, ":", votingPower);
 
         // Get lock details
-        (int128 amount, uint256 end) = votingEscrow.locked(tokenId);
+        (int128 amount, uint256 end) = votingEscrow.locked(voterTokenId);
         console.log("Lock details:");
         console.log("- Locked amount:", uint256(uint128(amount)));
         console.log("- Lock end timestamp:", end);
@@ -484,23 +493,29 @@ contract E2ETest is Script, Test {
 
         // Create gauge first
         (
-            address gaugeAddress,
-            address internalBribe,
-            address externalBribe
+            address createdGauge,
+            address createdInternalBribe,
+            address createdExternalBribe
         ) = voter.createGauge(pairAddress, 0);
+
+        gaugeAddress = createdGauge;
+        internalBribeAddress = createdInternalBribe;
+        externalBribeAddress = createdExternalBribe;
+
         console.log("Gauge created for pair:", pairAddress);
         console.log("Gauge address:", gaugeAddress);
-        console.log("External bribe address:", externalBribe);
+        console.log("Internal bribe address:", internalBribeAddress);
+        console.log("External bribe address:", externalBribeAddress);
 
         // Add LITH as reward token
-        (bool addLithSuccess, ) = externalBribe.call(
+        (bool addLithSuccess, ) = externalBribeAddress.call(
             abi.encodeWithSignature("addRewardToken(address)", address(lithos))
         );
         require(addLithSuccess, "Failed to add LITH as reward token");
         console.log("Added LITH as reward token to bribe contract");
 
         // Add USDT as reward token
-        (bool addUsdtSuccess, ) = externalBribe.call(
+        (bool addUsdtSuccess, ) = externalBribeAddress.call(
             abi.encodeWithSignature("addRewardToken(address)", USDT)
         );
         require(addUsdtSuccess, "Failed to add USDT as reward token");
@@ -512,14 +527,21 @@ contract E2ETest is Script, Test {
         console.log("Transferred", lithBribeAmount, "LITH to BRIBER for bribing");
 
         vm.stopBroadcast();
+
+        vm.startBroadcast(LP);
+        ERC20(pairAddress).approve(gaugeAddress, lpTokenBalance);
+        GaugeV2(gaugeAddress).deposit(lpTokenBalance);
+        console.log("Deposited tokens into gauge: ", lpTokenBalance);
+        vm.stopBroadcast();
+
         vm.startBroadcast(BRIBER);
 
         // Bribe with LITH tokens
-        lithos.approve(externalBribe, lithBribeAmount);
+        lithos.approve(externalBribeAddress, lithBribeAmount);
         console.log("Approved LITH for bribing:", lithBribeAmount);
 
         // Notify LITH reward amount
-        (bool notifyLithSuccess, ) = externalBribe.call(
+        (bool notifyLithSuccess, ) = externalBribeAddress.call(
             abi.encodeWithSignature(
                 "notifyRewardAmount(address,uint256)",
                 address(lithos),
@@ -537,11 +559,11 @@ contract E2ETest is Script, Test {
 
         // Get some USDT for bribing
         deal(USDT, BRIBER, usdtBribeAmount);
-        ERC20(USDT).approve(externalBribe, usdtBribeAmount);
+        ERC20(USDT).approve(externalBribeAddress, usdtBribeAmount);
         console.log("Approved USDT for bribing:", usdtBribeAmount);
 
         // Notify USDT reward amount
-        (bool notifyUsdtSuccess, ) = externalBribe.call(
+        (bool notifyUsdtSuccess, ) = externalBribeAddress.call(
             abi.encodeWithSignature(
                 "notifyRewardAmount(address,uint256)",
                 USDT,
@@ -569,8 +591,9 @@ contract E2ETest is Script, Test {
         vm.stopBroadcast();
         vm.startBroadcast(VOTER);
 
-        // Vote with our veNFT
-        uint256 tokenId = 1; // From step 8
+        // Vote with the veNFT created in step 8
+        require(voterTokenId != 0, "veNFT not ready for voting");
+        uint256 tokenId = voterTokenId;
         address[] memory pools = new address[](1);
         uint256[] memory weights = new uint256[](1);
 
@@ -686,8 +709,104 @@ contract E2ETest is Script, Test {
             );
         }
 
-        console.log("Epoch flip and distribution completed successfully!");       
+        console.log("Epoch flip and distribution completed successfully!");
+        vm.stopBroadcast();
     }
+
+
+
+    function step13_ClaimRewards() internal {
+        console.log("\n=== Step 13: Claim Rewards ===");
+
+        require(gaugeAddress != address(0), "Gauge not configured");
+        require(externalBribeAddress != address(0), "Bribes not configured");
+        require(voterTokenId != 0, "veNFT not created");
+
+        console.log("\n--- Claiming Gauge Emissions (LP Rewards) ---");
+        vm.startBroadcast(LP);
+        uint256 pendingEmissions = GaugeV2(gaugeAddress).earned(LP);
+        console.log("Pending LITH emissions for LP:", pendingEmissions);
+        require(pendingEmissions > 0, "No gauge emissions available");
+
+        uint256 lithBefore = lithos.balanceOf(LP);
+        GaugeV2(gaugeAddress).getReward();
+        uint256 lithAfter = lithos.balanceOf(LP);
+        require(lithAfter > lithBefore, "Gauge emission claim failed");
+        uint256 lithClaimed = lithAfter - lithBefore;
+        console.log("LITH claimed from gauge:", lithClaimed);
+
+        uint256 stakedLp = GaugeV2(gaugeAddress).balanceOf(LP);
+        console.log("LP tokens still staked:", stakedLp);
+        vm.stopBroadcast();
+
+        console.log("\n--- Claiming External Bribes (Voter Rewards) ---");
+        vm.startBroadcast(VOTER);
+        address[] memory externalTokens = new address[](2);
+        externalTokens[0] = address(lithos);
+        externalTokens[1] = USDT;
+        uint256 voterLithBefore = lithos.balanceOf(VOTER);
+        uint256 voterUsdtBefore = ERC20(USDT).balanceOf(VOTER);
+        Bribe(externalBribeAddress).getReward(voterTokenId, externalTokens);
+        uint256 voterLithAfter = lithos.balanceOf(VOTER);
+        uint256 voterUsdtAfter = ERC20(USDT).balanceOf(VOTER);
+
+        uint256 externalLithClaimed = voterLithAfter > voterLithBefore
+            ? voterLithAfter - voterLithBefore
+            : 0;
+        uint256 externalUsdtClaimed = voterUsdtAfter > voterUsdtBefore
+            ? voterUsdtAfter - voterUsdtBefore
+            : 0;
+
+        require(
+            externalLithClaimed > 0 || externalUsdtClaimed > 0,
+            "No external bribes claimed"
+        );
+        console.log("External LITH bribes claimed:", externalLithClaimed);
+        console.log("External USDT bribes claimed:", externalUsdtClaimed);
+
+        console.log("\n--- Claiming Trading Fees (Internal Bribe) ---");
+        address[] memory feeTokens = new address[](2);
+        feeTokens[0] = USDT;
+        feeTokens[1] = XPL;
+        uint256 voterUsdtBeforeFees = ERC20(USDT).balanceOf(VOTER);
+        uint256 voterXplBeforeFees = ERC20(XPL).balanceOf(VOTER);
+        Bribe(internalBribeAddress).getReward(voterTokenId, feeTokens);
+        uint256 voterUsdtAfterFees = ERC20(USDT).balanceOf(VOTER);
+        uint256 voterXplAfterFees = ERC20(XPL).balanceOf(VOTER);
+
+        uint256 internalUsdtClaimed = voterUsdtAfterFees > voterUsdtBeforeFees
+            ? voterUsdtAfterFees - voterUsdtBeforeFees
+            : 0;
+        uint256 internalXplClaimed = voterXplAfterFees > voterXplBeforeFees
+            ? voterXplAfterFees - voterXplBeforeFees
+            : 0;
+
+        require(
+            internalUsdtClaimed > 0 || internalXplClaimed > 0,
+            "No trading fees claimed"
+        );
+        console.log("Internal USDT fees claimed:", internalUsdtClaimed);
+        console.log("Internal WETH fees claimed:", internalXplClaimed);
+
+        console.log("\n--- Claiming Rebase Rewards ---");
+        uint256 claimableRebase = rewardsDistributor.claimable(voterTokenId);
+        console.log("Claimable rebase before claim:", claimableRebase);
+        require(claimableRebase > 0, "No rebase rewards claimable");
+
+        (int128 lockedBefore, ) = votingEscrow.locked(voterTokenId);
+        rewardsDistributor.claim(voterTokenId);
+        (int128 lockedAfterRebase, ) = votingEscrow.locked(voterTokenId);
+
+        uint256 lockedBeforeUint = uint256(uint128(lockedBefore));
+        uint256 lockedAfterUint = uint256(uint128(lockedAfterRebase));
+        require(lockedAfterUint > lockedBeforeUint, "No rebase compounded");
+        uint256 rebaseClaimed = lockedAfterUint - lockedBeforeUint;
+        console.log("Rebase compounded into veNFT:", rebaseClaimed);
+        console.log("New locked amount:", lockedAfterUint);
+
+        vm.stopBroadcast();
+    }
+
 
     function logResults() internal view {
         console.log("\n=== FINAL TEST RESULTS ===");
