@@ -45,6 +45,22 @@ contract LinkScript is Script {
             console2.log("Staking fee handler already set to deployer");
         }
 
+        // Set referral fee to 0 (disable referral system)
+        if (pairFactory.MAX_REFERRAL_FEE() != 0) {
+            console2.log("Setting referral fee to 0...");
+            pairFactory.setReferralFee(0);
+        } else {
+            console2.log("Referral fee already set to 0");
+        }
+
+        // Set dibs to deployer (required to be non-zero address)
+        if (pairFactory.dibs() != deployer) {
+            console2.log("Setting dibs to deployer...");
+            pairFactory.setDibs(deployer);
+        } else {
+            console2.log("Dibs already set to deployer");
+        }
+
         // Grant GOVERNANCE role to deployer for Phase 3 operations
         PermissionsRegistry permissions = PermissionsRegistry(deployed["PermissionsRegistry"]);
         if (!permissions.hasRole("GOVERNANCE", deployer)) {

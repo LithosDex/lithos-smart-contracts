@@ -4,8 +4,11 @@
 
 ### 1. LP Trading Fees
 - **Source**: Traders pay 0.18% (volatile) or 0.04% (stable) on swaps
-- **Recipients**: LP token holders (88% after referral fees, which LITH team is taking as protocol fee atm)
-- **Claim**: Directly from Pair contract
+- **Recipients**:
+  - **Unstaked LP holders**: Get fees directly (88% after referral fees, which LITH team is taking as protocol fee atm)
+    - **Claim**: Call `Pair.claimFees()` directly
+  - **Staked LP holders**: Fees go to gauge → internal bribe → voters
+    - **Claim**: Claim emissions from internal bribe contract
 
 ### 2. Gauge Emissions (LITH rewards)
 - **Source**: Weekly LITH emissions from Minter
@@ -60,7 +63,9 @@ Router.addLiquidity(
 );
 // Receive: LP tokens
 
-// 2. Stake LP tokens in Gauge (optional but recommended)
+// 2. DECISION: Stake LP tokens in Gauge or keep unstaked
+// Keep unstaked → earn trading fees directly
+// Stake in gauge → earn LITH emissions (fees go to voters)
 lpToken.approve(Gauge, lpAmount);
 Gauge.deposit(lpAmount);
 ```
@@ -161,16 +166,21 @@ VoterV3.distributeAll();
 
 ### For LP Providers
 
-#### A. Trading Fee Rewards (Continuous)
+#### A. Trading Fee Rewards (ONLY for Unstaked LP holders)
 ```solidity
 // Fees accumulate automatically as swaps occur
-// Check claimable fees
+// Check claimable fees (only works if LP tokens NOT staked)
 uint256 fees0 = Pair.claimable0(myAddress);
 uint256 fees1 = Pair.claimable1(myAddress);
 
-// Claim fees
+// Claim fees (only works if you hold LP tokens directly)
 Pair.claimFees();
 // Receive: token0 and token1 fees
+
+// NOTE: If LP tokens are staked in gauge:
+// - fees0/fees1 will be 0 for your address
+// - fees accumulate to the gauge address instead
+// - gauge forwards fees to internal bribe for voters
 ```
 
 #### B. Gauge Emission Rewards (If Staked)
@@ -247,9 +257,10 @@ VoterV3.claimFees(bribes, tokens, tokenId);
 
 ### Week 2+ (Steady State)
 **Throughout Week**:
-- LPs earn trading fees continuously
-- Staked LPs earn LITH emissions (streaming)
+- Unstaked LPs earn trading fees continuously
+- Staked LPs earn LITH emissions (streaming) but NOT trading fees
 - veNFT holders earn rebases (must claim, then compounds into lock)
+- veNFT voters earn trading fees from gauges they vote for
 - New votes can be cast (replace old votes)
 
 **Weekly (Thursday 00:00 UTC)**:
@@ -263,9 +274,11 @@ VoterV3.claimFees(bribes, tokens, tokenId);
 
 ## Key Points
 
-1. **LP Fees**: Automatic, claimable anytime, no voting needed
+1. **LP Fees**:
+   - Unstaked LPs: Get fees directly, claim from Pair contract
+   - Staked LPs: Forfeit fees to voters in exchange for LITH emissions
 2. **Gauge Emissions**: Requires staking LP tokens, rewards based on gauge's vote share
-3. **Bribes**: Requires veNFT and voting, rewards after epoch flip
+3. **Bribes**: Requires veNFT and voting, includes both trading fees (internal) and external incentives
 4. **Rebases**: Available for all veNFT holders, requires manual claim via RewardsDistributor, compounds into veNFT
 5. **Protocol Owner**: Mainly needs to ensure `Minter.update_period()` runs weekly
 6. **Permissionless**: Most functions can be called by anyone (distribute, update_period)
@@ -273,11 +286,11 @@ VoterV3.claimFees(bribes, tokens, tokenId);
 ## Who Calls What
 
 ### Users Call
-- `Pair.claimFees()` - claim trading fees
-- `Gauge.getReward()` - claim LITH emissions
-- `Bribe.getReward()` - claim bribe rewards
-- `VoterV3.vote()` - cast votes
-- `RewardsDistributor.claim()` - claim rebase rewards
+- `Pair.claimFees()` - claim trading fees (only if holding unstaked LP tokens)
+- `Gauge.getReward()` - claim LITH emissions (for staked LP providers)
+- `Bribe.getReward()` - claim bribe rewards (for voters)
+- `VoterV3.vote()` - cast votes (for veNFT holders)
+- `RewardsDistributor.claim()` - claim rebase rewards (for veNFT holders)
 
 ### Anyone Can Call (Protocol or Keepers)
 - `Minter.update_period()` - weekly emission mint
@@ -291,9 +304,13 @@ VoterV3.claimFees(bribes, tokens, tokenId);
 
 ## Reward Formulas
 
-**Trading Fees for LP**:
+**Trading Fees**:
 ```
+For Unstaked LP:
 My Share = (My LP Tokens / Total LP Tokens) * Accumulated Fees
+
+For Staked LP:
+Fees go to gauge → internal bribe → voters
 ```
 
 **Gauge Emissions for Staked LP**:
