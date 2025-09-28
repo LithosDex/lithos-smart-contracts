@@ -215,10 +215,10 @@ contract E2ETest is Test {
 
         vm.startPrank(DEPLOYER);
 
-        const uint256 amountToLpUSDT = 250_000e6;
-        const uint256 amountToLpWETH = 500e18;
-        const uint256 amountToLpWXPL = 250_000e18;
-        const uint256 amountToLpUSDe = 250_000e18;
+        uint256 amountToLpUSDT = 250_000e6;
+        uint256 amountToLpWETH = 500e18;
+        uint256 amountToLpWXPL = 250_000e18;
+        uint256 amountToLpUSDe = 250_000e18;
 
         // Approve RouterV2 to spend tokens
         ERC20(USDT).approve(address(router), amountToLpUSDT);
@@ -547,14 +547,14 @@ contract E2ETest is Test {
 
         // Add liquidity to WXPL/LITH pair (deployer has initial 50m of LITH already)
         uint256 deadline = block.timestamp + 600; // 10 minutes
-        const uint256 amountToLpWXPL = 100_000e18;
-        const uint256 amountToLpLITH = 100_000e18;
+        uint256 amountToLpWXPL = 100_000e18;
+        uint256 amountToLpLITH = 100_000e18;
 
         console.log("Adding liquidity to WXPL/LITH pair:");
         (uint256 amountA, uint256 amountB, uint256 liquidity) = router
             .addLiquidity(
                 WXPL, // tokenA
-                LITH, // tokenB
+                address(lithos), // tokenB
                 false, // stable = false (volatile pair)
                 amountToLpWXPL, // amountADesired
                 amountToLpLITH, // amountBDesired
@@ -694,10 +694,10 @@ contract E2ETest is Test {
         console.log("External bribe address:", usdtWethExternalBribe);
 
         // Add LITH as reward token
-        (bool addLithSuccess, ) = usdtWethExternalBribe.call(
+        (bool addLithSuccessUsdtWeth, ) = usdtWethExternalBribe.call(
             abi.encodeWithSignature("addRewardToken(address)", address(lithos))
         );
-        require(addLithSuccess, "Failed to add LITH as reward token");
+        require(addLithSuccessUsdtWeth, "Failed to add LITH as reward token");
         console.log("Added LITH as reward token to bribe contract");
 
         // ========== WXPL/LITH GAUGE ==========
@@ -728,10 +728,6 @@ contract E2ETest is Test {
             address wxplUsdtInternalBribe,
             address wxplUsdtExternalBribe
         ) = voter.createGauge(wxplUsdtPair, 0);
-        (gaugeAddress, internalBribe, externalBribe) = voter.createGauge(
-            wxplUsdtPair,
-            0
-        );
         console.log("Gauge created for WXPL/USDT pair:", wxplUsdtGaugeAddress);
         console.log("Internal bribe address:", wxplUsdtInternalBribe);
         console.log("External bribe address:", wxplUsdtExternalBribe);
@@ -745,19 +741,15 @@ contract E2ETest is Test {
             address usdtUsdeInternalBribe,
             address usdtUsdeExternalBribe
         ) = voter.createGauge(usdtUsdePair, 0);
-        (gaugeAddress, internalBribe, externalBribe) = voter.createGauge(
-            usdtUsdePair,
-            0
-        );
         console.log("Gauge created for USDT/USDE pair:", usdtUsdeGaugeAddress);
         console.log("Internal bribe address:", usdtUsdeInternalBribe);
         console.log("External bribe address:", usdtUsdeExternalBribe);
 
         // Add LITH as reward token
-        (bool addLithSuccess, ) = usdtUsdeExternalBribe.call(
+        (bool addLithSuccessUsdtUsde, ) = usdtUsdeExternalBribe.call(
             abi.encodeWithSignature("addRewardToken(address)", address(lithos))
         );
-        require(addLithSuccess, "Failed to add LITH as reward token");
+        require(addLithSuccessUsdtUsde, "Failed to add LITH as reward token");
         console.log("Added LITH as reward token to bribe contract");
 
         vm.stopPrank();
@@ -769,14 +761,14 @@ contract E2ETest is Test {
         uint256 lithBribeAmountForUsdtWeth = 1_000e18; // 1000 LITH
         lithos.approve(usdtWethExternalBribe, lithBribeAmountForUsdtWeth);
         console.log("Approved LITH for bribing:", lithBribeAmountForUsdtWeth);
-        (bool notifyLithSuccess, ) = usdtWethExternalBribe.call(
+        (bool notifyLithSuccessUsdtWeth, ) = usdtWethExternalBribe.call(
             abi.encodeWithSignature(
                 "notifyRewardAmount(address,uint256)",
                 address(lithos),
                 lithBribeAmountForUsdtWeth
             )
         );
-        require(notifyLithSuccess, "Failed to notify LITH reward amount for USDT/WETH");
+        require(notifyLithSuccessUsdtWeth, "Failed to notify LITH reward amount for USDT/WETH");
         console.log("Notified LITH bribe amount for USDT/WETH:", lithBribeAmountForUsdtWeth);
 
         // Bribe WXPL/LITH gauge with WXPL, LITH, and USDT
@@ -800,38 +792,38 @@ contract E2ETest is Test {
         require(notifyWxplSuccess, "Failed to notify WXPL reward amount for WXPL/LITH");
         console.log("Notified WXPL bribe amount for WXPL/LITH:", wxplBribeAmountForWxplLith);
 
-        (bool notifyLithSuccess, ) = wxplLithExternalBribe.call(
+        (bool notifyLithSuccessWxplLith, ) = wxplLithExternalBribe.call(
             abi.encodeWithSignature(
                 "notifyRewardAmount(address,uint256)",
                 address(lithos),
                 lithBribeAmountForWxplLith
             )
         );
-        require(notifyLithSuccess, "Failed to notify LITH reward amount for WXPL/LITH");
+        require(notifyLithSuccessWxplLith, "Failed to notify LITH reward amount for WXPL/LITH");
         console.log("Notified LITH bribe amount for WXPL/LITH:", lithBribeAmountForUsdtWeth);
 
         (bool notifyUsdtSuccess, ) = wxplLithExternalBribe.call(
             abi.encodeWithSignature(
                 "notifyRewardAmount(address,uint256)",
                 address(USDT),
-                usdtBribeAmountForUsdtWeth
+                usdtBribeAmountForWxplLith
             )
         );
         require(notifyUsdtSuccess, "Failed to notify USDT reward amount for WXPL/LITH");
-        console.log("Notified USDT bribe amount for WXPL/LITH:", usdtBribeAmountForUsdtWeth);
+        console.log("Notified USDT bribe amount for WXPL/LITH:", usdtBribeAmountForWxplLith);
 
         // Bribe USDT/USDe gauge with LITH
         uint256 lithBribeAmountForUsdtUsde = 1_000e18; // 1000 LITH
         lithos.approve(usdtUsdeExternalBribe, lithBribeAmountForUsdtUsde);
         console.log("Approved LITH for bribing:", lithBribeAmountForUsdtUsde);
-        (bool notifyLithSuccess, ) = usdtUsdeExternalBribe.call(
+        (bool notifyLithSuccessUsdtUsde, ) = usdtUsdeExternalBribe.call(
             abi.encodeWithSignature(
                 "notifyRewardAmount(address,uint256)",
                 address(lithos),
                 lithBribeAmountForUsdtUsde
             )
         );
-        require(notifyLithSuccess, "Failed to notify LITH reward amount for USDT/USDe");
+        require(notifyLithSuccessUsdtUsde, "Failed to notify LITH reward amount for USDT/USDe");
         console.log("Notified LITH bribe amount for USDT/USDe:", lithBribeAmountForUsdtUsde);
 
         vm.stopPrank();
