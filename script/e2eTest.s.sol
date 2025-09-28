@@ -190,7 +190,7 @@ contract E2ETest is Script, Test {
         ERC20(USDT).approve(address(router), USDT_AMOUNT);
         ERC20(XPL).approve(address(router), XPL_AMOUNT);
         console.log("Approved RouterV2 to spend tokens");
-        
+
         // Add liquidity
         uint256 deadline = block.timestamp + 600; // 10 minutes
         (uint256 amountA, uint256 amountB, uint256 liquidity) = router
@@ -230,7 +230,7 @@ contract E2ETest is Script, Test {
         uint256 usdtBefore = ERC20(USDT).balanceOf(DEPLOYER);
         uint256 wethBefore = ERC20(XPL).balanceOf(DEPLOYER);
         console.log("Before swap - USDT:", usdtBefore, "WETH:", wethBefore);
-        
+
         vm.startBroadcast(DEPLOYER);
         // Approve GlobalRouter to spend USDT for swap
         ERC20(USDT).approve(address(globalRouter), SWAP_AMOUNT);
