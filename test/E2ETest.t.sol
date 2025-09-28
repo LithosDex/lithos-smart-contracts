@@ -492,7 +492,7 @@ contract E2ETest is Test {
 
         // Initialize all contracts
         lithos.initialMint(DEPLOYER);
-        console.log("LITH initial mint: 50M tokens to TEST_WALLET");
+        console.log("LITH initial mint: 50M tokens to DEPLOYER");
 
         gaugeFactory.initialize(address(permissionsRegistry));
         bribeFactory.initialize(DEPLOYER, address(permissionsRegistry));
@@ -546,7 +546,7 @@ contract E2ETest is Test {
         console.log("WXPL/LITH volatile pair created:", wxplLithPair);
 
         // Add liquidity to WXPL/LITH pair (deployer has initial 50m of LITH already)
-        uint256 deadline = block.timestamp + 600; // 10 minutes
+        uint256 deadline = block.timestamp + 1200;
         uint256 amountToLpWXPL = 100_000e18;
         uint256 amountToLpLITH = 100_000e18;
 
@@ -583,7 +583,7 @@ contract E2ETest is Test {
 
         // Transfer some LITH to VOTER for locking
         vm.startPrank(DEPLOYER);
-        uint256 transferAmount = 5000e18; // 5000 LITH tokens
+        uint256 transferAmount = 1_000_000e18; // 1M LITH tokens
         lithos.transfer(VOTER, transferAmount);
         console.log("Transferred", transferAmount, "LITH to VOTER for locking");
         vm.stopPrank();
