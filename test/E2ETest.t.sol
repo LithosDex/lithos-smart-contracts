@@ -1154,7 +1154,8 @@ contract E2ETest is Test {
         address usdtUsdeGauge = voter.gauges(usdtUsdePair);
 
         // Record LP's LITH balance before claiming
-        uint256 lpLithBefore = lithos.balanceOf(LP);
+        uint256 lpLithBalanceStart = lithos.balanceOf(LP);
+        uint256 lpLithBefore = lpLithBalanceStart;
         console.log(
             "LP's LITH balance before claiming:",
             lpLithBefore / 1e18,
@@ -1178,10 +1179,12 @@ contract E2ETest is Test {
 
                 if (claimSuccess) {
                     uint256 newBalance = lithos.balanceOf(LP);
-                    console.log(
-                        "Claimed:",
-                        (newBalance - lpLithBefore) / 1e18,
-                        "LITH"
+                    uint256 claimed = newBalance - lpLithBefore;
+                    console.log("Claimed:", claimed / 1e18, "LITH");
+                    // Assert that emissions were actually claimed for USDT/WETH (25% vote share)
+                    require(
+                        claimed > 0,
+                        "USDT/WETH gauge should have distributed emissions"
                     );
                     lpLithBefore = newBalance;
                 }
@@ -1207,10 +1210,12 @@ contract E2ETest is Test {
 
                 if (claimSuccess) {
                     uint256 newBalance = lithos.balanceOf(LP);
-                    console.log(
-                        "Claimed:",
-                        (newBalance - lpLithBefore) / 1e18,
-                        "LITH"
+                    uint256 claimed = newBalance - lpLithBefore;
+                    console.log("Claimed:", claimed / 1e18, "LITH");
+                    // Assert that emissions were actually claimed for WXPL/LITH (50% vote share - should be largest)
+                    require(
+                        claimed > 0,
+                        "WXPL/LITH gauge should have distributed emissions"
                     );
                     lpLithBefore = newBalance;
                 }
@@ -1236,10 +1241,12 @@ contract E2ETest is Test {
 
                 if (claimSuccess) {
                     uint256 newBalance = lithos.balanceOf(LP);
-                    console.log(
-                        "Claimed:",
-                        (newBalance - lpLithBefore) / 1e18,
-                        "LITH"
+                    uint256 claimed = newBalance - lpLithBefore;
+                    console.log("Claimed:", claimed / 1e18, "LITH");
+                    // Assert that emissions were actually claimed for WXPL/USDT (25% vote share, no bribes)
+                    require(
+                        claimed > 0,
+                        "WXPL/USDT gauge should have distributed emissions despite no bribes"
                     );
                     lpLithBefore = newBalance;
                 }
@@ -1262,17 +1269,27 @@ contract E2ETest is Test {
                     pending / 1e18,
                     "LITH (should be 0)"
                 );
+                // Assert that this gauge gets 0 emissions (edge case - has bribes but no votes)
+                require(
+                    pending == 0,
+                    "USDT/USDe gauge should have 0 emissions (no votes)"
+                );
             } else {
                 console.log("No emissions (expected - gauge got 0 votes)");
             }
         }
 
-        uint256 totalLPEmissions = lithos.balanceOf(LP) - lpLithBefore;
+        uint256 totalLPEmissions = lithos.balanceOf(LP) - lpLithBalanceStart;
         console.log("\n=== Phase A Summary ===");
         console.log(
             "Total gauge emissions claimed by LP:",
             totalLPEmissions / 1e18,
             "LITH"
+        );
+        // Assert that LP received total emissions > 0 (staked in 3 gauges with votes)
+        require(
+            totalLPEmissions > 0,
+            "LP should have received gauge emissions for staked positions"
         );
         console.log("Bribes NOT claimable yet (still in current epoch)");
 
@@ -1285,6 +1302,22 @@ contract E2ETest is Test {
         // Fast forward to Oct 23 (next Thursday epoch)
         vm.warp(1761177600 + 1 hours); // Oct 23, 2025 + 1 hour
         console.log("Time warped to Oct 23, 2025 + 1 hour");
+
+        // IMPOTANT!! Need to trigger epoch flip to update active_period
+        vm.startPrank(DEPLOYER);
+        console.log("Triggering epoch flip to update active_period...");
+        bool canUpdate = minterUpgradeable.check();
+        if (canUpdate) {
+            voter.distributeAll();
+            console.log(
+                "Epoch flipped, active_period updated to:",
+                minterUpgradeable.active_period()
+            );
+        } else {
+            console.log("Warning: Could not trigger epoch flip");
+        }
+        vm.stopPrank();
+
         console.log("VOTER wallet claims bribe rewards from voting\n");
 
         vm.startPrank(VOTER);
@@ -1292,9 +1325,13 @@ contract E2ETest is Test {
         uint256 tokenId = voterTokenId; // veNFT owned by VOTER
 
         // Record VOTER's balances before claiming bribes
-        uint256 voterLithBefore = lithos.balanceOf(VOTER);
-        uint256 voterWxplBefore = ERC20(WXPL).balanceOf(VOTER);
-        uint256 voterUsdtBefore = ERC20(USDT).balanceOf(VOTER);
+        uint256 voterLithBalanceStart = lithos.balanceOf(VOTER);
+        uint256 voterWxplBalanceStart = ERC20(WXPL).balanceOf(VOTER);
+        uint256 voterUsdtBalanceStart = ERC20(USDT).balanceOf(VOTER);
+
+        uint256 voterLithBefore = voterLithBalanceStart;
+        uint256 voterWxplBefore = voterWxplBalanceStart;
+        uint256 voterUsdtBefore = voterUsdtBalanceStart;
 
         console.log("VOTER balances before claiming bribes:");
         console.log("- LITH:", voterLithBefore / 1e18);
@@ -1319,6 +1356,11 @@ contract E2ETest is Test {
             if (claimSuccess) {
                 uint256 lithClaimed = lithos.balanceOf(VOTER) - voterLithBefore;
                 console.log("Claimed LITH bribes:", lithClaimed / 1e18);
+                // Assert that LITH bribes were received (25% of total LITH bribes)
+                require(
+                    lithClaimed > 0,
+                    "VOTER should receive LITH bribes from USDT/WETH gauge"
+                );
                 voterLithBefore = lithos.balanceOf(VOTER);
             } else {
                 console.log("No bribes to claim or not yet claimable");
@@ -1353,6 +1395,20 @@ contract E2ETest is Test {
                 console.log("Claimed LITH bribes:", lithClaimed / 1e18);
                 console.log("Claimed USDT bribes:", usdtClaimed / 1e6);
 
+                // Assert all three bribe tokens were received (50% vote share - highest)
+                require(
+                    wxplClaimed > 0,
+                    "VOTER should receive WXPL bribes from WXPL/LITH gauge"
+                );
+                require(
+                    lithClaimed > 0,
+                    "VOTER should receive LITH bribes from WXPL/LITH gauge"
+                );
+                require(
+                    usdtClaimed > 0,
+                    "VOTER should receive USDT bribes from WXPL/LITH gauge"
+                );
+
                 voterWxplBefore = ERC20(WXPL).balanceOf(VOTER);
                 voterLithBefore = lithos.balanceOf(VOTER);
                 voterUsdtBefore = ERC20(USDT).balanceOf(VOTER);
@@ -1371,6 +1427,10 @@ contract E2ETest is Test {
             rewardTokens[0] = WXPL;
             rewardTokens[1] = USDT;
 
+            // Record balances before attempting claim
+            uint256 wxplBefore = ERC20(WXPL).balanceOf(VOTER);
+            uint256 usdtBefore = ERC20(USDT).balanceOf(VOTER);
+
             (bool claimSuccess, ) = wxplUsdtExtBribe.call(
                 abi.encodeWithSignature(
                     "getReward(uint256,address[])",
@@ -1379,7 +1439,16 @@ contract E2ETest is Test {
                 )
             );
 
-            console.log("No bribes expected (gauge had no bribes)");
+            // Assert no bribes were received (edge case - gauge had no bribes)
+            require(
+                ERC20(WXPL).balanceOf(VOTER) == wxplBefore,
+                "WXPL/USDT should have no WXPL bribes"
+            );
+            require(
+                ERC20(USDT).balanceOf(VOTER) == usdtBefore,
+                "WXPL/USDT should have no USDT bribes"
+            );
+            console.log("No bribes expected (gauge had no bribes) - verified!");
         }
 
         // Check USDT/USDe (0 votes, but has bribes - should be unclaimable)
@@ -1397,19 +1466,22 @@ contract E2ETest is Test {
         console.log("No trading fees expected (no swaps after gauge creation)");
 
         console.log("\n=== Phase B Summary ===");
+        uint256 totalWxplBribes = ERC20(WXPL).balanceOf(VOTER) -
+            voterWxplBalanceStart;
+        uint256 totalLithBribes = lithos.balanceOf(VOTER) -
+            voterLithBalanceStart;
+        uint256 totalUsdtBribes = ERC20(USDT).balanceOf(VOTER) -
+            voterUsdtBalanceStart;
+
         console.log("Total bribes claimed by VOTER:");
-        console.log(
-            "- WXPL:",
-            (ERC20(WXPL).balanceOf(VOTER) - voterWxplBefore) / 1e18
-        );
-        console.log(
-            "- LITH:",
-            (lithos.balanceOf(VOTER) - voterLithBefore) / 1e18
-        );
-        console.log(
-            "- USDT:",
-            (ERC20(USDT).balanceOf(VOTER) - voterUsdtBefore) / 1e6
-        );
+        console.log("- WXPL:", totalWxplBribes / 1e18);
+        console.log("- LITH:", totalLithBribes / 1e18);
+        console.log("- USDT:", totalUsdtBribes / 1e6);
+
+        // Assert that VOTER received bribes for their votes
+        require(totalWxplBribes > 0, "VOTER should have received WXPL bribes");
+        require(totalLithBribes > 0, "VOTER should have received LITH bribes");
+        require(totalUsdtBribes > 0, "VOTER should have received USDT bribes");
 
         vm.stopPrank();
 

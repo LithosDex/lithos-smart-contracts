@@ -35,9 +35,9 @@ contract BribeFactoryV3 is OwnableUpgradeable {
         __Ownable_init(msg.sender); //after deploy ownership to multisig
         voter = _voter;
 
-        //bribe default tokens
-        defaultRewardToken.push(address(0x82bF51B4f3036bA6c46d7195B4140c3CB6cCF0EA)); // $lith
-        defaultRewardToken.push(address(0x6100E367285b01F48D07953803A2d8dCA5D19873)); // $wxpl
+        //bribe default token
+        defaultRewardToken.push(address(0x3a6a2309Bc05b9798CF46699Bba9F6536039B72D)); // $LITH
+        defaultRewardToken.push(address(0x3576E9157cF2e1dB071b3587dEbBFb67D9e0962d)); // $WXPL
 
         // registry to check accesses
         permissionsRegistry = IPermissionsRegistry(_permissionsRegistry);
