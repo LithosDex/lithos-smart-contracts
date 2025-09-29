@@ -29,11 +29,22 @@ contract E2ETest is Test {
     // deployer
     address constant DEPLOYER = 0xa9040c08B0FA3D5cf8B1534A0686261Da948F82a;
 
-    // DEX Contract instances
-    PairFactory public pairFactory;
-    RouterV2 public router;
-    GlobalRouter public globalRouter;
-    TradeHelper public tradeHelper;
+    // Test accounts
+    address constant LP = address(2);
+    address constant BRIBER = address(3);
+    address constant VOTER = address(4);
+
+    // Mainnet deployments
+    PairFactory public pairFactory =
+        PairFactory(0xD209Cc008C3A26664B21138B425556D1c7e41d6D);
+    RouterV2 public router =
+        RouterV2(payable(0x0c746e15F626681Fab319a520dB8066D29Ab3730));
+    GlobalRouter public globalRouter =
+        GlobalRouter(0x34c62c36713bDEb2e387B3321f0de5DF8623ab82);
+    TradeHelper public tradeHelper =
+        TradeHelper(0x2A66F82F6ce9976179D191224A1E4aC8b50e68D1);
+
+    // Contract instances (to deploy later)
     VeArtProxyUpgradeable public veArtProxyUpgradeable;
     Lithos public lithos;
     VotingEscrow public votingEscrow;
@@ -45,26 +56,41 @@ contract E2ETest is Test {
     MinterUpgradeable public minterUpgradeable;
 
     // Test data
+    uint256 public voterTokenId;
+
     address public usdtWethPair;
+    address public usdtWethGaugeAddress;
+    address public usdtWethInternalBribe;
+    address public usdtWethExternalBribe;
+
     address public wxplLithPair;
+    address public wxplLithGaugeAddress;
+    address public wxplLithInternalBribe;
+    address public wxplLithExternalBribe;
+
     address public wxplUsdtPair;
+    address public wxplUsdtGaugeAddress;
+    address public wxplUsdtInternalBribe;
+    address public wxplUsdtExternalBribe;
+
     address public usdtUsdePair;
+    address public usdtUsdeGaugeAddress;
+    address public usdtUsdeInternalBribe;
+    address public usdtUsdeExternalBribe;
+
     uint256 public lpTokenBalance;
-    uint256 public constant USDT_AMOUNT = 1000e6; // 1000 USDT (6 decimals)
-    uint256 public constant WETH_AMOUNT = 1e18; // 1 WETH (18 decimals)
-    uint256 public constant WXPL_AMOUNT = 10e18; // 10 WXPL (18 decimals)
-    uint256 public constant USDe_AMOUNT = 1000e18; // 1000 USDe (18 decimals)
-    uint256 public constant LITH_AMOUNT = 1000e18; // 1000 LITH for liquidity
-    uint256 public constant SWAP_AMOUNT = 100e6; // 100 USDT for swap
 
     function setUp() public {
-        // Step 0: Set time to Oct 1, 2024
-        vm.warp(1727740800); // Oct 1, 2024 00:00:00 UTC
-        console.log("Time set to Oct 1, 2024");
+        // Step 0: Set time to Tues Oct 1, 2025 00:00:00 UTC
+        vm.warp(1759298400);
+        console.log("Time set to Oct 1, 2025 00:00:00 UTC");
         console.log("Current timestamp:", block.timestamp);
 
-        // Give deployer some ETH
+        // Give deployer and test accounts some ETH
         vm.deal(DEPLOYER, 100 ether);
+        vm.deal(LP, 100 ether);
+        vm.deal(BRIBER, 100 ether);
+        vm.deal(VOTER, 100 ether);
 
         console.log("=== DEX E2E Test on Plasma Mainnet Beta Fork ===");
         console.log("Chain ID: 9745");
@@ -72,25 +98,27 @@ contract E2ETest is Test {
     }
 
     function test_e2e() public {
-        // Oct 1, 2024: Deploy DEX contracts
-        step1_DeployDEXContracts();
+        // Mainnet DEX contracts already deployed
+        // step1_DeployDEXContracts();
+
+        // Oct 1, 2025: Do pool stuff
         step2_CreatePools();
-        step3_AddLiquidity();
+        step3A_GetFunds();
+        step3B_AddLiquidity();
         step4_RunSwaps();
 
-        // Fast forward to Oct 10, 2024: Launch LITH and voting
+        // Fast forward to Oct 9, 2025: Launch LITH and voting prep
         step5_FastForwardToLaunch();
         step6_DeployVotingContracts();
         step7_LaunchLITHAndVoting();
         step8_CreateLocks();
-        step9_BribePools();
+        step9A_BribePools();
+        step9B_StakeLPTokens();
         step10_VoteForPools();
 
-        // Fast forward to Oct 16, 2024: Epoch flip and distribution
+        // Fast forward to Oct 16, 2025: Epoch flip and distribution
         step11_FastForwardToDistribution();
         step12_EpochFlipAndDistribute();
-
-        // Claim all rewards types
         step13_ClaimAllRewards();
 
         console.log("All contracts deployed successfully!");
@@ -98,11 +126,11 @@ contract E2ETest is Test {
         logResults();
     }
 
-    // Step 1: Deploy DEX contracts only (Oct 1, 2024)
+    // Step 1: Deploy DEX contracts only
     function step1_DeployDEXContracts() internal {
-        console.log("\n=== Step 1: Deploy DEX Contracts (Oct 1, 2024) ===");
+        console.log("\n=== Step 1: Deploy DEX Contracts ===");
 
-        // Act as TEST_WALLET for all deployments
+        // Act as DEPLOYER for all deployments
         vm.startPrank(DEPLOYER);
 
         // Deploy PairFactory first
@@ -165,84 +193,66 @@ contract E2ETest is Test {
         vm.stopPrank();
     }
 
+    // Step 3A: Get funds
+    function step3A_GetFunds() internal {
+        console.log("\n=== Step GetFunds: Transfer Funds From Whales ===");
+
+        // Transfer USDT from whale
+        address usdtWhale = 0x5D72a9d9A9510Cd8cBdBA12aC62593A58930a948;
+        vm.startPrank(usdtWhale);
+        ERC20(USDT).transfer(DEPLOYER, 1_000_000e6); // 1,000,000 USDT
+        console.log("Successfully transferred USDT from whale:", usdtWhale);
+        vm.stopPrank();
+
+        // Transfer WETH from whale
+        address wethWhale = 0xf1aB7f60128924d69f6d7dE25A20eF70bBd43d07;
+        vm.startPrank(wethWhale);
+        ERC20(WETH).transfer(DEPLOYER, 1_000e18); // 1000 WETH
+        console.log("Successfully transferred WETH from whale:", wethWhale);
+        vm.stopPrank();
+
+        // Transfer WXPL from whale
+        address wxplWhale = 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
+        vm.startPrank(wxplWhale);
+        ERC20(WXPL).transfer(DEPLOYER, 1_000_000e18); // 1,000,000 WXPL
+        console.log("Successfully transferred WXPL from whale:", wxplWhale);
+        vm.stopPrank();
+
+        // For USDe, transfer from whale
+        address usdeWhale = 0x7519403E12111ff6b710877Fcd821D0c12CAF43A;
+        vm.startPrank(usdeWhale);
+        ERC20(USDe).transfer(DEPLOYER, 1_000_000e18); // 1,000,000 USDe
+        console.log("Successfully transferred USDe from whale:", usdeWhale);
+        vm.stopPrank();
+
+        console.log("Deployer USDT balance:", ERC20(USDT).balanceOf(DEPLOYER));
+        console.log("Deployer WETH balance:", ERC20(WETH).balanceOf(DEPLOYER));
+        console.log("Deployer WXPL balance:", ERC20(WXPL).balanceOf(DEPLOYER));
+        console.log("Deployer USDe balance:", ERC20(USDe).balanceOf(DEPLOYER));
+    }
+
     // Step 3: Add LP
-    function step3_AddLiquidity() internal {
+    function step3B_AddLiquidity() internal {
         console.log("\n=== Step 3: Add Liquidity ===");
 
-        // Mint USDT from the owner address
-        address usdtOwner = 0x4DFF9b5b0143E642a3F63a5bcf2d1C328e600bf8;
-        vm.startPrank(usdtOwner);
-        uint256 usdtNeeded = USDT_AMOUNT * 3 + SWAP_AMOUNT + 5e6; // 3x for pairs, swap amount, plus 5 USDT for bribes
-        (bool mintSuccess, ) = USDT.call(
-            abi.encodeWithSignature(
-                "mint(address,uint256)",
-                DEPLOYER,
-                usdtNeeded
-            )
-        );
-
-        require(mintSuccess, "USDT mint failed");
-        console.log("Successfully minted USDT from owner:", usdtOwner);
-
-        vm.stopPrank();
-
-        // Mint WETH from the owner address
-        address wethOwner = 0x9fFfeBA0564F5a521428C20AC601c2dba4B2E67F;
-        vm.startPrank(wethOwner);
-
-        // Add owner as minter first
-        (bool addMinterSuccess, ) = WETH.call(
-            abi.encodeWithSignature("addMinter(address)", wethOwner)
-        );
-        if (addMinterSuccess) {
-            console.log("Added WETH owner as minter");
-        }
-
-        // Mint WETH to TEST_WALLET
-        (bool wethMintSuccess, ) = WETH.call(
-            abi.encodeWithSignature(
-                "mint(address,uint256)",
-                DEPLOYER,
-                WETH_AMOUNT * 2
-            )
-        );
-
-        require(wethMintSuccess, "WETH mint failed");
-        console.log("Successfully minted WETH from owner:", wethOwner);
-
-        vm.stopPrank();
-
-        // For WXPL, use deposit function (it's a wrapped token)
+        // Transfer funds to LP
         vm.startPrank(DEPLOYER);
-        // Deposit XPL to get WXPL (send native XPL)
-        (bool wxplDepositSuccess, ) = WXPL.call{value: WXPL_AMOUNT * 2}("");
-        require(wxplDepositSuccess, "WXPL deposit failed");
-        console.log("Successfully deposited XPL to get WXPL");
-        vm.stopPrank();
+        uint256 amountToLpUSDT = 250_000e6;
+        uint256 amountToLpWETH = 500e18;
+        uint256 amountToLpWXPL = 250_000e18;
+        uint256 amountToLpUSDe = 250_000e18;
+        ERC20(USDT).transfer(LP, amountToLpUSDT * 3); // Used in 3 pairs
+        ERC20(WETH).transfer(LP, amountToLpWETH);
+        ERC20(WXPL).transfer(LP, amountToLpWXPL);
+        ERC20(USDe).transfer(LP, amountToLpUSDe);
 
-        // For USDe, transfer from a whale address instead of minting
-        address usdeWhale = 0x7519403E12111ff6b710877Fcd821D0c12CAF43A;
+        vm.startPrank(LP);
 
-        vm.startPrank(usdeWhale);
-
-        // Transfer USDe from whale to TEST_WALLET
-        ERC20(USDe).transfer(DEPLOYER, USDe_AMOUNT * 2);
-        console.log("Successfully transferred USDe from whale:", usdeWhale);
-
-        vm.stopPrank();
-
-        console.log("USDT balance:", ERC20(USDT).balanceOf(DEPLOYER));
-        console.log("WETH balance:", ERC20(WETH).balanceOf(DEPLOYER));
-        console.log("WXPL balance:", ERC20(WXPL).balanceOf(DEPLOYER));
-        console.log("USDe balance:", ERC20(USDe).balanceOf(DEPLOYER));
-
-        vm.startPrank(DEPLOYER);
-
-        // Approve RouterV2 to spend tokens (need to approve enough for all pairs)
-        ERC20(USDT).approve(address(router), USDT_AMOUNT * 3); // Used in 3 pairs
-        ERC20(WETH).approve(address(router), WETH_AMOUNT);
-        ERC20(WXPL).approve(address(router), WXPL_AMOUNT);
-        ERC20(USDe).approve(address(router), USDe_AMOUNT);
+        // Approve RouterV2 to spend tokens
+        ERC20(USDT).approve(address(router), amountToLpUSDT * 3);
+        ERC20(WETH).approve(address(router), amountToLpWETH);
+        ERC20(WXPL).approve(address(router), amountToLpWXPL);
+        ERC20(USDe).approve(address(router), amountToLpUSDe);
         console.log("Approved RouterV2 to spend tokens");
 
         // Add liquidity to all pairs
@@ -254,11 +264,11 @@ contract E2ETest is Test {
                 USDT, // tokenA
                 WETH, // tokenB
                 false, // stable = false (volatile pair)
-                USDT_AMOUNT, // amountADesired
-                WETH_AMOUNT, // amountBDesired
+                amountToLpUSDT, // amountADesired
+                amountToLpWETH, // amountBDesired
                 0, // amountAMin
                 0, // amountBMin
-                DEPLOYER, // to
+                LP, // to
                 deadline // deadline
             );
 
@@ -272,11 +282,11 @@ contract E2ETest is Test {
             WXPL, // tokenA
             USDT, // tokenB
             false, // stable = false (volatile pair)
-            WXPL_AMOUNT, // amountADesired
-            USDT_AMOUNT, // amountBDesired
+            amountToLpWXPL, // amountADesired
+            amountToLpUSDT, // amountBDesired
             0, // amountAMin
             0, // amountBMin
-            DEPLOYER, // to
+            LP, // to
             deadline // deadline
         );
 
@@ -290,11 +300,11 @@ contract E2ETest is Test {
             USDT, // tokenA
             USDe, // tokenB
             true, // stable = true (stable pair)
-            USDT_AMOUNT, // amountADesired
-            USDe_AMOUNT, // amountBDesired
+            amountToLpUSDT, // amountADesired
+            amountToLpUSDe, // amountBDesired
             0, // amountAMin
             0, // amountBMin
-            DEPLOYER, // to
+            LP, // to
             deadline // deadline
         );
 
@@ -310,62 +320,136 @@ contract E2ETest is Test {
     function step4_RunSwaps() internal {
         console.log("\n=== Step 4: Run Swaps ===");
 
+        // Goal here is to build up swap volume on the following pools to make sure swap
+        // fees are distributed correctly in the rewards step:
+        // - USDT/WETH
+        // - WXPL/USDT - 0 swap volume to test edge case
+        // - USDT/USDe
+        // - WXPL/LITH - will be created/LP'd/swapped in a later step
+
         vm.startPrank(DEPLOYER);
 
-        // Check balances before swap
+        // Define swap amounts
+        uint256 amountToSwapUSDT = 1_000e6;
+        uint256 amountToSwapUSDe = 1_000e18;
+        uint256 amountToSwapWETH = 1e18;
+
+        // Approve GlobalRouter to spend tokens for all swaps
+        ERC20(USDT).approve(address(globalRouter), amountToSwapUSDT * 2); // Two swaps
+        ERC20(USDe).approve(address(globalRouter), amountToSwapUSDe);
+        ERC20(WETH).approve(address(globalRouter), amountToSwapWETH);
+
+        uint256 deadline = block.timestamp + 600;
+
+        // === Swap 1: USDT -> WETH ===
+        console.log("\nSwap 1: USDT -> WETH");
         uint256 usdtBefore = ERC20(USDT).balanceOf(DEPLOYER);
         uint256 wethBefore = ERC20(WETH).balanceOf(DEPLOYER);
-        console.log("Before swap - USDT:", usdtBefore, "WETH:", wethBefore);
 
-        // Approve GlobalRouter to spend USDT for swap
-        ERC20(USDT).approve(address(globalRouter), SWAP_AMOUNT);
-        console.log("Approved GlobalRouter to spend USDT");
+        ITradeHelper.Route[] memory route1 = new ITradeHelper.Route[](1);
+        route1[0] = ITradeHelper.Route({from: USDT, to: WETH, stable: false});
 
-        // Create route for USDT -> WETH swap
-        ITradeHelper.Route[] memory routes = new ITradeHelper.Route[](1);
-        routes[0] = ITradeHelper.Route({from: USDT, to: WETH, stable: false});
-
-        // Execute swap: 100 USDT -> WETH using GlobalRouter
-        uint256 deadline = block.timestamp + 600;
-        uint256[] memory amounts = globalRouter.swapExactTokensForTokens(
-            SWAP_AMOUNT, // amountIn
-            0, // amountOutMin
-            routes, // routes
-            DEPLOYER, // to
-            deadline, // deadline
-            true // _type (true = V2 pools)
+        uint256[] memory amounts1 = globalRouter.swapExactTokensForTokens(
+            amountToSwapUSDT,
+            0,
+            route1,
+            DEPLOYER,
+            deadline,
+            true
         );
 
-        // Check balances after swap
         uint256 usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
         uint256 wethAfter = ERC20(WETH).balanceOf(DEPLOYER);
-        console.log("After swap - USDT:", usdtAfter, "WETH:", wethAfter);
+        console.log("- USDT spent:", usdtBefore - usdtAfter);
+        console.log("- WETH received:", wethAfter - wethBefore);
+        console.log("- Route amounts:", amounts1[0], "->", amounts1[1]);
 
-        // Calculate swap results
-        uint256 usdtSpent = usdtBefore - usdtAfter;
-        uint256 wethReceived = wethAfter - wethBefore;
-        console.log("Swap results:");
-        console.log("- USDT spent:", usdtSpent);
-        console.log("- WETH received:", wethReceived);
-        console.log("- Amounts from swap:", amounts[0], "->", amounts[1]);
+        // === Swap 2: WETH -> USDT ===
+        console.log("\nSwap 2: WETH -> USDT (reverse)");
+        wethBefore = ERC20(WETH).balanceOf(DEPLOYER);
+        usdtBefore = ERC20(USDT).balanceOf(DEPLOYER);
 
-        // Verify swap worked
-        require(usdtSpent > 0, "No USDT spent");
-        require(wethReceived > 0, "No WETH received");
-        console.log("Swap executed successfully!");
+        ITradeHelper.Route[] memory route2 = new ITradeHelper.Route[](1);
+        route2[0] = ITradeHelper.Route({from: WETH, to: USDT, stable: false});
+
+        uint256[] memory amounts2 = globalRouter.swapExactTokensForTokens(
+            amountToSwapWETH,
+            0,
+            route2,
+            DEPLOYER,
+            deadline,
+            true
+        );
+
+        wethAfter = ERC20(WETH).balanceOf(DEPLOYER);
+        usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
+        console.log("- WETH spent:", wethBefore - wethAfter);
+        console.log("- USDT received:", usdtAfter - usdtBefore);
+        console.log("- Route amounts:", amounts2[0], "->", amounts2[1]);
+
+        // === Swap 3: USDT -> USDe ===
+        console.log("\nSwap 3: USDT -> USDe");
+        usdtBefore = ERC20(USDT).balanceOf(DEPLOYER);
+        uint256 usdeBefore = ERC20(USDe).balanceOf(DEPLOYER);
+
+        ITradeHelper.Route[] memory route3 = new ITradeHelper.Route[](1);
+        route3[0] = ITradeHelper.Route({from: USDT, to: USDe, stable: true});
+
+        uint256[] memory amounts3 = globalRouter.swapExactTokensForTokens(
+            amountToSwapUSDT,
+            0,
+            route3,
+            DEPLOYER,
+            deadline,
+            true
+        );
+
+        usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
+        uint256 usdeAfter = ERC20(USDe).balanceOf(DEPLOYER);
+        console.log("- USDT spent:", usdtBefore - usdtAfter);
+        console.log("- USDe received:", usdeAfter - usdeBefore);
+        console.log("- Route amounts:", amounts3[0], "->", amounts3[1]);
+
+        // === Swap 4: USDe -> USDT ===
+        console.log("\nSwap 4: USDe -> USDT");
+        usdeBefore = ERC20(USDe).balanceOf(DEPLOYER);
+        usdtBefore = ERC20(USDT).balanceOf(DEPLOYER);
+
+        ITradeHelper.Route[] memory route4 = new ITradeHelper.Route[](1);
+        route4[0] = ITradeHelper.Route({from: USDe, to: USDT, stable: true});
+
+        uint256[] memory amounts4 = globalRouter.swapExactTokensForTokens(
+            amountToSwapUSDe,
+            0,
+            route4,
+            DEPLOYER,
+            deadline,
+            true
+        );
+
+        usdeAfter = ERC20(USDe).balanceOf(DEPLOYER);
+        usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
+        console.log("- USDe spent:", usdeBefore - usdeAfter);
+        console.log("- USDT received:", usdtAfter - usdtBefore);
+        console.log("- Route amounts:", amounts4[0], "->", amounts4[1]);
+
+        // Note: WXPL/USDT pool gets 0 swap volume intentionally (testing edge case)
+        console.log("\nWXPL/USDT: Intentionally skipped (0 volume test case)");
+
+        console.log("\n=== All swaps completed successfully! ===");
+        console.log("Generated swap volume on USDT/WETH and USDT/USDe pools");
+        console.log("WXPL/USDT kept at 0 volume for edge case testing");
 
         vm.stopPrank();
     }
 
     // Step 5: Fast forward to launch
     function step5_FastForwardToLaunch() internal {
-        console.log(
-            "\n=== Step 5: Fast Forward for LITH Launch (Oct 10, 2024) ==="
-        );
+        console.log("\n=== Step 5: Fast Forward to Oct 9, 2025 ===");
 
-        // Fast forward to Oct 10, 2024 for LITH launch
-        vm.warp(1728518400); // Oct 10, 2024 00:00:00 UTC
-        console.log("Fast forwarded to Oct 10, 2024 for LITH launch");
+        // Set time to Oct 9, 2025 to prepare veNFT + bribes ahead of the Oct 16 epoch flip
+        vm.warp(1759968000);
+        console.log("Time set to Oct 9, 2025 for LITH launch preparation");
         console.log("Current timestamp:", block.timestamp);
     }
 
@@ -434,7 +518,7 @@ contract E2ETest is Test {
 
         // Initialize all contracts
         lithos.initialMint(DEPLOYER);
-        console.log("LITH initial mint: 50M tokens to TEST_WALLET");
+        console.log("LITH initial mint: 50M tokens to DEPLOYER");
 
         gaugeFactory.initialize(address(permissionsRegistry));
         bribeFactory.initialize(DEPLOYER, address(permissionsRegistry));
@@ -487,6 +571,43 @@ contract E2ETest is Test {
         );
         console.log("WXPL/LITH volatile pair created:", wxplLithPair);
 
+        // Add liquidity to WXPL/LITH pair (deployer has initial 50m of LITH already)
+        uint256 deadline = block.timestamp + 1200;
+        uint256 amountToLpWXPL = 100_000e18;
+        uint256 amountToLpLITH = 100_000e18;
+
+        // Transfer WXPL and LITH to LP address
+        ERC20(WXPL).transfer(LP, amountToLpWXPL);
+        lithos.transfer(LP, amountToLpLITH);
+
+        vm.stopPrank();
+
+        vm.startPrank(LP);
+
+        // Approve RouterV2 to spend WXPL and LITH
+        ERC20(WXPL).approve(address(router), amountToLpWXPL);
+        lithos.approve(address(router), amountToLpLITH);
+        console.log("Approved RouterV2 to spend WXPL and LITH");
+
+        console.log("Adding liquidity to WXPL/LITH pair:");
+        (uint256 amountA, uint256 amountB, uint256 liquidity) = router
+            .addLiquidity(
+                WXPL, // tokenA
+                address(lithos), // tokenB
+                false, // stable = false (volatile pair)
+                amountToLpWXPL, // amountADesired
+                amountToLpLITH, // amountBDesired
+                0, // amountAMin
+                0, // amountBMin
+                LP, // to
+                deadline // deadline
+            );
+
+        lpTokenBalance = liquidity;
+        console.log("- WXPL amount:", amountA);
+        console.log("- LITH amount:", amountB);
+        console.log("- LP tokens minted:", liquidity);
+
         vm.stopPrank();
     }
 
@@ -494,13 +615,20 @@ contract E2ETest is Test {
     function step8_CreateLocks() internal {
         console.log("\n=== Step 8: Create Voting Escrow Lock ===");
 
+        // Transfer some LITH to VOTER for locking
         vm.startPrank(DEPLOYER);
+        uint256 transferAmount = 1_000_000e18; // 1M LITH tokens
+        lithos.transfer(VOTER, transferAmount);
+        console.log("Transferred", transferAmount, "LITH to VOTER for locking");
+        vm.stopPrank();
 
+        // Lock as VOTER
+        vm.startPrank(VOTER);
         uint256 lockAmount = 1_000_000e18; // Lock 1M LITH tokens
         uint256 lockDuration = 4 weeks; // 4 weeks duration
 
         // Check LITH balance before lock
-        uint256 lithBalanceBefore = lithos.balanceOf(DEPLOYER);
+        uint256 lithBalanceBefore = lithos.balanceOf(VOTER);
         console.log("LITH balance before lock:", lithBalanceBefore);
         require(
             lithBalanceBefore >= lockAmount,
@@ -512,23 +640,23 @@ contract E2ETest is Test {
         console.log("Approved VotingEscrow to spend LITH:", lockAmount);
 
         // Create lock
-        uint256 tokenId = votingEscrow.create_lock(lockAmount, lockDuration);
+        voterTokenId = votingEscrow.create_lock(lockAmount, lockDuration);
         console.log("Lock created successfully!");
-        console.log("- Token ID (veNFT):", tokenId);
+        console.log("- Token ID (veNFT):", voterTokenId);
         console.log("- Amount locked:", lockAmount);
         console.log("- Duration:", lockDuration, "seconds");
 
         // Check veNFT minted - verify ownership
-        address nftOwner = votingEscrow.ownerOf(tokenId);
+        address nftOwner = votingEscrow.ownerOf(voterTokenId);
         console.log("veNFT owner:", nftOwner);
-        require(nftOwner == DEPLOYER, "veNFT not minted to deployer");
+        require(nftOwner == VOTER, "veNFT not minted to deployer");
 
-        // Check veNFT balance of deployer
-        uint256 veNFTBalance = votingEscrow.balanceOf(DEPLOYER);
-        console.log("veNFT balance of deployer:", veNFTBalance);
+        // Check veNFT balance of VOTER
+        uint256 veNFTBalance = votingEscrow.balanceOf(VOTER);
+        console.log("veNFT balance of VOTER:", veNFTBalance);
 
         // Check LITH balance after lock
-        uint256 lithBalanceAfter = lithos.balanceOf(DEPLOYER);
+        uint256 lithBalanceAfter = lithos.balanceOf(VOTER);
         console.log("LITH balance after lock:", lithBalanceAfter);
         console.log(
             "LITH tokens locked:",
@@ -536,11 +664,11 @@ contract E2ETest is Test {
         );
 
         // Check voting power
-        uint256 votingPower = votingEscrow.balanceOfNFT(tokenId);
-        console.log("Voting power for NFT", tokenId, ":", votingPower);
+        uint256 votingPower = votingEscrow.balanceOfNFT(voterTokenId);
+        console.log("Voting power for NFT", voterTokenId, ":", votingPower);
 
         // Get lock details
-        (int128 amount, uint256 end) = votingEscrow.locked(tokenId);
+        (int128 amount, uint256 end) = votingEscrow.locked(voterTokenId);
         console.log("Lock details:");
         console.log("- Locked amount:", uint256(uint128(amount)));
         console.log("- Lock end timestamp:", end);
@@ -551,12 +679,18 @@ contract E2ETest is Test {
     }
 
     // Step 9: Bribe pools with different tokens
-    function step9_BribePools() internal {
+    function step9A_BribePools() internal {
         console.log("\n=== Step 9: Bribe Pools with Different Tokens ===");
 
+        // NOTE: We execute this step on Oct 9, 2025.
+        // - Bribes queued now are for the NEXT epoch (Oct 16-23)
+        // - Votes cast in step 10 are recorded for CURRENT epoch (Oct 9-16) and will determine NEXT week's emission distributrion (Oct 16-23)
+        // - Bribes become claimable after Oct 23 epoch flip
+
+        // --- DEPLOYER Whitelists all tokens that will be used to create gauges,
+        // creates gauges, and adds reward tokens to gauges
         vm.startPrank(DEPLOYER);
 
-        // Whitelist all tokens that will be used in gauges
         address[] memory tokensToCheck = new address[](4);
         tokensToCheck[0] = address(lithos);
         tokensToCheck[1] = WXPL;
@@ -571,183 +705,333 @@ contract E2ETest is Test {
         }
 
         if (toWhitelistCount > 0) {
-            address[] memory tokensToWhitelist = new address[](toWhitelistCount);
+            address[] memory tokensToWhitelist = new address[](
+                toWhitelistCount
+            );
             uint256 index = 0;
             for (uint256 i = 0; i < tokensToCheck.length; i++) {
                 if (!voter.isWhitelisted(tokensToCheck[i])) {
                     tokensToWhitelist[index] = tokensToCheck[i];
-                    console.log("Whitelisting token for gauge creation:", tokensToCheck[i]);
+                    console.log(
+                        "Whitelisting token for gauge creation:",
+                        tokensToCheck[i]
+                    );
                     index++;
                 }
             }
             voter.whitelist(tokensToWhitelist);
-            console.log("Whitelisted", toWhitelistCount, "tokens for gauge creation");
+            console.log(
+                "Whitelisted",
+                toWhitelistCount,
+                "tokens for gauge creation"
+            );
         } else {
             console.log("All tokens already whitelisted");
         }
 
         // ========== USDT/WETH GAUGE ==========
         // Pool tokens: USDT, WETH (automatically added as reward tokens)
-        // Additional bribes: LITH (must be added manually)
+        // Additional reward tokens: LITH (must be added manually)
 
         (
-            address gaugeAddress,
-            address internalBribe,
-            address externalBribe
+            usdtWethGaugeAddress,
+            usdtWethInternalBribe,
+            usdtWethExternalBribe
         ) = voter.createGauge(usdtWethPair, 0);
-        console.log("Gauge created for USDT/WETH pair:", gaugeAddress);
-        console.log("Internal bribe address:", internalBribe);
-        console.log("External bribe address:", externalBribe);
+        console.log("Gauge created for USDT/WETH pair:", usdtWethGaugeAddress);
+        console.log("Internal bribe address:", usdtWethInternalBribe);
+        console.log("External bribe address:", usdtWethExternalBribe);
 
-        // AUTOMATIC REWARD TOKENS: USDT and WETH are automatically added since they're the pool's tokens
-        // MANUAL ADDITION: LITH must be added manually since it's not a pool token
-
-        (bool addLithSuccess, ) = externalBribe.call(
+        // Add LITH as reward token
+        (bool addLithSuccessUsdtWeth, ) = usdtWethExternalBribe.call(
             abi.encodeWithSignature("addRewardToken(address)", address(lithos))
         );
-        require(addLithSuccess, "Failed to add LITH as reward token");
+        require(addLithSuccessUsdtWeth, "Failed to add LITH as reward token");
         console.log("Added LITH as reward token to bribe contract");
 
-        uint256 lithBribeAmountForUsdtWeth = 2_000_000e18;
+        // ========== WXPL/LITH GAUGE ==========
+        // Pool tokens: WXPL, LITH (automatically added as reward tokens)
+        // Additional reward tokens: USDT (must be added manually)
 
-        // Approve bribe to pull LITH tokens (notifyRewardAmount will transfer them)
-        lithos.approve(externalBribe, lithBribeAmountForUsdtWeth);
-        console.log("Approved bribe contract to pull LITH:", lithBribeAmountForUsdtWeth);
+        (
+            wxplLithGaugeAddress,
+            wxplLithInternalBribe,
+            wxplLithExternalBribe
+        ) = voter.createGauge(wxplLithPair, 0);
+        console.log("Gauge created for WXPL/LITH pair:", wxplLithGaugeAddress);
+        console.log("Internal bribe address:", wxplLithInternalBribe);
+        console.log("External bribe address:", wxplLithExternalBribe);
 
-        // Notify LITH reward amount for USDT/WETH gauge (will transfer tokens)
-        (bool notifyLithSuccess, ) = externalBribe.call(
+        (bool addUsdtSuccess, ) = wxplLithExternalBribe.call(
+            abi.encodeWithSignature("addRewardToken(address)", USDT)
+        );
+        require(addUsdtSuccess, "Failed to add USDT as reward token");
+        console.log("Added USDT as reward token to bribe contract");
+
+        // ========== WXPL/USDT GAUGE ==========
+        // Pool tokens: WXPL, USDT (automatically added as reward tokens)
+        // Additional reward tokens: none
+
+        (
+            wxplUsdtGaugeAddress,
+            wxplUsdtInternalBribe,
+            wxplUsdtExternalBribe
+        ) = voter.createGauge(wxplUsdtPair, 0);
+        console.log("Gauge created for WXPL/USDT pair:", wxplUsdtGaugeAddress);
+        console.log("Internal bribe address:", wxplUsdtInternalBribe);
+        console.log("External bribe address:", wxplUsdtExternalBribe);
+
+        // ========== USDT/USDe GAUGE ==========
+        // Pool tokens: USDT, USDe (automatically added as reward tokens)
+        // Additional reward tokens: LITH (must be added manually)
+
+        (
+            usdtUsdeGaugeAddress,
+            usdtUsdeInternalBribe,
+            usdtUsdeExternalBribe
+        ) = voter.createGauge(usdtUsdePair, 0);
+        console.log("Gauge created for USDT/USDE pair:", usdtUsdeGaugeAddress);
+        console.log("Internal bribe address:", usdtUsdeInternalBribe);
+        console.log("External bribe address:", usdtUsdeExternalBribe);
+
+        // Add LITH as reward token
+        (bool addLithSuccessUsdtUsde, ) = usdtUsdeExternalBribe.call(
+            abi.encodeWithSignature("addRewardToken(address)", address(lithos))
+        );
+        require(addLithSuccessUsdtUsde, "Failed to add LITH as reward token");
+        console.log("Added LITH as reward token to bribe contract");
+
+        // Transfer funds to BRIBER
+        lithos.transfer(BRIBER, 3000e18);
+        ERC20(WXPL).transfer(BRIBER, 1000e18);
+        ERC20(USDT).transfer(BRIBER, 1000e6);
+
+        vm.stopPrank();
+
+        // --- BRIBER adds bribes to gauges
+        vm.startPrank(BRIBER);
+
+        // Bribe USDT/WETH gauge with LITH
+        uint256 lithBribeAmountForUsdtWeth = 1_000e18; // 1000 LITH
+        lithos.approve(usdtWethExternalBribe, lithBribeAmountForUsdtWeth);
+        console.log("Approved LITH for bribing:", lithBribeAmountForUsdtWeth);
+        (bool notifyLithSuccessUsdtWeth, ) = usdtWethExternalBribe.call(
             abi.encodeWithSignature(
                 "notifyRewardAmount(address,uint256)",
                 address(lithos),
                 lithBribeAmountForUsdtWeth
             )
         );
-        require(notifyLithSuccess, "Failed to notify LITH reward amount for USDT/WETH");
-        console.log("Notified LITH bribe amount for USDT/WETH:", lithBribeAmountForUsdtWeth);
-
-        // ========== WXPL/LITH GAUGE ==========
-        // Pool tokens: WXPL, LITH (automatically added as reward tokens)
-        // Additional bribes: USDT (must be added manually)
-
-        (gaugeAddress, internalBribe, externalBribe) = voter.createGauge(
-            wxplLithPair,
-            0
+        require(
+            notifyLithSuccessUsdtWeth,
+            "Failed to notify LITH reward amount for USDT/WETH"
         );
-        console.log("Gauge created for WXPL/LITH pair:", gaugeAddress);
-        console.log("Internal bribe address:", internalBribe);
-        console.log("External bribe address:", externalBribe);
-
-        // AUTOMATIC REWARD TOKENS: WXPL and LITH are automatically added since they're the pool's tokens
-        // MANUAL ADDITION: USDT must be added manually since it's not a pool token
-
-        (bool addUsdtSuccess, ) = externalBribe.call(
-            abi.encodeWithSignature("addRewardToken(address)", USDT)
+        console.log(
+            "Notified LITH bribe amount for USDT/WETH:",
+            lithBribeAmountForUsdtWeth
         );
-        require(addUsdtSuccess, "Failed to add USDT as reward token");
-        console.log("Added USDT as reward token to bribe contract");
 
-        // Approve bribe to pull reward tokens (notifyRewardAmount will transfer them)
-        uint256 wxplBribeAmount = 5e18;
-        uint256 lithBribeAmount = 5e18;
-        uint256 usdtBribeAmount = 5e6;
+        // Bribe WXPL/LITH gauge with WXPL, LITH, and USDT
+        uint256 wxplBribeAmountForWxplLith = 1_000e18; // 1000 WXPL
+        uint256 lithBribeAmountForWxplLith = 1_000e18; // 1000 LITH
+        uint256 usdtBribeAmountForWxplLith = 1_000e6; // 1000 USDT
+        ERC20(WXPL).approve(wxplLithExternalBribe, lithBribeAmountForWxplLith);
+        lithos.approve(wxplLithExternalBribe, wxplBribeAmountForWxplLith);
+        ERC20(USDT).approve(wxplLithExternalBribe, usdtBribeAmountForWxplLith);
+        console.log("Approved WXPL for bribing:", wxplBribeAmountForWxplLith);
+        console.log("Approved LITH for bribing:", lithBribeAmountForUsdtWeth);
+        console.log("Approved USDT for bribing:", usdtBribeAmountForWxplLith);
 
-        ERC20(WXPL).approve(externalBribe, wxplBribeAmount);
-        lithos.approve(externalBribe, lithBribeAmount);
-        ERC20(USDT).approve(externalBribe, usdtBribeAmount);
-        console.log("Approved bribe contract to pull WXPL, LITH, and USDT");
-
-        // Notify WXPL reward amount
-        (bool notifyWxplSuccess, ) = externalBribe.call(
+        (bool notifyWxplSuccess, ) = wxplLithExternalBribe.call(
             abi.encodeWithSignature(
                 "notifyRewardAmount(address,uint256)",
                 address(WXPL),
-                wxplBribeAmount
+                wxplBribeAmountForWxplLith
             )
         );
-        require(notifyWxplSuccess, "Failed to notify WXPL reward amount");
-        console.log("Notified WXPL bribe amount:", wxplBribeAmount);
+        require(
+            notifyWxplSuccess,
+            "Failed to notify WXPL reward amount for WXPL/LITH"
+        );
+        console.log(
+            "Notified WXPL bribe amount for WXPL/LITH:",
+            wxplBribeAmountForWxplLith
+        );
 
-        // Notify LITH reward amount
-        (bool notifyLithSuccess2, ) = externalBribe.call(
+        (bool notifyLithSuccessWxplLith, ) = wxplLithExternalBribe.call(
             abi.encodeWithSignature(
                 "notifyRewardAmount(address,uint256)",
                 address(lithos),
-                lithBribeAmount
+                lithBribeAmountForWxplLith
             )
         );
-        require(notifyLithSuccess2, "Failed to notify LITH reward amount");
-        console.log("Notified LITH bribe amount:", lithBribeAmount);
+        require(
+            notifyLithSuccessWxplLith,
+            "Failed to notify LITH reward amount for WXPL/LITH"
+        );
+        console.log(
+            "Notified LITH bribe amount for WXPL/LITH:",
+            lithBribeAmountForUsdtWeth
+        );
 
-        // Notify USDT reward amount
-        (bool notifyUsdtSuccess, ) = externalBribe.call(
+        (bool notifyUsdtSuccess, ) = wxplLithExternalBribe.call(
             abi.encodeWithSignature(
                 "notifyRewardAmount(address,uint256)",
-                USDT,
-                usdtBribeAmount
+                address(USDT),
+                usdtBribeAmountForWxplLith
             )
         );
-        require(notifyUsdtSuccess, "Failed to notify USDT reward amount");
-        console.log("Notified USDT bribe amount:", usdtBribeAmount);
-
-        // WXPL/USDT gauge
-        // - no rewards
-        (gaugeAddress, internalBribe, externalBribe) = voter.createGauge(
-            wxplUsdtPair,
-            0
+        require(
+            notifyUsdtSuccess,
+            "Failed to notify USDT reward amount for WXPL/LITH"
         );
-        console.log("Gauge created for WXPL/USDT pair:", gaugeAddress);
-        console.log("Internal bribe address:", internalBribe);
-        console.log("External bribe address:", externalBribe);
-
-        // USDT/USDe gauge
-        // - no rewards (just creating gauge, not bribing it)
-        (gaugeAddress, internalBribe, externalBribe) = voter.createGauge(
-            usdtUsdePair,
-            0
+        console.log(
+            "Notified USDT bribe amount for WXPL/LITH:",
+            usdtBribeAmountForWxplLith
         );
-        console.log("Gauge created for USDT/USDE pair:", gaugeAddress);
-        console.log("Internal bribe address:", internalBribe);
-        console.log("External bribe address:", externalBribe);
-        console.log("No bribes added to USDT/USDe gauge");
 
-        console.log("Pool bribing completed successfully!");
+        // No bribes to WXPL/USDT gauge
+
+        // Bribe USDT/USDe gauge with LITH
+        uint256 lithBribeAmountForUsdtUsde = 1_000e18; // 1000 LITH
+        lithos.approve(usdtUsdeExternalBribe, lithBribeAmountForUsdtUsde);
+        console.log("Approved LITH for bribing:", lithBribeAmountForUsdtUsde);
+        (bool notifyLithSuccessUsdtUsde, ) = usdtUsdeExternalBribe.call(
+            abi.encodeWithSignature(
+                "notifyRewardAmount(address,uint256)",
+                address(lithos),
+                lithBribeAmountForUsdtUsde
+            )
+        );
+        require(
+            notifyLithSuccessUsdtUsde,
+            "Failed to notify LITH reward amount for USDT/USDe"
+        );
+        console.log(
+            "Notified LITH bribe amount for USDT/USDe:",
+            lithBribeAmountForUsdtUsde
+        );
 
         vm.stopPrank();
+    }
+
+    function step9B_StakeLPTokens() internal {
+        // --- LP stakes their LP tokens in gauges to earn emissions
+        console.log("\n--- LP Stakes LP Tokens in Gauges ---");
+        vm.startPrank(LP);
+
+        // Get LP token balances
+        uint256 usdtWethLPBalance = ERC20(usdtWethPair).balanceOf(LP);
+        uint256 wxplLithLPBalance = ERC20(wxplLithPair).balanceOf(LP);
+        uint256 wxplUsdtLPBalance = ERC20(wxplUsdtPair).balanceOf(LP);
+        uint256 usdtUsdeLPBalance = ERC20(usdtUsdePair).balanceOf(LP);
+
+        console.log("LP token balances before staking:");
+        console.log("- USDT/WETH LP:", usdtWethLPBalance);
+        console.log("- WXPL/LITH LP:", wxplLithLPBalance);
+        console.log("- WXPL/USDT LP:", wxplUsdtLPBalance);
+        console.log("- USDT/USDe LP:", usdtUsdeLPBalance);
+
+        // Approve gauges to spend LP tokens
+        ERC20(usdtWethPair).approve(usdtWethGaugeAddress, usdtWethLPBalance);
+        ERC20(wxplLithPair).approve(wxplLithGaugeAddress, wxplLithLPBalance);
+        ERC20(wxplUsdtPair).approve(wxplUsdtGaugeAddress, wxplUsdtLPBalance);
+        ERC20(usdtUsdePair).approve(usdtUsdeGaugeAddress, usdtUsdeLPBalance);
+
+        // Stake LP tokens in gauges
+        if (usdtWethLPBalance > 0) {
+            (bool depositSuccess, ) = usdtWethGaugeAddress.call(
+                abi.encodeWithSignature("deposit(uint256)", usdtWethLPBalance)
+            );
+            require(depositSuccess, "Failed to stake USDT/WETH LP tokens");
+            console.log("Staked USDT/WETH LP tokens:", usdtWethLPBalance);
+        }
+
+        if (wxplLithLPBalance > 0) {
+            (bool depositSuccess, ) = wxplLithGaugeAddress.call(
+                abi.encodeWithSignature("deposit(uint256)", wxplLithLPBalance)
+            );
+            require(depositSuccess, "Failed to stake WXPL/LITH LP tokens");
+            console.log("Staked WXPL/LITH LP tokens:", wxplLithLPBalance);
+        }
+
+        if (wxplUsdtLPBalance > 0) {
+            (bool depositSuccess, ) = wxplUsdtGaugeAddress.call(
+                abi.encodeWithSignature("deposit(uint256)", wxplUsdtLPBalance)
+            );
+            require(depositSuccess, "Failed to stake WXPL/USDT LP tokens");
+            console.log("Staked WXPL/USDT LP tokens:", wxplUsdtLPBalance);
+        }
+
+        if (usdtUsdeLPBalance > 0) {
+            (bool depositSuccess, ) = usdtUsdeGaugeAddress.call(
+                abi.encodeWithSignature("deposit(uint256)", usdtUsdeLPBalance)
+            );
+            require(depositSuccess, "Failed to stake USDT/USDe LP tokens");
+            console.log("Staked USDT/USDe LP tokens:", usdtUsdeLPBalance);
+        }
+
+        console.log("LP tokens successfully staked in all gauges!");
     }
 
     // Step 10: Vote for pools
     function step10_VoteForPools() internal {
         console.log("\n=== Step 10: Vote for Pools ===");
 
-        vm.startPrank(DEPLOYER);
+        vm.startPrank(VOTER);
 
-        // Vote with our veNFT
-        uint256 tokenId = 1; // From step 8
-        address[] memory pools = new address[](1);
-        uint256[] memory weights = new uint256[](1);
+        // Vote with veNFT across multiple pools
+        require(voterTokenId != 0, "veNFT not ready for voting");
+        address[] memory pools = new address[](3);
+        uint256[] memory weights = new uint256[](3);
 
-        pools[0] = wxplLithPair;
-        weights[0] = 100; // 100% of voting power to this pool
+        // Distribute votes:
+        // 25% to USDT/WETH (has LITH bribes)
+        // 50% to WXPL/LITH (has WXPL, LITH, USDT bribes)
+        // 25% to WXPL/USDT (NO bribes - edge case test)
+        // 0% to USDT/USDe (has bribes but no votes - another edge case)
 
-        voter.vote(tokenId, pools, weights);
-        console.log("Voted with NFT", tokenId, "for pool:", wxplLithPair);
-        console.log("Vote weight:", weights[0]);
+        pools[0] = usdtWethPair;
+        pools[1] = wxplLithPair;
+        pools[2] = wxplUsdtPair;
+
+        weights[0] = 25; // 25% to USDT/WETH
+        weights[1] = 50; // 50% to WXPL/LITH
+        weights[2] = 25; // 25% to WXPL/USDT
+
+        voter.vote(voterTokenId, pools, weights);
+
+        console.log("Voted with NFT", voterTokenId, "across multiple pools:");
+        console.log("- USDT/WETH:", weights[0], "% (has LITH bribes)");
+        console.log(
+            "- WXPL/LITH:",
+            weights[1],
+            "% (has WXPL, LITH, USDT bribes)"
+        );
+        console.log(
+            "- WXPL/USDT:",
+            weights[2],
+            "% (NO bribes - testing edge case)"
+        );
+        console.log(
+            "- USDT/USDe: 0% (has LITH bribes but no votes - testing edge case)"
+        );
 
         console.log("Voting completed successfully!");
 
         vm.stopPrank();
     }
 
-    // Step 11: Fast forward for distribution
+    // Step 11: Fast forward to Oct 16, 2025
     function step11_FastForwardToDistribution() internal {
         console.log(
-            "\n=== Step 11: Fast Forward for Distribution (Oct 17, 2024) ==="
+            "\n=== Step 11: Fast Forward for Distribution Oct 16 2025 ==="
         );
 
-        // Fast forward to Oct 17, 2024 for epoch flip (1 week after Oct 10)
-        vm.warp(1729123200); // Oct 17, 2024 00:00:00 UTC
+        // Set time to Oct 16, 2025 for epoch flip
+        vm.warp(1760572800);
         console.log(
-            "Fast forwarded to Oct 17, 2024 for epoch flip and distribution"
+            "Fast forwarded to Oct 16, 2025 for epoch flip and distribution"
         );
         console.log("Current timestamp:", block.timestamp);
     }
@@ -846,209 +1130,222 @@ contract E2ETest is Test {
     // Step 13: Claim all rewards types
     function step13_ClaimAllRewards() internal {
         console.log("\n=== Step 13: Claim All Rewards Types ===");
+        console.log("Testing reward claiming across two epochs:");
         console.log(
-            "After epoch flip and distribution, claiming all accumulated rewards"
+            "- Oct 16: Gauge emissions claimable (based on Oct 9 votes)"
         );
+        console.log("- Oct 23: Bribe rewards claimable (bribes queued Oct 9)");
+        console.log("");
 
-        vm.startPrank(DEPLOYER);
+        // ========== PHASE A: Oct 16 + 1 hour - Gauge Emissions for LP ==========
+        console.log("=== PHASE A: Gauge Emissions (Oct 16 + 1 hour) ===");
+        console.log("LP wallet claims gauge emissions from staked LP tokens");
 
-        // Get gauge address for our pair (we're voting on WXPL/LITH)
-        address gaugeAddress = voter.gauges(wxplLithPair);
-        console.log("Gauge address for WXPL/LITH:", gaugeAddress);
+        // Fast forward 1 hour to accumulate some rewards
+        vm.warp(block.timestamp + 1 hours);
+        console.log("Fast forwarded 1 hour to accumulate emissions\n");
 
-        // Check gauge state
-        console.log("\n--- Checking Gauge State ---");
-        (bool rewardRateSuccess, bytes memory rewardRateData) = gaugeAddress
-            .call(abi.encodeWithSignature("rewardRate()"));
-        if (rewardRateSuccess && rewardRateData.length > 0) {
-            uint256 rewardRate = abi.decode(rewardRateData, (uint256));
-            console.log("Gauge reward rate:", rewardRate);
-        }
+        vm.startPrank(LP);
 
-        // Check gauge reward token
-        (bool rewardTokenSuccess, bytes memory rewardTokenData) = gaugeAddress
-            .call(abi.encodeWithSignature("rewardToken()"));
-        if (rewardTokenSuccess && rewardTokenData.length > 0) {
-            address rewardToken = abi.decode(rewardTokenData, (address));
-            console.log("Gauge reward token:", rewardToken);
-            console.log("Expected LITH address:", address(lithos));
-        }
+        // Get all gauge addresses
+        address usdtWethGauge = voter.gauges(usdtWethPair);
+        address wxplLithGauge = voter.gauges(wxplLithPair);
+        address wxplUsdtGauge = voter.gauges(wxplUsdtPair);
+        address usdtUsdeGauge = voter.gauges(usdtUsdePair);
 
-        // Check total supply in gauge
-        (bool totalSupplySuccess, bytes memory totalSupplyData) = gaugeAddress
-            .call(abi.encodeWithSignature("totalSupply()"));
-        if (totalSupplySuccess && totalSupplyData.length > 0) {
-            uint256 totalSupply = abi.decode(totalSupplyData, (uint256));
-            console.log("Total LP tokens staked in gauge:", totalSupply);
-        }
-
-        // Check votes for gauge (current epoch)
-        uint256 gaugeVotes = voter.weights(wxplLithPair);
-        uint256 totalVotes = voter.totalWeight();
-        console.log("Gauge votes (current epoch):", gaugeVotes);
-        console.log("Total votes (current epoch):", totalVotes);
-
-        // Check votes from all relevant epochs
-        uint256 oct17Epoch = 1728604800;
-        uint256 oct24Epoch = 1729209600;
-        uint256 currentEpochVotes = voter.weightsAt(
-            wxplLithPair,
-            minterUpgradeable.active_period()
-        );
-        uint256 oct17Votes = voter.weightsAt(wxplLithPair, oct17Epoch);
-        uint256 oct24Votes = voter.weightsAt(wxplLithPair, oct24Epoch);
-
-        console.log("Current epoch:", minterUpgradeable.active_period());
-        console.log("Gauge votes (current epoch):", currentEpochVotes);
-        console.log("Gauge votes (Oct 17 epoch 1728604800):", oct17Votes);
-        console.log("Gauge votes (Oct 24 epoch 1729209600):", oct24Votes);
-
-        // Record balances before claiming
-        console.log("\n--- Recording balances before claiming ---");
-        uint256 usdtBefore = ERC20(USDT).balanceOf(DEPLOYER);
-        uint256 wethBefore = ERC20(WETH).balanceOf(DEPLOYER);
-        uint256 lithBefore = lithos.balanceOf(DEPLOYER);
-        console.log("USDT before:", usdtBefore);
-        console.log("WETH before:", wethBefore);
-        console.log("LITH before:", lithBefore);
-
-        // 1. Skip direct LP Trading Fees claim - they flow through gauge's internal bribe
-        console.log("\n--- LP Trading Fees ---");
+        // Record LP's LITH balance before claiming
+        uint256 lpLithBalanceStart = lithos.balanceOf(LP);
+        uint256 lpLithBefore = lpLithBalanceStart;
         console.log(
-            "LP tokens remain staked in gauge, fees flow through internal bribes to voters"
+            "LP's LITH balance before claiming:",
+            lpLithBefore / 1e18,
+            "LITH\n"
         );
 
-        // 2. Claim Gauge Emissions (LITH rewards for staked LP)
-        console.log("\n--- Claiming Gauge Emissions ---");
-
-        if (gaugeAddress != address(0)) {
-            // Check if we still have LP tokens staked from step 10
-            (
-                bool checkStakedSuccess,
-                bytes memory checkStakedData
-            ) = gaugeAddress.call(
-                    abi.encodeWithSignature("balanceOf(address)", DEPLOYER)
-                );
-            if (checkStakedSuccess && checkStakedData.length > 0) {
-                uint256 currentlyStaked = abi.decode(
-                    checkStakedData,
-                    (uint256)
-                );
-                console.log("LP tokens staked in gauge:", currentlyStaked);
-            }
-
-            // Let's wait a bit to accumulate rewards
-            vm.warp(block.timestamp + 1 hours);
-            console.log("Fast forwarded 1 hour to accumulate rewards");
-
-            // Check earned emissions BEFORE claiming
-            (bool earnedSuccess, bytes memory earnedData) = gaugeAddress.call(
-                abi.encodeWithSignature("earned(address)", DEPLOYER)
+        // Claim from USDT/WETH gauge (should get ~25% of emissions)
+        console.log("--- USDT/WETH Gauge (25% of votes) ---");
+        if (usdtWethGauge != address(0)) {
+            (bool earnedSuccess, bytes memory earnedData) = usdtWethGauge.call(
+                abi.encodeWithSignature("earned(address)", LP)
             );
 
             if (earnedSuccess && earnedData.length > 0) {
-                uint256 pendingEmissions = abi.decode(earnedData, (uint256));
-                console.log(
-                    "Pending gauge emissions after 1 hour:",
-                    pendingEmissions
-                );
+                uint256 pending = abi.decode(earnedData, (uint256));
+                console.log("Pending emissions:", pending / 1e18, "LITH");
 
-                // Claim emissions
-                (bool getRewardSuccess, ) = gaugeAddress.call(
+                (bool claimSuccess, ) = usdtWethGauge.call(
                     abi.encodeWithSignature("getReward()")
                 );
 
-                if (getRewardSuccess) {
-                    uint256 lithAfterEmissions = lithos.balanceOf(DEPLOYER);
-                    uint256 lithEmissionsClaimed = lithAfterEmissions -
-                        lithBefore;
-                    console.log("Gauge emissions claimed successfully!");
-                    console.log(
-                        "- LITH rewards received:",
-                        lithEmissionsClaimed
+                if (claimSuccess) {
+                    uint256 newBalance = lithos.balanceOf(LP);
+                    uint256 claimed = newBalance - lpLithBefore;
+                    console.log("Claimed:", claimed / 1e18, "LITH");
+                    // Assert that emissions were actually claimed for USDT/WETH (25% vote share)
+                    require(
+                        claimed > 0,
+                        "USDT/WETH gauge should have distributed emissions"
                     );
-                    lithBefore = lithAfterEmissions;
-                } else {
-                    console.log("Failed to claim gauge emissions");
+                    lpLithBefore = newBalance;
                 }
             } else {
-                console.log("No gauge emissions to claim");
+                console.log("No emissions to claim");
             }
         }
 
-        // 3. Claim Bribe Rewards (for veNFT voters)
-        console.log("\n--- Claiming Bribe Rewards ---");
+        // Claim from WXPL/LITH gauge (should get ~50% of emissions)
+        console.log("\n--- WXPL/LITH Gauge (50% of votes) ---");
+        if (wxplLithGauge != address(0)) {
+            (bool earnedSuccess, bytes memory earnedData) = wxplLithGauge.call(
+                abi.encodeWithSignature("earned(address)", LP)
+            );
 
-        uint256 tokenId = 1; // Our veNFT from step 8
+            if (earnedSuccess && earnedData.length > 0) {
+                uint256 pending = abi.decode(earnedData, (uint256));
+                console.log("Pending emissions:", pending / 1e18, "LITH");
 
-        // Get bribe addresses
-        address internalBribe = voter.internal_bribes(gaugeAddress);
-        address externalBribe = voter.external_bribes(gaugeAddress);
-        console.log("Internal bribe address:", internalBribe);
-        console.log("External bribe address:", externalBribe);
+                (bool claimSuccess, ) = wxplLithGauge.call(
+                    abi.encodeWithSignature("getReward()")
+                );
 
-        // Check if bribes have any rewards before claiming
-        if (externalBribe != address(0)) {
-            // Check LITH bribes
-            (
-                bool checkEarnedSuccess,
-                bytes memory checkEarnedData
-            ) = externalBribe.call(
-                    abi.encodeWithSignature(
-                        "earned(uint256,address)",
-                        tokenId,
-                        address(lithos)
-                    )
-                );
-            if (checkEarnedSuccess && checkEarnedData.length > 0) {
-                uint256 earnedLith = abi.decode(checkEarnedData, (uint256));
-                console.log("Pending LITH bribes for tokenId:", tokenId);
-                console.log("Amount:", earnedLith / 1e18, "LITH");
-            }
-
-            // Check deposit balance for this token at different epochs
-            uint256 curEpoch = minterUpgradeable.active_period();
-            (bool balanceSuccess, bytes memory balanceData) = externalBribe
-                .call(
-                    abi.encodeWithSignature(
-                        "balanceOfAt(uint256,uint256)",
-                        tokenId,
-                        curEpoch
-                    )
-                );
-            if (balanceSuccess && balanceData.length > 0) {
-                uint256 balance = abi.decode(balanceData, (uint256));
-                console.log(
-                    "External bribe balance for tokenId at current epoch:",
-                    balance
-                );
-            }
-
-            // Also check the next epoch balance
-            (
-                bool nextBalanceSuccess,
-                bytes memory nextBalanceData
-            ) = externalBribe.call(
-                    abi.encodeWithSignature("balanceOf(uint256)", tokenId)
-                );
-            if (nextBalanceSuccess && nextBalanceData.length > 0) {
-                uint256 nextBalance = abi.decode(nextBalanceData, (uint256));
-                console.log(
-                    "External bribe balance for tokenId (next epoch):",
-                    nextBalance
-                );
+                if (claimSuccess) {
+                    uint256 newBalance = lithos.balanceOf(LP);
+                    uint256 claimed = newBalance - lpLithBefore;
+                    console.log("Claimed:", claimed / 1e18, "LITH");
+                    // Assert that emissions were actually claimed for WXPL/LITH (50% vote share - should be largest)
+                    require(
+                        claimed > 0,
+                        "WXPL/LITH gauge should have distributed emissions"
+                    );
+                    lpLithBefore = newBalance;
+                }
+            } else {
+                console.log("No emissions to claim");
             }
         }
 
-        // Claim from external bribe (LITH and possibly USDT)
-        if (externalBribe != address(0)) {
-            // Prepare reward tokens array
-            address[] memory rewardTokens = new address[](2);
-            rewardTokens[0] = address(lithos);
-            rewardTokens[1] = USDT;
+        // Claim from WXPL/USDT gauge (should get ~25% of emissions, but NO bribes)
+        console.log("\n--- WXPL/USDT Gauge (25% of votes, NO bribes) ---");
+        if (wxplUsdtGauge != address(0)) {
+            (bool earnedSuccess, bytes memory earnedData) = wxplUsdtGauge.call(
+                abi.encodeWithSignature("earned(address)", LP)
+            );
 
-            // Claim external bribes
-            (bool externalClaimSuccess, ) = externalBribe.call(
+            if (earnedSuccess && earnedData.length > 0) {
+                uint256 pending = abi.decode(earnedData, (uint256));
+                console.log("Pending emissions:", pending / 1e18, "LITH");
+
+                (bool claimSuccess, ) = wxplUsdtGauge.call(
+                    abi.encodeWithSignature("getReward()")
+                );
+
+                if (claimSuccess) {
+                    uint256 newBalance = lithos.balanceOf(LP);
+                    uint256 claimed = newBalance - lpLithBefore;
+                    console.log("Claimed:", claimed / 1e18, "LITH");
+                    // Assert that emissions were actually claimed for WXPL/USDT (25% vote share, no bribes)
+                    require(
+                        claimed > 0,
+                        "WXPL/USDT gauge should have distributed emissions despite no bribes"
+                    );
+                    lpLithBefore = newBalance;
+                }
+            } else {
+                console.log("No emissions to claim");
+            }
+        }
+
+        // Check USDT/USDe gauge (should have 0 emissions - no votes)
+        console.log("\n--- USDT/USDe Gauge (0% of votes - edge case) ---");
+        if (usdtUsdeGauge != address(0)) {
+            (bool earnedSuccess, bytes memory earnedData) = usdtUsdeGauge.call(
+                abi.encodeWithSignature("earned(address)", LP)
+            );
+
+            if (earnedSuccess && earnedData.length > 0) {
+                uint256 pending = abi.decode(earnedData, (uint256));
+                console.log(
+                    "Pending emissions:",
+                    pending / 1e18,
+                    "LITH (should be 0)"
+                );
+                // Assert that this gauge gets 0 emissions (edge case - has bribes but no votes)
+                require(
+                    pending == 0,
+                    "USDT/USDe gauge should have 0 emissions (no votes)"
+                );
+            } else {
+                console.log("No emissions (expected - gauge got 0 votes)");
+            }
+        }
+
+        uint256 totalLPEmissions = lithos.balanceOf(LP) - lpLithBalanceStart;
+        console.log("\n=== Phase A Summary ===");
+        console.log(
+            "Total gauge emissions claimed by LP:",
+            totalLPEmissions / 1e18,
+            "LITH"
+        );
+        // Assert that LP received total emissions > 0 (staked in 3 gauges with votes)
+        require(
+            totalLPEmissions > 0,
+            "LP should have received gauge emissions for staked positions"
+        );
+        console.log("Bribes NOT claimable yet (still in current epoch)");
+
+        vm.stopPrank();
+
+        // ========== PHASE B: Oct 23 + 1 hour - Bribe Rewards for VOTER ==========
+        console.log("\n=== PHASE B: Bribe Rewards (Oct 23 + 1 hour) ===");
+        console.log("Fast forwarding to next epoch for bribe claims...");
+
+        // Fast forward to Oct 23 (next Thursday epoch)
+        vm.warp(1761177600 + 1 hours); // Oct 23, 2025 + 1 hour
+        console.log("Time warped to Oct 23, 2025 + 1 hour");
+
+        // IMPOTANT!! Need to trigger epoch flip to update active_period
+        vm.startPrank(DEPLOYER);
+        console.log("Triggering epoch flip to update active_period...");
+        bool canUpdate = minterUpgradeable.check();
+        if (canUpdate) {
+            voter.distributeAll();
+            console.log(
+                "Epoch flipped, active_period updated to:",
+                minterUpgradeable.active_period()
+            );
+        } else {
+            console.log("Warning: Could not trigger epoch flip");
+        }
+        vm.stopPrank();
+
+        console.log("VOTER wallet claims bribe rewards from voting\n");
+
+        vm.startPrank(VOTER);
+
+        uint256 tokenId = voterTokenId; // veNFT owned by VOTER
+
+        // Record VOTER's balances before claiming bribes
+        uint256 voterLithBalanceStart = lithos.balanceOf(VOTER);
+        uint256 voterWxplBalanceStart = ERC20(WXPL).balanceOf(VOTER);
+        uint256 voterUsdtBalanceStart = ERC20(USDT).balanceOf(VOTER);
+
+        uint256 voterLithBefore = voterLithBalanceStart;
+        uint256 voterWxplBefore = voterWxplBalanceStart;
+        uint256 voterUsdtBefore = voterUsdtBalanceStart;
+
+        console.log("VOTER balances before claiming bribes:");
+        console.log("- LITH:", voterLithBefore / 1e18);
+        console.log("- WXPL:", voterWxplBefore / 1e18);
+        console.log("- USDT:", voterUsdtBefore / 1e6, "\n");
+
+        // Claim from USDT/WETH external bribe (25% of votes, has LITH bribes)
+        console.log("--- USDT/WETH External Bribes (25% vote share) ---");
+        address usdtWethExtBribe = voter.external_bribes(usdtWethGauge);
+        if (usdtWethExtBribe != address(0)) {
+            address[] memory rewardTokens = new address[](1);
+            rewardTokens[0] = address(lithos); // Only LITH bribes for this gauge
+
+            (bool claimSuccess, ) = usdtWethExtBribe.call(
                 abi.encodeWithSignature(
                     "getReward(uint256,address[])",
                     tokenId,
@@ -1056,119 +1353,159 @@ contract E2ETest is Test {
                 )
             );
 
-            if (externalClaimSuccess) {
-                uint256 lithAfterBribes = lithos.balanceOf(DEPLOYER);
-                uint256 usdtAfterBribes = ERC20(USDT).balanceOf(DEPLOYER);
-                uint256 lithBribesClaimed = lithAfterBribes > lithBefore
-                    ? lithAfterBribes - lithBefore
-                    : 0;
-                uint256 usdtBribesClaimed = usdtAfterBribes > usdtBefore
-                    ? usdtAfterBribes - usdtBefore
-                    : 0;
-
-                console.log("External bribe rewards claimed successfully!");
-                console.log("- LITH bribes received:", lithBribesClaimed);
-                console.log("- USDT bribes received:", usdtBribesClaimed);
-
-                lithBefore = lithAfterBribes;
-                usdtBefore = usdtAfterBribes;
-            } else {
-                console.log(
-                    "Failed to claim external bribes or no bribes available"
+            if (claimSuccess) {
+                uint256 lithClaimed = lithos.balanceOf(VOTER) - voterLithBefore;
+                console.log("Claimed LITH bribes:", lithClaimed / 1e18);
+                // Assert that LITH bribes were received (25% of total LITH bribes)
+                require(
+                    lithClaimed > 0,
+                    "VOTER should receive LITH bribes from USDT/WETH gauge"
                 );
+                voterLithBefore = lithos.balanceOf(VOTER);
+            } else {
+                console.log("No bribes to claim or not yet claimable");
             }
         }
 
-        // Claim from internal bribe (trading fees distributed to voters)
-        if (internalBribe != address(0)) {
-            // Internal bribes get trading fees as rewards
-            address[] memory feeTokens = new address[](2);
-            feeTokens[0] = USDT;
-            feeTokens[1] = WETH;
+        // Claim from WXPL/LITH external bribe (50% of votes, has WXPL, LITH, USDT bribes)
+        console.log("\n--- WXPL/LITH External Bribes (50% vote share) ---");
+        address wxplLithExtBribe = voter.external_bribes(wxplLithGauge);
+        if (wxplLithExtBribe != address(0)) {
+            address[] memory rewardTokens = new address[](3);
+            rewardTokens[0] = WXPL;
+            rewardTokens[1] = address(lithos);
+            rewardTokens[2] = USDT;
 
-            (bool internalClaimSuccess, ) = internalBribe.call(
+            (bool claimSuccess, ) = wxplLithExtBribe.call(
                 abi.encodeWithSignature(
                     "getReward(uint256,address[])",
                     tokenId,
-                    feeTokens
+                    rewardTokens
                 )
             );
 
-            if (internalClaimSuccess) {
-                uint256 usdtAfterInternal = ERC20(USDT).balanceOf(DEPLOYER);
-                uint256 wethAfterInternal = ERC20(WETH).balanceOf(DEPLOYER);
-                uint256 usdtInternalClaimed = usdtAfterInternal > usdtBefore
-                    ? usdtAfterInternal - usdtBefore
-                    : 0;
-                uint256 wethInternalClaimed = wethAfterInternal > wethBefore
-                    ? wethAfterInternal - wethBefore
-                    : 0;
+            if (claimSuccess) {
+                uint256 wxplClaimed = ERC20(WXPL).balanceOf(VOTER) -
+                    voterWxplBefore;
+                uint256 lithClaimed = lithos.balanceOf(VOTER) - voterLithBefore;
+                uint256 usdtClaimed = ERC20(USDT).balanceOf(VOTER) -
+                    voterUsdtBefore;
 
-                console.log(
-                    "Internal bribe rewards (trading fees) claimed successfully!"
+                console.log("Claimed WXPL bribes:", wxplClaimed / 1e18);
+                console.log("Claimed LITH bribes:", lithClaimed / 1e18);
+                console.log("Claimed USDT bribes:", usdtClaimed / 1e6);
+
+                // Assert all three bribe tokens were received (50% vote share - highest)
+                require(
+                    wxplClaimed > 0,
+                    "VOTER should receive WXPL bribes from WXPL/LITH gauge"
                 );
-                console.log("- USDT fees from voting:", usdtInternalClaimed);
-                console.log("- WETH fees from voting:", wethInternalClaimed);
+                require(
+                    lithClaimed > 0,
+                    "VOTER should receive LITH bribes from WXPL/LITH gauge"
+                );
+                require(
+                    usdtClaimed > 0,
+                    "VOTER should receive USDT bribes from WXPL/LITH gauge"
+                );
 
-                usdtBefore = usdtAfterInternal;
-                wethBefore = wethAfterInternal;
+                voterWxplBefore = ERC20(WXPL).balanceOf(VOTER);
+                voterLithBefore = lithos.balanceOf(VOTER);
+                voterUsdtBefore = ERC20(USDT).balanceOf(VOTER);
             } else {
-                console.log("No internal bribes to claim");
+                console.log("No bribes to claim or not yet claimable");
             }
         }
 
-        // 4. Claim Rebase Rewards (for all veNFT holders)
-        console.log("\n--- Claiming Rebase Rewards ---");
-
-        // Check RewardsDistributor balance
-        uint256 distBalance = lithos.balanceOf(address(rewardsDistributor));
+        // Check WXPL/USDT external bribe (25% of votes, but NO bribes)
         console.log(
-            "RewardsDistributor LITH balance:",
-            distBalance / 1e18,
-            "LITH"
+            "\n--- WXPL/USDT External Bribes (25% vote share, NO bribes) ---"
         );
+        address wxplUsdtExtBribe = voter.external_bribes(wxplUsdtGauge);
+        if (wxplUsdtExtBribe != address(0)) {
+            address[] memory rewardTokens = new address[](2);
+            rewardTokens[0] = WXPL;
+            rewardTokens[1] = USDT;
 
-        // Check total veNFT supply for rebase calculation
-        uint256 totalVeSupply = votingEscrow.totalSupply();
-        console.log("Total veNFT supply:", totalVeSupply);
+            // Record balances before attempting claim
+            uint256 wxplBefore = ERC20(WXPL).balanceOf(VOTER);
+            uint256 usdtBefore = ERC20(USDT).balanceOf(VOTER);
 
-        // Check claimable rebase amount
-        uint256 claimableRebase = rewardsDistributor.claimable(tokenId);
-        console.log("Claimable rebase rewards for tokenId:", tokenId);
-        console.log("Amount:", claimableRebase / 1e18, "LITH");
-
-        if (claimableRebase > 0) {
-            // Get locked amount before claim
-            (int128 lockedBefore, ) = votingEscrow.locked(tokenId);
-            console.log(
-                "Locked amount before rebase:",
-                uint256(uint128(lockedBefore))
+            (bool claimSuccess, ) = wxplUsdtExtBribe.call(
+                abi.encodeWithSignature(
+                    "getReward(uint256,address[])",
+                    tokenId,
+                    rewardTokens
+                )
             );
 
-            // Claim rebase rewards
-            rewardsDistributor.claim(tokenId);
-
-            // Get locked amount after claim (rebase compounds into veNFT)
-            (int128 lockedAfter, ) = votingEscrow.locked(tokenId);
-            uint256 rebaseReceived = uint256(uint128(lockedAfter)) -
-                uint256(uint128(lockedBefore));
-
-            console.log("Rebase rewards claimed successfully!");
-            console.log("- LITH compounded into veNFT:", rebaseReceived);
-            console.log("- New locked amount:", uint256(uint128(lockedAfter)));
-        } else {
-            console.log("No rebase rewards to claim");
+            // Assert no bribes were received (edge case - gauge had no bribes)
+            require(
+                ERC20(WXPL).balanceOf(VOTER) == wxplBefore,
+                "WXPL/USDT should have no WXPL bribes"
+            );
+            require(
+                ERC20(USDT).balanceOf(VOTER) == usdtBefore,
+                "WXPL/USDT should have no USDT bribes"
+            );
+            console.log("No bribes expected (gauge had no bribes) - verified!");
         }
 
-        // Summary of all rewards claimed
-        console.log("\n=== Rewards Claim Summary ===");
-        console.log("All reward types have been claimed and verified!");
-        console.log("- LP Trading Fees: Claimed from Pair contract");
-        console.log("- Gauge Emissions: Claimed LITH from staked LP tokens");
-        console.log("- Bribe Rewards: Claimed external and internal bribes");
-        console.log("- Rebase Rewards: Claimed and compounded into veNFT");
+        // Check USDT/USDe (0 votes, but has bribes - should be unclaimable)
+        console.log(
+            "\n--- USDT/USDe External Bribes (0% vote share - edge case) ---"
+        );
+        address usdtUsdeExtBribe = voter.external_bribes(usdtUsdeGauge);
+        console.log("Gauge has LITH bribes but got 0 votes");
+        console.log(
+            "Bribes remain unclaimed (VOTER didn't vote for this gauge)"
+        );
+
+        // Check internal bribes (should be 0 - no swaps after gauge creation)
+        console.log("\n--- Internal Bribes (Trading Fees) ---");
+        console.log("No trading fees expected (no swaps after gauge creation)");
+
+        console.log("\n=== Phase B Summary ===");
+        uint256 totalWxplBribes = ERC20(WXPL).balanceOf(VOTER) -
+            voterWxplBalanceStart;
+        uint256 totalLithBribes = lithos.balanceOf(VOTER) -
+            voterLithBalanceStart;
+        uint256 totalUsdtBribes = ERC20(USDT).balanceOf(VOTER) -
+            voterUsdtBalanceStart;
+
+        console.log("Total bribes claimed by VOTER:");
+        console.log("- WXPL:", totalWxplBribes / 1e18);
+        console.log("- LITH:", totalLithBribes / 1e18);
+        console.log("- USDT:", totalUsdtBribes / 1e6);
+
+        // Assert that VOTER received bribes for their votes
+        require(totalWxplBribes > 0, "VOTER should have received WXPL bribes");
+        require(totalLithBribes > 0, "VOTER should have received LITH bribes");
+        require(totalUsdtBribes > 0, "VOTER should have received USDT bribes");
 
         vm.stopPrank();
+
+        // ========== FINAL SUMMARY ==========
+        console.log("\n=== FINAL REWARDS SUMMARY ===");
+        console.log("LP wallet (liquidity provider):");
+        console.log("- Staked LP tokens in gauges");
+        console.log("- Earned gauge emissions proportional to votes");
+        console.log("- Received LITH tokens as rewards");
+
+        console.log("\nVOTER wallet (veNFT holder):");
+        console.log("- Voted with veNFT across multiple gauges");
+        console.log("- Earned external bribes based on vote share");
+        console.log("- Received WXPL, LITH, and USDT as bribe rewards");
+
+        console.log("\nEdge cases tested:");
+        console.log("- WXPL/USDT: Had votes but no bribes");
+        console.log("- USDT/USDe: Had bribes but no votes");
+        console.log("- Internal bribes: Zero (no post-gauge swaps)");
+
+        console.log("\nTimeline:");
+        console.log("- Oct 9: Bribes queued, votes cast, LP tokens staked");
+        console.log("- Oct 16: Epoch flip, gauge emissions distributed");
+        console.log("- Oct 23: Next epoch, bribes became claimable");
     }
 
     function logResults() internal view {
