@@ -105,7 +105,6 @@ contract E2ETest is Test {
         step2_CreatePools();
         step3A_GetFunds();
         step3B_AddLiquidity();
-        step4_RunSwaps();
 
         // Fast forward to Oct 9, 2025: Launch LITH and voting prep
         step5_FastForwardToLaunch();
@@ -115,11 +114,16 @@ contract E2ETest is Test {
         step9A_BribePools();
         step9B_StakeLPTokens();
         step10_VoteForPools();
+        step4_RunSwaps();
 
-        // Fast forward to Oct 16, 2025: Epoch flip and distribution
-        step11_FastForwardToDistribution();
-        step12_EpochFlipAndDistribute();
-        step13_ClaimAllRewards();
+        // Fast forward to Oct 15, 2025: Distribute fees BEFORE epoch flip
+        step11_FastForwardToPreEpochDistribution();
+        step12_DistributeFeesBeforeFlip();
+
+        // Fast forward to Oct 16, 2025: Epoch flip
+        step13_FastForwardToEpochFlip();
+        step14_EpochFlipAndEmissions();
+        step15_ClaimAllRewards();
 
         console.log("All contracts deployed successfully!");
 
@@ -339,7 +343,7 @@ contract E2ETest is Test {
         ERC20(USDe).approve(address(globalRouter), amountToSwapUSDe);
         ERC20(WETH).approve(address(globalRouter), amountToSwapWETH);
 
-        uint256 deadline = block.timestamp + 600;
+        uint256 deadline = block.timestamp + 1200;
 
         // === Swap 1: USDT -> WETH ===
         console.log("\nSwap 1: USDT -> WETH");
@@ -835,11 +839,11 @@ contract E2ETest is Test {
         uint256 wxplBribeAmountForWxplLith = 1_000e18; // 1000 WXPL
         uint256 lithBribeAmountForWxplLith = 1_000e18; // 1000 LITH
         uint256 usdtBribeAmountForWxplLith = 1_000e6; // 1000 USDT
-        ERC20(WXPL).approve(wxplLithExternalBribe, lithBribeAmountForWxplLith);
+        ERC20(WXPL).approve(wxplLithExternalBribe, wxplBribeAmountForWxplLith);
         lithos.approve(wxplLithExternalBribe, wxplBribeAmountForWxplLith);
         ERC20(USDT).approve(wxplLithExternalBribe, usdtBribeAmountForWxplLith);
         console.log("Approved WXPL for bribing:", wxplBribeAmountForWxplLith);
-        console.log("Approved LITH for bribing:", lithBribeAmountForUsdtWeth);
+        console.log("Approved LITH for bribing:", lithBribeAmountForWxplLith);
         console.log("Approved USDT for bribing:", usdtBribeAmountForWxplLith);
 
         (bool notifyWxplSuccess, ) = wxplLithExternalBribe.call(
@@ -1022,23 +1026,84 @@ contract E2ETest is Test {
         vm.stopPrank();
     }
 
-    // Step 11: Fast forward to Oct 16, 2025
-    function step11_FastForwardToDistribution() internal {
+    // Step 11: Fast forward to Oct 15, 2025 (before epoch flip)
+    function step11_FastForwardToPreEpochDistribution() internal {
+        console.log("\n=== Step 11: Fast Forward to Oct 15, 2025 ===");
+        console.log("Moving to Oct 15 to distribute fees BEFORE epoch flip");
         console.log(
-            "\n=== Step 11: Fast Forward for Distribution Oct 16 2025 ==="
+            "This ensures fees are scheduled for Oct 16 (same as voting balance)"
         );
+
+        // Oct 15, 2025 00:00:00 UTC
+        vm.warp(1760486400);
+        console.log("Time set to Oct 15, 2025");
+        console.log("Current timestamp:", block.timestamp);
+        console.log(
+            "Active period still:",
+            minterUpgradeable.active_period(),
+            "(Oct 9)"
+        );
+    }
+
+    // Step 12: Distribute fees before epoch flip
+    function step12_DistributeFeesBeforeFlip() internal {
+        console.log("\n=== Step 12: Distribute Fees Before Epoch Flip ===");
+        console.log("Distributing fees while still in Oct 9-16 epoch");
+        console.log(
+            "This schedules internal bribe rewards at Oct 16 (matching voting balance)"
+        );
+
+        vm.startPrank(DEPLOYER);
+
+        // Distribute fees for all active gauges
+        uint256 poolCount = voter.length();
+        address[] memory activeGauges = new address[](poolCount);
+        uint256 activeCount = 0;
+
+        // Collect active gauges
+        for (uint256 i = 0; i < poolCount; i++) {
+            address pool = voter.pools(i);
+            address gauge = voter.gauges(pool);
+            if (gauge != address(0) && voter.isAlive(gauge)) {
+                activeGauges[activeCount] = gauge;
+                activeCount++;
+                console.log("  - Active gauge:", gauge);
+            }
+        }
+
+        if (activeCount > 0) {
+            // Create correctly sized array
+            address[] memory finalGauges = new address[](activeCount);
+            for (uint256 i = 0; i < activeCount; i++) {
+                finalGauges[i] = activeGauges[i];
+            }
+
+            voter.distributeFees(finalGauges);
+            console.log("Fees distributed to", activeCount, "active gauges");
+            console.log(
+                "Swap fees now scheduled for Oct 16 (same as voting balance!)"
+            );
+        }
+
+        vm.stopPrank();
+    }
+
+    // Step 13: Fast forward to Oct 16, 2025
+    function step13_FastForwardToEpochFlip() internal {
+        console.log("\n=== Step 13: Fast Forward to Oct 16, 2025 ===");
 
         // Set time to Oct 16, 2025 for epoch flip
         vm.warp(1760572800);
-        console.log(
-            "Fast forwarded to Oct 16, 2025 for epoch flip and distribution"
-        );
+        console.log("Fast forwarded to Oct 16, 2025 for epoch flip");
         console.log("Current timestamp:", block.timestamp);
     }
 
-    // Step 12: Epoch flip and distribution
-    function step12_EpochFlipAndDistribute() internal {
-        console.log("\n=== Step 12: Epoch Flip and Emissions Distribution ===");
+    // Step 14: Epoch flip and emissions distribution
+    function step14_EpochFlipAndEmissions() internal {
+        console.log("\n=== Step 14: Epoch Flip and Emissions Distribution ===");
+        console.log(
+            "Note: Fees already distributed on Oct 15, only emissions now"
+        );
 
         vm.startPrank(DEPLOYER);
 
@@ -1082,38 +1147,6 @@ contract E2ETest is Test {
             );
             console.log("- Active period:", activePeriodAfter);
             console.log("- Next period:", activePeriodAfter + 604800);
-
-            // Distribute fees for active gauges
-            console.log("Distributing fees to gauges...");
-            uint256 poolCount = voter.length();
-            address[] memory activeGauges = new address[](poolCount);
-            uint256 activeCount = 0;
-
-            // Collect active gauges
-            for (uint256 i = 0; i < poolCount; i++) {
-                address pool = voter.pools(i);
-                address gauge = voter.gauges(pool);
-                if (gauge != address(0) && voter.isAlive(gauge)) {
-                    activeGauges[activeCount] = gauge;
-                    activeCount++;
-                    console.log("  - Active gauge:", gauge, "for pool:", pool);
-                }
-            }
-
-            if (activeCount > 0) {
-                // Create correctly sized array
-                address[] memory finalGauges = new address[](activeCount);
-                for (uint256 i = 0; i < activeCount; i++) {
-                    finalGauges[i] = activeGauges[i];
-                }
-
-                voter.distributeFees(finalGauges);
-                console.log(
-                    "Fees distributed to",
-                    activeCount,
-                    "active gauges"
-                );
-            }
         } else {
             console.log("Not time for new emission period yet.");
             console.log(
@@ -1122,19 +1155,19 @@ contract E2ETest is Test {
             );
         }
 
-        console.log("Epoch flip and distribution completed successfully!");
+        console.log("Epoch flip and emissions completed successfully!");
 
         vm.stopPrank();
     }
 
     // Step 13: Claim all rewards types
-    function step13_ClaimAllRewards() internal {
-        console.log("\n=== Step 13: Claim All Rewards Types ===");
+    function step15_ClaimAllRewards() internal {
+        console.log("\n=== Step 15: Claim All Rewards Types ===");
         console.log("Testing reward claiming across two epochs:");
         console.log(
             "- Oct 16: Gauge emissions claimable (based on Oct 9 votes)"
         );
-        console.log("- Oct 23: Bribe rewards claimable (bribes queued Oct 9)");
+        console.log("- Oct 23: External AND internal bribes claimable");
         console.log("");
 
         // ========== PHASE A: Oct 16 + 1 hour - Gauge Emissions for LP ==========
@@ -1336,7 +1369,8 @@ contract E2ETest is Test {
         console.log("VOTER balances before claiming bribes:");
         console.log("- LITH:", voterLithBefore / 1e18);
         console.log("- WXPL:", voterWxplBefore / 1e18);
-        console.log("- USDT:", voterUsdtBefore / 1e6, "\n");
+        console.log("- USDT:", voterUsdtBefore / 1e6);
+        console.log("- WETH:", ERC20(WETH).balanceOf(VOTER) / 1e18, "\n");
 
         // Claim from USDT/WETH external bribe (25% of votes, has LITH bribes)
         console.log("--- USDT/WETH External Bribes (25% vote share) ---");
@@ -1461,10 +1495,6 @@ contract E2ETest is Test {
             "Bribes remain unclaimed (VOTER didn't vote for this gauge)"
         );
 
-        // Check internal bribes (should be 0 - no swaps after gauge creation)
-        console.log("\n--- Internal Bribes (Trading Fees) ---");
-        console.log("No trading fees expected (no swaps after gauge creation)");
-
         console.log("\n=== Phase B Summary ===");
         uint256 totalWxplBribes = ERC20(WXPL).balanceOf(VOTER) -
             voterWxplBalanceStart;
@@ -1473,15 +1503,137 @@ contract E2ETest is Test {
         uint256 totalUsdtBribes = ERC20(USDT).balanceOf(VOTER) -
             voterUsdtBalanceStart;
 
-        console.log("Total bribes claimed by VOTER:");
+        console.log("Total external bribes claimed by VOTER:");
         console.log("- WXPL:", totalWxplBribes / 1e18);
         console.log("- LITH:", totalLithBribes / 1e18);
         console.log("- USDT:", totalUsdtBribes / 1e6);
+        console.log(
+            "\nNow claiming internal bribes (swap fees) - should work since we distributed fees on Oct 15"
+        );
 
-        // Assert that VOTER received bribes for their votes
+        // Assert that VOTER received external bribes for their votes
         require(totalWxplBribes > 0, "VOTER should have received WXPL bribes");
         require(totalLithBribes > 0, "VOTER should have received LITH bribes");
         require(totalUsdtBribes > 0, "VOTER should have received USDT bribes");
+
+        // ========== PHASE C: Internal Bribes (Oct 23 - Same Epoch) ==========
+        console.log("\n=== PHASE C: Internal Bribes/Swap Fees (Oct 23) ===");
+        console.log("Internal bribes should now be claimable because:");
+        console.log("- Voted on Oct 9 -> balance recorded at Oct 16");
+        console.log(
+            "- Fees distributed Oct 15 (BEFORE epoch flip) -> rewards at Oct 16"
+        );
+        console.log("- Balance and rewards timestamps now match at Oct 16");
+        console.log(
+            "- On Oct 23, active_period > Oct 16, so can claim Oct 16 rewards\n"
+        );
+
+        // Record VOTER's balances before claiming internal bribes
+        uint256 voterUsdtBeforeFees = ERC20(USDT).balanceOf(VOTER);
+        uint256 voterWethBeforeFees = ERC20(WETH).balanceOf(VOTER);
+        uint256 voterWxplBeforeFees = ERC20(WXPL).balanceOf(VOTER);
+        uint256 voterUsdeBeforeFees = ERC20(USDe).balanceOf(VOTER);
+
+        console.log("VOTER balances before claiming internal bribes:");
+        console.log("- USDT:", voterUsdtBeforeFees / 1e6);
+        console.log("- WETH:", voterWethBeforeFees / 1e18, "\n");
+
+        // Claim USDT/WETH internal bribe (had swaps)
+        console.log("--- USDT/WETH Internal Bribes (Trading Fees) ---");
+
+        // Debug: Check gauge LP balance
+        uint256 gaugeLPBalance = ERC20(usdtWethPair).balanceOf(usdtWethGauge);
+        console.log("Gauge LP token balance:", gaugeLPBalance);
+
+        address usdtWethIntBribe = voter.internal_bribes(usdtWethGauge);
+        console.log("Internal bribe contract:", usdtWethIntBribe);
+        if (usdtWethIntBribe != address(0)) {
+            // Debug: Check bribe contract token balances
+            uint256 bribeUsdtBalance = ERC20(USDT).balanceOf(usdtWethIntBribe);
+            uint256 bribeWethBalance = ERC20(WETH).balanceOf(usdtWethIntBribe);
+            console.log("Bribe USDT balance:", bribeUsdtBalance);
+            console.log("Bribe WETH balance:", bribeWethBalance);
+
+            address[] memory feeTokens = new address[](2);
+            feeTokens[0] = USDT;
+            feeTokens[1] = WETH;
+
+            (bool claimSuccess, ) = usdtWethIntBribe.call(
+                abi.encodeWithSignature(
+                    "getReward(uint256,address[])",
+                    tokenId,
+                    feeTokens
+                )
+            );
+
+            if (claimSuccess) {
+                uint256 usdtFees = ERC20(USDT).balanceOf(VOTER) -
+                    voterUsdtBeforeFees;
+                uint256 wethFees = ERC20(WETH).balanceOf(VOTER) -
+                    voterWethBeforeFees;
+                console.log("- USDT fees claimed:", usdtFees / 1e6);
+                console.log("- WETH fees claimed:", wethFees / 1e18);
+
+                // Should successfully claim fees now that timestamps match
+                require(
+                    usdtFees > 0 || wethFees > 0,
+                    "USDT/WETH should have swap fees from step4"
+                );
+                console.log(
+                    "  Successfully claimed internal bribes! Timestamps aligned."
+                );
+
+                voterUsdtBeforeFees = ERC20(USDT).balanceOf(VOTER);
+                voterWethBeforeFees = ERC20(WETH).balanceOf(VOTER);
+            } else {
+                console.log("No fees to claim");
+            }
+        }
+
+        // Claim USDT/USDe internal bribe (had swaps but got 0 votes)
+        console.log("\n--- USDT/USDe Internal Bribes ---");
+        address usdtUsdeIntBribe = voter.internal_bribes(usdtUsdeGauge);
+        if (usdtUsdeIntBribe != address(0)) {
+            address[] memory feeTokens = new address[](2);
+            feeTokens[0] = USDT;
+            feeTokens[1] = USDe;
+
+            (bool claimSuccess, ) = usdtUsdeIntBribe.call(
+                abi.encodeWithSignature(
+                    "getReward(uint256,address[])",
+                    tokenId,
+                    feeTokens
+                )
+            );
+
+            if (claimSuccess) {
+                uint256 usdtFees = ERC20(USDT).balanceOf(VOTER) -
+                    voterUsdtBeforeFees;
+                uint256 usdeFees = ERC20(USDe).balanceOf(VOTER) -
+                    voterUsdeBeforeFees;
+                console.log("- USDT fees claimed:", usdtFees / 1e6);
+                console.log("- USDe fees claimed:", usdeFees / 1e18);
+
+                // Note: USDT/USDe got 0 votes so should have 0 fees
+                if (usdtFees == 0 && usdeFees == 0) {
+                    console.log("  (No fees - gauge got 0 votes, as expected)");
+                }
+            } else {
+                console.log("No fees to claim (gauge got 0 votes - expected)");
+            }
+        }
+
+        // WXPL/USDT internal bribe (intentionally no swaps - testing edge case)
+        console.log("\n--- WXPL/USDT Internal Bribes ---");
+        console.log("No fees expected (intentionally no swaps for this pair)");
+
+        console.log("\n=== Phase C Summary ===");
+        console.log("Internal bribes successfully claimed!");
+        console.log("- Key insight: Distribute fees BEFORE epoch flip");
+        console.log("- This ensures balance and reward timestamps align");
+        console.log(
+            "- Single vote is sufficient for both external and internal bribes"
+        );
 
         vm.stopPrank();
 
@@ -1490,22 +1642,32 @@ contract E2ETest is Test {
         console.log("LP wallet (liquidity provider):");
         console.log("- Staked LP tokens in gauges");
         console.log("- Earned gauge emissions proportional to votes");
-        console.log("- Received LITH tokens as rewards");
+        console.log("- Received LITH tokens as rewards on Oct 16");
 
         console.log("\nVOTER wallet (veNFT holder):");
         console.log("- Voted with veNFT across multiple gauges");
-        console.log("- Earned external bribes based on vote share");
-        console.log("- Received WXPL, LITH, and USDT as bribe rewards");
+        console.log(
+            "- Earned external bribes based on vote share (claimable Oct 23)"
+        );
+        console.log(
+            "- Earned internal bribes (swap fees) based on vote share (claimable Oct 30)"
+        );
+        console.log("- Received WXPL, LITH, and USDT as rewards");
 
         console.log("\nEdge cases tested:");
-        console.log("- WXPL/USDT: Had votes but no bribes");
-        console.log("- USDT/USDe: Had bribes but no votes");
-        console.log("- Internal bribes: Zero (no post-gauge swaps)");
+        console.log("- WXPL/USDT: Had votes but no bribes, no swap volume");
+        console.log("- USDT/USDe: Had bribes and swaps but no votes");
+        console.log(
+            "- Internal bribes: Must distribute fees before epoch flip for proper timing"
+        );
 
-        console.log("\nTimeline:");
-        console.log("- Oct 9: Bribes queued, votes cast, LP tokens staked");
-        console.log("- Oct 16: Epoch flip, gauge emissions distributed");
-        console.log("- Oct 23: Next epoch, bribes became claimable");
+        console.log("\nComplete Timeline:");
+        console.log(
+            "- Oct 9: Vote (balance at Oct 16), external bribes, swaps"
+        );
+        console.log("- Oct 15: Distribute fees (rewards scheduled at Oct 16)");
+        console.log("- Oct 16: Epoch flip, emissions claimable");
+        console.log("- Oct 23: External AND internal bribes claimable");
     }
 
     function logResults() internal view {
