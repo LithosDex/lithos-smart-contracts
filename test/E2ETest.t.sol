@@ -757,6 +757,11 @@ contract E2ETest is Test {
         require(addLithSuccessUsdtUsde, "Failed to add LITH as reward token");
         console.log("Added LITH as reward token to bribe contract");
 
+        // Transfer funds to BRIBER
+        lithos.transfer(BRIBER, 3000e18);
+        ERC20(WXPL).transfer(BRIBER, 1000e18);
+        ERC20(USDT).transfer(BRIBER, 1000e6);
+
         vm.stopPrank();
 
         // --- BRIBER adds bribes to gauges
@@ -780,9 +785,9 @@ contract E2ETest is Test {
         uint256 wxplBribeAmountForWxplLith = 1_000e18; // 1000 WXPL
         uint256 lithBribeAmountForWxplLith = 1_000e18; // 1000 LITH
         uint256 usdtBribeAmountForWxplLith = 1_000e6; // 1000 USDT
+        ERC20(WXPL).approve(wxplLithExternalBribe, lithBribeAmountForWxplLith);
         lithos.approve(wxplLithExternalBribe, wxplBribeAmountForWxplLith);
-        lithos.approve(wxplLithExternalBribe, lithBribeAmountForUsdtWeth);
-        lithos.approve(wxplLithExternalBribe, usdtBribeAmountForWxplLith);
+        ERC20(USDT).approve(wxplLithExternalBribe, usdtBribeAmountForWxplLith);
         console.log("Approved WXPL for bribing:", wxplBribeAmountForWxplLith);
         console.log("Approved LITH for bribing:", lithBribeAmountForUsdtWeth);
         console.log("Approved USDT for bribing:", usdtBribeAmountForWxplLith);
