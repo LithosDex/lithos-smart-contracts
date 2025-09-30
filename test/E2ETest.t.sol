@@ -33,6 +33,7 @@ contract E2ETest is Test {
     address constant LP = address(2);
     address constant BRIBER = address(3);
     address constant VOTER = address(4);
+    address constant LP_UNSTAKED = address(5);
 
     // Mainnet deployments
     PairFactory public pairFactory =
@@ -80,6 +81,11 @@ contract E2ETest is Test {
 
     uint256 public lpTokenBalance;
 
+    // Track LP_UNSTAKED's starting balances after liquidity provision
+    uint256 public lpUnstakedInitialUSDT;
+    uint256 public lpUnstakedInitialWETH;
+    uint256 public lpUnstakedInitialUSDe;
+
     function setUp() public {
         // Step 0: Set time to Tues Oct 1, 2025 00:00:00 UTC
         vm.warp(1759298400);
@@ -91,6 +97,7 @@ contract E2ETest is Test {
         vm.deal(LP, 100 ether);
         vm.deal(BRIBER, 100 ether);
         vm.deal(VOTER, 100 ether);
+        vm.deal(LP_UNSTAKED, 100 ether);
 
         console.log("=== DEX E2E Test on Plasma Mainnet Beta Fork ===");
         console.log("Chain ID: 9745");
@@ -114,7 +121,8 @@ contract E2ETest is Test {
         step9A_BribePools();
         step9B_StakeLPTokens();
         step10_VoteForPools();
-        step4_RunSwaps();
+        step_RunSwaps();
+        step_ClaimTradingFeesUnstaked();
 
         // Fast forward to Oct 15, 2025: Distribute fees BEFORE epoch flip
         step11_FastForwardToPreEpochDistribution();
@@ -204,28 +212,28 @@ contract E2ETest is Test {
         // Transfer USDT from whale
         address usdtWhale = 0x5D72a9d9A9510Cd8cBdBA12aC62593A58930a948;
         vm.startPrank(usdtWhale);
-        ERC20(USDT).transfer(DEPLOYER, 1_000_000e6); // 1,000,000 USDT
+        ERC20(USDT).transfer(DEPLOYER, 2_000_000e6); // 2,000,000 USDT
         console.log("Successfully transferred USDT from whale:", usdtWhale);
         vm.stopPrank();
 
         // Transfer WETH from whale
         address wethWhale = 0xf1aB7f60128924d69f6d7dE25A20eF70bBd43d07;
         vm.startPrank(wethWhale);
-        ERC20(WETH).transfer(DEPLOYER, 1_000e18); // 1000 WETH
+        ERC20(WETH).transfer(DEPLOYER, 2_000e18); // 2000 WETH
         console.log("Successfully transferred WETH from whale:", wethWhale);
         vm.stopPrank();
 
         // Transfer WXPL from whale
         address wxplWhale = 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
         vm.startPrank(wxplWhale);
-        ERC20(WXPL).transfer(DEPLOYER, 1_000_000e18); // 1,000,000 WXPL
+        ERC20(WXPL).transfer(DEPLOYER, 2_000_000e18); // 2,000,000 WXPL
         console.log("Successfully transferred WXPL from whale:", wxplWhale);
         vm.stopPrank();
 
         // For USDe, transfer from whale
         address usdeWhale = 0x7519403E12111ff6b710877Fcd821D0c12CAF43A;
         vm.startPrank(usdeWhale);
-        ERC20(USDe).transfer(DEPLOYER, 1_000_000e18); // 1,000,000 USDe
+        ERC20(USDe).transfer(DEPLOYER, 2_000_000e18); // 2,000,000 USDe
         console.log("Successfully transferred USDe from whale:", usdeWhale);
         vm.stopPrank();
 
@@ -239,16 +247,23 @@ contract E2ETest is Test {
     function step3B_AddLiquidity() internal {
         console.log("\n=== Step 3: Add Liquidity ===");
 
-        // Transfer funds to LP
+        // Transfer funds to LP and LP_UNSTAKED
         vm.startPrank(DEPLOYER);
         uint256 amountToLpUSDT = 250_000e6;
         uint256 amountToLpWETH = 500e18;
         uint256 amountToLpWXPL = 250_000e18;
         uint256 amountToLpUSDe = 250_000e18;
+
+        // LP gets funds for all pairs
         ERC20(USDT).transfer(LP, amountToLpUSDT * 3); // Used in 3 pairs
         ERC20(WETH).transfer(LP, amountToLpWETH);
         ERC20(WXPL).transfer(LP, amountToLpWXPL);
         ERC20(USDe).transfer(LP, amountToLpUSDe);
+
+        // LP_UNSTAKED gets funds for USDT/WETH and USDT/USDe (pools with swaps)
+        ERC20(USDT).transfer(LP_UNSTAKED, amountToLpUSDT * 2); // For 2 pairs
+        ERC20(WETH).transfer(LP_UNSTAKED, amountToLpWETH);
+        ERC20(USDe).transfer(LP_UNSTAKED, amountToLpUSDe);
 
         vm.startPrank(LP);
 
@@ -318,10 +333,67 @@ contract E2ETest is Test {
         console.log("- LP tokens minted:", liquidity);
 
         vm.stopPrank();
+
+        // LP_UNSTAKED adds liquidity (but won't stake)
+        console.log(
+            "\n=== LP_UNSTAKED Adding Liquidity (Will Keep Unstaked) ==="
+        );
+        vm.startPrank(LP_UNSTAKED);
+
+        // Approve RouterV2 to spend tokens
+        ERC20(USDT).approve(address(router), amountToLpUSDT * 2);
+        ERC20(WETH).approve(address(router), amountToLpWETH);
+        ERC20(USDe).approve(address(router), amountToLpUSDe);
+        console.log("LP_UNSTAKED approved RouterV2 to spend tokens");
+
+        // Add liquidity to USDT/WETH pair
+        console.log("LP_UNSTAKED adding liquidity to USDT/WETH pair:");
+        (amountA, amountB, liquidity) = router.addLiquidity(
+            USDT, // tokenA
+            WETH, // tokenB
+            false, // stable = false (volatile pair)
+            amountToLpUSDT, // amountADesired
+            amountToLpWETH, // amountBDesired
+            0, // amountAMin
+            0, // amountBMin
+            LP_UNSTAKED, // to
+            deadline // deadline
+        );
+        console.log("- USDT amount:", amountA);
+        console.log("- WETH amount:", amountB);
+        console.log("- LP tokens minted:", liquidity);
+
+        // Add liquidity to USDT/USDe pair
+        console.log("LP_UNSTAKED adding liquidity to USDT/USDe pair:");
+        (amountA, amountB, liquidity) = router.addLiquidity(
+            USDT, // tokenA
+            USDe, // tokenB
+            true, // stable = true (stable pair)
+            amountToLpUSDT, // amountADesired
+            amountToLpUSDe, // amountBDesired
+            0, // amountAMin
+            0, // amountBMin
+            LP_UNSTAKED, // to
+            deadline // deadline
+        );
+        console.log("- USDT amount:", amountA);
+        console.log("- USDe amount:", amountB);
+        console.log("- LP tokens minted:", liquidity);
+
+        console.log(
+            "\nLP_UNSTAKED keeps LP tokens unstaked to earn trading fees directly"
+        );
+
+        // Record initial balances after liquidity provision (before any swaps/fees)
+        lpUnstakedInitialUSDT = ERC20(USDT).balanceOf(LP_UNSTAKED);
+        lpUnstakedInitialWETH = ERC20(WETH).balanceOf(LP_UNSTAKED);
+        lpUnstakedInitialUSDe = ERC20(USDe).balanceOf(LP_UNSTAKED);
+
+        vm.stopPrank();
     }
 
-    // Step 4: Run swaps
-    function step4_RunSwaps() internal {
+    // Step: Run swaps
+    function step_RunSwaps() internal {
         console.log("\n=== Step 4: Run Swaps ===");
 
         // Goal here is to build up swap volume on the following pools to make sure swap
@@ -445,6 +517,97 @@ contract E2ETest is Test {
         console.log("WXPL/USDT kept at 0 volume for edge case testing");
 
         vm.stopPrank();
+    }
+
+    // Step: Claim trading fees for unstaked LP
+    function step_ClaimTradingFeesUnstaked() internal {
+        console.log("\n=== Step: Claim Trading Fees for Unstaked LP ===");
+        console.log(
+            "Demonstrating that unstaked LPs can claim trading fees directly"
+        );
+        console.log("while staked LPs cannot (their fees go to voters)\n");
+
+        console.log("--- LP_UNSTAKED Claims Trading Fees ---");
+        console.log(
+            "Note: claimable0/claimable1 are only finalized when claimFees() is called"
+        );
+        console.log(
+            "So we claim first, then measure the actual fees received\n"
+        );
+
+        vm.startPrank(LP_UNSTAKED);
+
+        // Record balances before claiming
+        uint256 usdtBefore = ERC20(USDT).balanceOf(LP_UNSTAKED);
+        uint256 wethBefore = ERC20(WETH).balanceOf(LP_UNSTAKED);
+        uint256 usdeBefore = ERC20(USDe).balanceOf(LP_UNSTAKED);
+
+        // Claim from USDT/WETH pair (claimFees finalizes fees via _updateFor)
+        (bool success, ) = usdtWethPair.call(
+            abi.encodeWithSignature("claimFees()")
+        );
+        if (success) {
+            console.log("Successfully claimed fees from USDT/WETH pair");
+        }
+
+        // Claim from USDT/USDe pair
+        (success, ) = usdtUsdePair.call(abi.encodeWithSignature("claimFees()"));
+        if (success) {
+            console.log("Successfully claimed fees from USDT/USDe pair");
+        }
+
+        // Check balances after claiming
+        uint256 usdtAfter = ERC20(USDT).balanceOf(LP_UNSTAKED);
+        uint256 wethAfter = ERC20(WETH).balanceOf(LP_UNSTAKED);
+        uint256 usdeAfter = ERC20(USDe).balanceOf(LP_UNSTAKED);
+
+        uint256 usdtReceived = usdtAfter - usdtBefore;
+        uint256 wethReceived = wethAfter - wethBefore;
+        uint256 usdeReceived = usdeAfter - usdeBefore;
+
+        console.log("\nFees claimed by LP_UNSTAKED:");
+        if (usdtReceived > 0) {
+            console.log("  USDT:");
+            console.log("    Raw units:", usdtReceived);
+            // Format as X.XXXXXX USDT (6 decimals)
+            uint256 usdtWhole = usdtReceived / 1e6;
+            uint256 usdtDecimals = usdtReceived % 1e6;
+            console.log("    Formatted: %s.%s USDT", usdtWhole, usdtDecimals);
+        }
+        if (wethReceived > 0) {
+            console.log("  WETH:");
+            console.log("    Raw units:", wethReceived);
+            // Format as 0.XXXXXX WETH (show first 6 decimals)
+            uint256 wethWhole = wethReceived / 1e18;
+            uint256 wethDecimals = (wethReceived % 1e18) / 1e12; // First 6 decimals
+            console.log("    Formatted: %s.%s WETH", wethWhole, wethDecimals);
+        }
+        if (usdeReceived > 0) {
+            console.log("  USDe:");
+            console.log("    Raw units:", usdeReceived);
+            // Format as 0.XXXXXX USDe (show first 6 decimals)
+            uint256 usdeWhole = usdeReceived / 1e18;
+            uint256 usdeDecimals = (usdeReceived % 1e18) / 1e12; // First 6 decimals
+            console.log("    Formatted: %s.%s USDe", usdeWhole, usdeDecimals);
+        }
+        if (usdtReceived == 0 && wethReceived == 0 && usdeReceived == 0) {
+            console.log("  No fees received (already claimed or no new swaps)");
+        }
+
+        // Verify fees were actually received
+        require(
+            usdtReceived > 0 || wethReceived > 0 || usdeReceived > 0,
+            "LP_UNSTAKED should have received trading fees from swaps"
+        );
+
+        vm.stopPrank();
+
+        console.log("\n=== Key Insight ===");
+        console.log("LP_UNSTAKED earns trading fees directly from swaps");
+        console.log(
+            "LP (staked) cannot claim fees - they go to voters instead"
+        );
+        console.log("This is the tradeoff: trading fees vs LITH emissions");
     }
 
     // Step 5: Fast forward to launch
@@ -1637,12 +1800,94 @@ contract E2ETest is Test {
 
         vm.stopPrank();
 
+        // ========== PHASE D: LP_UNSTAKED Trading Fees (Continuous) ==========
+        console.log("\n=== PHASE D: Unstaked LP Trading Fees (Oct 23) ===");
+        console.log(
+            "LP_UNSTAKED continues earning trading fees throughout all epochs"
+        );
+        console.log(
+            "They don't need to wait for epoch flips - fees accrue continuously\n"
+        );
+
+        vm.startPrank(LP_UNSTAKED);
+
+        console.log("--- LP_UNSTAKED Claims More Trading Fees ---");
+        console.log("Note: Fees are finalized when claimFees() is called\n");
+
+        // Record balances before claiming
+        uint256 unstakedUsdtBefore = ERC20(USDT).balanceOf(LP_UNSTAKED);
+        uint256 unstakedWethBefore = ERC20(WETH).balanceOf(LP_UNSTAKED);
+        uint256 unstakedUsdeBefore = ERC20(USDe).balanceOf(LP_UNSTAKED);
+
+        // Claim from USDT/WETH (this finalizes fees via _updateFor)
+        (bool success, ) = usdtWethPair.call(
+            abi.encodeWithSignature("claimFees()")
+        );
+        if (success) {
+            console.log("Claimed fees from USDT/WETH pair");
+        }
+
+        // Claim from USDT/USDe
+        (success, ) = usdtUsdePair.call(abi.encodeWithSignature("claimFees()"));
+        if (success) {
+            console.log("Claimed fees from USDT/USDe pair");
+        }
+
+        // Calculate total fees claimed
+        uint256 unstakedUsdtAfter = ERC20(USDT).balanceOf(LP_UNSTAKED);
+        uint256 unstakedWethAfter = ERC20(WETH).balanceOf(LP_UNSTAKED);
+        uint256 unstakedUsdeAfter = ERC20(USDe).balanceOf(LP_UNSTAKED);
+
+        uint256 usdtClaimed = unstakedUsdtAfter - unstakedUsdtBefore;
+        uint256 wethClaimed = unstakedWethAfter - unstakedWethBefore;
+        uint256 usdeClaimed = unstakedUsdeAfter - unstakedUsdeBefore;
+
+        console.log("\nAdditional fees claimed by LP_UNSTAKED:");
+        if (usdtClaimed > 0) {
+            console.log("  USDT: %s.%s", usdtClaimed / 1e6, usdtClaimed % 1e6);
+        }
+        if (wethClaimed > 0) {
+            console.log(
+                "  WETH: %s.%s",
+                wethClaimed / 1e18,
+                (wethClaimed % 1e18) / 1e12
+            );
+        }
+        if (usdeClaimed > 0) {
+            console.log(
+                "  USDe: %s.%s",
+                usdeClaimed / 1e18,
+                (usdeClaimed % 1e18) / 1e12
+            );
+        }
+        if (usdtClaimed == 0 && wethClaimed == 0 && usdeClaimed == 0) {
+            console.log("  None (fees already claimed in prior step)");
+        }
+
+        console.log("\n=== Phase D Summary ===");
+        console.log("LP_UNSTAKED:");
+        console.log("- Continues earning trading fees from all swaps");
+        console.log("- Can claim anytime, no epoch restrictions");
+        console.log("- Does NOT receive LITH emissions");
+        console.log("- Does NOT receive bribes");
+
+        vm.stopPrank();
+
         // ========== FINAL SUMMARY ==========
         console.log("\n=== FINAL REWARDS SUMMARY ===");
-        console.log("LP wallet (liquidity provider):");
+        console.log("LP wallet (liquidity provider who staked):");
         console.log("- Staked LP tokens in gauges");
         console.log("- Earned gauge emissions proportional to votes");
         console.log("- Received LITH tokens as rewards on Oct 16");
+        console.log("- Forfeited trading fees to voters");
+
+        console.log(
+            "\nLP_UNSTAKED wallet (liquidity provider who didn't stake):"
+        );
+        console.log("- Kept LP tokens unstaked");
+        console.log("- Earned trading fees continuously from swaps");
+        console.log("- Could claim fees anytime without epoch restrictions");
+        console.log("- Did NOT receive LITH emissions or bribes");
 
         console.log("\nVOTER wallet (veNFT holder):");
         console.log("- Voted with veNFT across multiple gauges");
@@ -1733,6 +1978,7 @@ contract E2ETest is Test {
 
         console.log("");
         console.log("=== Final Balances ===");
+        console.log("DEPLOYER:");
         console.log("- USDT:", ERC20(USDT).balanceOf(DEPLOYER) / 1e6, "USDT");
         console.log("- WETH:", ERC20(WETH).balanceOf(DEPLOYER) / 1e18, "WETH");
         console.log(
@@ -1744,6 +1990,79 @@ contract E2ETest is Test {
         if (address(lithos) != address(0)) {
             console.log("- LITH:", lithos.balanceOf(DEPLOYER) / 1e18, "LITH");
         }
+
+        console.log("\n=== LP vs LP_UNSTAKED Comparison ===");
+        console.log("LP (Staked):");
+        console.log(
+            "- LITH earned from emissions:",
+            lithos.balanceOf(LP) / 1e18,
+            "LITH"
+        );
+        console.log("- Trading fees earned: 0 (forfeited to voters)");
+        console.log("- LP tokens location: Staked in gauges");
+
+        console.log("\nLP_UNSTAKED (Not Staked):");
+        console.log("- LITH earned from emissions: 0");
+        console.log("- Trading fees earned (net of initial balance):");
+
+        uint256 currentUSDT = ERC20(USDT).balanceOf(LP_UNSTAKED);
+        uint256 currentWETH = ERC20(WETH).balanceOf(LP_UNSTAKED);
+        uint256 currentUSDe = ERC20(USDe).balanceOf(LP_UNSTAKED);
+
+        // Calculate net fees (current - initial after LP provision)
+        int256 netUSDT = int256(currentUSDT) - int256(lpUnstakedInitialUSDT);
+        int256 netWETH = int256(currentWETH) - int256(lpUnstakedInitialWETH);
+        int256 netUSDe = int256(currentUSDe) - int256(lpUnstakedInitialUSDe);
+
+        if (netUSDT > 0) {
+            console.log(
+                "  - USDT: +%s.%s",
+                uint256(netUSDT) / 1e6,
+                uint256(netUSDT) % 1e6
+            );
+        } else if (netUSDT < 0) {
+            console.log(
+                "  - USDT: -%s.%s (used in swaps)",
+                uint256(-netUSDT) / 1e6,
+                uint256(-netUSDT) % 1e6
+            );
+        } else {
+            console.log("  - USDT: 0");
+        }
+
+        if (netWETH > 0) {
+            console.log(
+                "  - WETH: +%s.%s",
+                uint256(netWETH) / 1e18,
+                (uint256(netWETH) % 1e18) / 1e12
+            );
+        } else if (netWETH < 0) {
+            console.log(
+                "  - WETH: -%s.%s (used in swaps)",
+                uint256(-netWETH) / 1e18,
+                (uint256(-netWETH) % 1e18) / 1e12
+            );
+        } else {
+            console.log("  - WETH: 0");
+        }
+
+        if (netUSDe > 0) {
+            console.log(
+                "  - USDe: +%s.%s",
+                uint256(netUSDe) / 1e18,
+                (uint256(netUSDe) % 1e18) / 1e12
+            );
+        } else if (netUSDe < 0) {
+            console.log(
+                "  - USDe: -%s.%s (used in swaps)",
+                uint256(-netUSDe) / 1e18,
+                (uint256(-netUSDe) % 1e18) / 1e12
+            );
+        } else {
+            console.log("  - USDe: 0");
+        }
+
+        console.log("- LP tokens location: Held directly in wallet");
 
         console.log("");
         console.log("Complete E2E test completed successfully!");
