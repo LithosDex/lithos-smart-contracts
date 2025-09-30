@@ -1977,92 +1977,139 @@ contract E2ETest is Test {
         }
 
         console.log("");
-        console.log("=== Final Balances ===");
-        console.log("DEPLOYER:");
-        console.log("- USDT:", ERC20(USDT).balanceOf(DEPLOYER) / 1e6, "USDT");
-        console.log("- WETH:", ERC20(WETH).balanceOf(DEPLOYER) / 1e18, "WETH");
-        console.log(
-            "- LP Tokens (USDT/WETH):",
-            ERC20(usdtWethPair).balanceOf(DEPLOYER) / 1e18,
-            "LP"
-        );
+        console.log("========================================");
+        console.log("=== REWARDS SUMMARY BY PARTICIPANT ===");
+        console.log("========================================");
+        console.log("");
 
-        if (address(lithos) != address(0)) {
-            console.log("- LITH:", lithos.balanceOf(DEPLOYER) / 1e18, "LITH");
-        }
-
-        console.log("\n=== LP vs LP_UNSTAKED Comparison ===");
-        console.log("LP (Staked):");
-        console.log(
-            "- LITH earned from emissions:",
-            lithos.balanceOf(LP) / 1e18,
-            "LITH"
-        );
-        console.log("- Trading fees earned: 0 (forfeited to voters)");
-        console.log("- LP tokens location: Staked in gauges");
-
-        console.log("\nLP_UNSTAKED (Not Staked):");
-        console.log("- LITH earned from emissions: 0");
-        console.log("- Trading fees earned (net of initial balance):");
+        // LP_UNSTAKED Summary
+        console.log("1. LP_UNSTAKED (Unstaked Liquidity Provider)");
+        console.log("   -------------------------------------------");
+        console.log("   Strategy: Provided liquidity, kept LP tokens unstaked");
+        console.log("");
+        console.log("   Timeline:");
+        console.log("   - Oct 1: Added liquidity to USDT/WETH and USDT/USDe");
+        console.log("   - Oct 9: Swaps occurred, trading fees accumulated");
+        console.log("   - Oct 9: Claimed trading fees from pairs");
+        console.log("");
+        console.log("   Rewards Earned:");
 
         uint256 currentUSDT = ERC20(USDT).balanceOf(LP_UNSTAKED);
         uint256 currentWETH = ERC20(WETH).balanceOf(LP_UNSTAKED);
         uint256 currentUSDe = ERC20(USDe).balanceOf(LP_UNSTAKED);
 
-        // Calculate net fees (current - initial after LP provision)
         int256 netUSDT = int256(currentUSDT) - int256(lpUnstakedInitialUSDT);
         int256 netWETH = int256(currentWETH) - int256(lpUnstakedInitialWETH);
         int256 netUSDe = int256(currentUSDe) - int256(lpUnstakedInitialUSDe);
 
+        console.log("   Trading Fees Earned:");
         if (netUSDT > 0) {
-            console.log(
-                "  - USDT: +%s.%s",
-                uint256(netUSDT) / 1e6,
-                uint256(netUSDT) % 1e6
-            );
-        } else if (netUSDT < 0) {
-            console.log(
-                "  - USDT: -%s.%s (used in swaps)",
-                uint256(-netUSDT) / 1e6,
-                uint256(-netUSDT) % 1e6
-            );
-        } else {
-            console.log("  - USDT: 0");
+            console.log("   - USDT: +%s.%s", uint256(netUSDT) / 1e6, uint256(netUSDT) % 1e6);
         }
-
         if (netWETH > 0) {
-            console.log(
-                "  - WETH: +%s.%s",
-                uint256(netWETH) / 1e18,
-                (uint256(netWETH) % 1e18) / 1e12
-            );
-        } else if (netWETH < 0) {
-            console.log(
-                "  - WETH: -%s.%s (used in swaps)",
-                uint256(-netWETH) / 1e18,
-                (uint256(-netWETH) % 1e18) / 1e12
-            );
-        } else {
-            console.log("  - WETH: 0");
+            console.log("   - WETH: +%s.%s", uint256(netWETH) / 1e18, (uint256(netWETH) % 1e18) / 1e12);
         }
-
         if (netUSDe > 0) {
-            console.log(
-                "  - USDe: +%s.%s",
-                uint256(netUSDe) / 1e18,
-                (uint256(netUSDe) % 1e18) / 1e12
-            );
-        } else if (netUSDe < 0) {
-            console.log(
-                "  - USDe: -%s.%s (used in swaps)",
-                uint256(-netUSDe) / 1e18,
-                (uint256(-netUSDe) % 1e18) / 1e12
-            );
-        } else {
-            console.log("  - USDe: 0");
+            console.log("   - USDe: +%s.%s", uint256(netUSDe) / 1e18, (uint256(netUSDe) % 1e18) / 1e12);
         }
+        console.log("");
+        console.log("   How LP_UNSTAKED Earned These Fees:");
+        console.log("   - Provided liquidity to USDT/WETH and USDT/USDe");
+        console.log("   - Kept LP tokens in wallet (did NOT stake in gauges)");
+        console.log("   - Swaps generated 0.18%% trading fees");
+        console.log("   - LP_UNSTAKED owns ~50%% of LP tokens, earns ~50%% of fees");
+        console.log("   - Claimed fees directly from pair contracts");
+        console.log("");
+        console.log("   - LITH Emissions: 0 (not staked in gauges)");
+        console.log("   - Bribes: 0 (not voting)");
+        console.log("");
 
-        console.log("- LP tokens location: Held directly in wallet");
+        // LP Summary
+        console.log("2. LP (Staked Liquidity Provider)");
+        console.log("   -------------------------------");
+        console.log("   Strategy: Provided liquidity, staked LP tokens in gauges");
+        console.log("");
+        console.log("   Timeline:");
+        console.log("   - Oct 1: Added liquidity to all pairs");
+        console.log("   - Oct 9: Staked LP tokens in gauges");
+        console.log("   - Oct 16: Claimed LITH emissions");
+        console.log("");
+        console.log("   Rewards Earned:");
+        console.log("   - LITH Emissions: %s LITH", lithos.balanceOf(LP) / 1e18);
+        console.log("");
+        console.log("   How LP Earned Emissions:");
+        console.log("   - Staked LP tokens in 4 gauges (USDT/WETH, WXPL/LITH, WXPL/USDT, USDT/USDe)");
+        console.log("   - VOTER voted for 3 of these gauges (25%%, 50%%, 25%% split)");
+        console.log("   - LP receives emissions proportional to:");
+        console.log("     * Their share of staked LP in each gauge (~100%%)");
+        console.log("     * The gauge's share of total votes (25%% + 50%% + 25%% = 100%%)");
+        console.log("   - Result: LP earns from all voted gauges where they staked");
+        console.log("");
+        console.log("   - Trading Fees: 0 (forfeited to voters when staked)");
+        console.log("   - Bribes: 0 (not voting, only providing liquidity)");
+        console.log("");
+
+        // VOTER Summary
+        uint256 voterLith = lithos.balanceOf(VOTER);
+        uint256 voterWxpl = ERC20(WXPL).balanceOf(VOTER);
+        uint256 voterUsdt = ERC20(USDT).balanceOf(VOTER);
+        uint256 voterWeth = ERC20(WETH).balanceOf(VOTER);
+        uint256 voterUsde = ERC20(USDe).balanceOf(VOTER);
+
+        console.log("3. VOTER (veNFT Holder)");
+        console.log("   ---------------------");
+        console.log("   Strategy: Locked LITH for veNFT, voted for gauges");
+        console.log("");
+        console.log("   Timeline:");
+        console.log("   - Oct 9: Created 1M LITH lock (4 weeks)");
+        console.log("   - Oct 9: Voted across gauges (25%% USDT/WETH, 50%% WXPL/LITH, 25%% WXPL/USDT)");
+        console.log("   - Oct 23: Claimed external bribes");
+        console.log("   - Oct 23: Claimed internal bribes (trading fees)");
+        console.log("");
+        console.log("   Rewards Earned:");
+        console.log("   - LITH Emissions: 0 (didn't provide liquidity)");
+        console.log("");
+
+        console.log("   External Bribes (from vote incentives):");
+        if (voterLith > 1_000_000e18) {
+            uint256 lithBribes = (voterLith - 1_000_000e18) / 1e18;
+            console.log("   - LITH: %s", lithBribes);
+            console.log("     Source: 1000 from USDT/WETH + 1000 from WXPL/LITH");
+            console.log("     VOTER is only voter, gets 100%% of bribes from pools voted for");
+        }
+        if (voterWxpl > 0) {
+            console.log("   - WXPL: %s", voterWxpl / 1e18);
+            console.log("     Source: 1000 WXPL bribe on WXPL/LITH gauge");
+            console.log("     VOTER is only voter, gets 100%% of bribes");
+        }
+        if (voterUsdt > 0) {
+            console.log("   - USDT: %s.%s", voterUsdt / 1e6, voterUsdt % 1e6);
+            console.log("     Breakdown:");
+            console.log("       External: ~1000 USDT (bribe on WXPL/LITH gauge)");
+            console.log("       Internal: ~0.77 USDT (swap fees from USDT/WETH + USDT/USDe)");
+            console.log("     Note: VOTER gets 100%% of fees from pools they voted for");
+        }
+        console.log("");
+
+        console.log("   Internal Bribes (trading fees from gauges):");
+        if (voterWeth > 0) {
+            console.log("   - WETH: %s.%s", voterWeth / 1e18, (voterWeth % 1e18) / 1e12);
+            console.log("     Source: ~0.79 WETH total swap fees from USDT/WETH pair");
+            console.log("     VOTER voted 25%% for USDT/WETH but is only voter");
+            console.log("     Gets 100%% of fees collected by that gauge");
+        }
+        if (voterUsde > 0) {
+            console.log("   - USDe: %s.%s", voterUsde / 1e18, (voterUsde % 1e18) / 1e12);
+            console.log("     Source: Swap fees from USDT/USDe pair (if any)");
+        }
+        console.log("");
+
+        console.log("   Key Insight:");
+        console.log("   - VOTER is the ONLY voter, so gets 100%% of all bribes/fees");
+        console.log("   - From pools they voted for (USDT/WETH, WXPL/LITH, WXPL/USDT)");
+        console.log("   - Pools with 0%% votes (USDT/USDe) = 0 rewards for VOTER");
+        console.log("");
+        console.log("========================================");
 
         console.log("");
         console.log("Complete E2E test completed successfully!");
