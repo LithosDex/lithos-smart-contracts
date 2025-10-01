@@ -15,23 +15,3 @@ export class Pair extends DataSourceTemplate {
     DataSourceTemplate.createWithContext("Pair", [address.toHex()], context);
   }
 }
-
-export class Bribes extends DataSourceTemplate {
-  static create(address: Address): void {
-    DataSourceTemplate.create("Bribes", [address.toHex()]);
-  }
-
-  static createWithContext(address: Address, context: DataSourceContext): void {
-    DataSourceTemplate.createWithContext("Bribes", [address.toHex()], context);
-  }
-}
-
-export class GaugeV2 extends DataSourceTemplate {
-  static create(address: Address): void {
-    DataSourceTemplate.create("GaugeV2", [address.toHex()]);
-  }
-
-  static createWithContext(address: Address, context: DataSourceContext): void {
-    DataSourceTemplate.createWithContext("GaugeV2", [address.toHex()], context);
-  }
-}

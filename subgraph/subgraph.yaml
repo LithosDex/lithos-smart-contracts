@@ -6,11 +6,11 @@ dataSources:
   # PairFactory - Creates new pairs
   - kind: ethereum
     name: PairFactory
-    network: plasma-testnet # or polygon, base, etc.
+    network: plasma-mainnet # or polygon, base, etc.
     source:
-      address: "0xa74848bAC41c4B1E6d1CFA6615Afb8893805075A" # Replace with actual deployed factory address
+      address: "0x71a870D1c935C2146b87644DF3B5316e8756aE18" # PairFactoryUpgradeable
       abi: PairFactory
-      startBlock: 2893469 # Replace with actual deployment block
+      startBlock: 2204716 # Replace with actual deployment block
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -35,11 +35,11 @@ dataSources:
   # RouterV2 - Router swaps
   - kind: ethereum
     name: RouterV2
-    network: plasma-testnet # or polygon, base, etc.
+    network: plasma-mainnet # or polygon, base, etc.
     source:
-      address: "0xb7Be9aB86d1A18c0425C3f6ABbbD58d0Ef19f1a9" # Replace with actual deployed router address
+      address: "0xD70962bd7C6B3567a8c893b55a8aBC1E151759f3" # RouterV2
       abi: RouterV2
-      startBlock: 2893474 # Replace with actual deployment block
+      startBlock: 2204949 # Replace with actual deployment block
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -59,117 +59,119 @@ dataSources:
           handler: handleRouterSwap
       file: ./src/router.ts
 
-  # VotingEscrow - veNFT management
-  - kind: ethereum
-    name: VotingEscrow
-    network: plasma-testnet
-    source:
-      address: "0x516C42d4BcF32531Cb7cf5Eb89Bb8870A4a60011"
-      abi: VotingEscrow
-      startBlock: 2893467
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - VotingEscrow
-        - VeNFT
-        - User
-        - VeDeposit
-        - VeWithdraw
-        - VeTransfer
-        - VeDelegation
-      abis:
-        - name: VotingEscrow
-          file: ./abis/VotingEscrow.json
-        - name: ERC20
-          file: ./abis/ERC20.json
-      eventHandlers:
-        # veNFT Lock/Unlock events
-        - event: Deposit(indexed address,uint256,uint256,indexed uint256,uint8,uint256)
-          handler: handleDeposit
-        - event: Withdraw(indexed address,uint256,uint256,uint256)
-          handler: handleWithdraw
-        - event: Supply(uint256,uint256)
-          handler: handleSupply
-
-        # ERC721 Transfer events for veNFTs
-        - event: Transfer(indexed address,indexed address,indexed uint256)
-          handler: handleTransfer
-        - event: Approval(indexed address,indexed address,indexed uint256)
-          handler: handleApproval
-        - event: ApprovalForAll(indexed address,indexed address,bool)
-          handler: handleApprovalForAll
-
-        # Delegation events
-        - event: DelegateChanged(indexed address,indexed address,indexed address)
-          handler: handleDelegateChanged
-        - event: DelegateVotesChanged(indexed address,uint256,uint256)
-          handler: handleDelegateVotesChanged
-      file: ./src/voting-escrow.ts
-
-  # MinterUpgradeable - Token emissions and minting
-  - kind: ethereum
-    name: MinterUpgradeable
-    network: plasma-testnet
-    source:
-      address: "0x4f00b43CD851ac5d5599834f71434f245A92D973"
-      abi: MinterUpgradeable
-      startBlock: 2893485
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - Minter
-        - MintEvent
-        - User
-      abis:
-        - name: MinterUpgradeable
-          file: ./abis/MinterUpgradeable.json
-        - name: ERC20
-          file: ./abis/ERC20.json
-      eventHandlers:
-        # Emission events
-        - event: Mint(indexed address,uint256,uint256,uint256)
-          handler: handleMint
-      file: ./src/minter.ts
-
-  # VoterV3 - Governance and gauge creation
-  - kind: ethereum
-    name: VoterV3
-    network: plasma-testnet
-    source:
-      address: "0x5C1f4391ad20475D76f4738d3faAF3B170A06919"
-      abi: VoterV3
-      startBlock: 2893482
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - Voter
-        - GaugeCreatedEvent
-        - Gauge
-        - Bribe
-        - BribeFactory
-        - Token
-      abis:
-        - name: VoterV3
-          file: ./abis/VoterV3.json
-        - name: ERC20
-          file: ./abis/ERC20.json
-      eventHandlers:
-        # Gauge creation events (also creates bribes)
-        - event: GaugeCreated(indexed address,address,address,indexed address,indexed address)
-          handler: handleGaugeCreated
-      file: ./src/voter.ts
+  # GlobalRouter - Global routing (no events to index)
+  # Address: 0xC7E4BCC695a9788fd0f952250cA058273BE7F6A3
+  # TradeHelper - Helper contract (no events to index)
+  # Address: 0xf2e70f25a712B2FEE0B76d5728a620707AF5D42c
+  # VotingEscrow - veNFT management (COMMENTED OUT)
+  # - kind: ethereum
+  #   name: VotingEscrow
+  #   network: plasma-testnet
+  #   source:
+  #     address: "0x516C42d4BcF32531Cb7cf5Eb89Bb8870A4a60011"
+  #     abi: VotingEscrow
+  #     startBlock: 2893467
+  #   mapping:
+  #     kind: ethereum/events
+  #     apiVersion: 0.0.7
+  #     language: wasm/assemblyscript
+  #     entities:
+  #       - VotingEscrow
+  #       - VeNFT
+  #       - User
+  #       - VeDeposit
+  #       - VeWithdraw
+  #       - VeTransfer
+  #       - VeDelegation
+  #     abis:
+  #       - name: VotingEscrow
+  #         file: ./abis/VotingEscrow.json
+  #       - name: ERC20
+  #         file: ./abis/ERC20.json
+  #     eventHandlers:
+  #       # veNFT Lock/Unlock events
+  #       - event: Deposit(indexed address,uint256,uint256,indexed uint256,uint8,uint256)
+  #         handler: handleDeposit
+  #       - event: Withdraw(indexed address,uint256,uint256,uint256)
+  #         handler: handleWithdraw
+  #       - event: Supply(uint256,uint256)
+  #         handler: handleSupply
+  #
+  #       # ERC721 Transfer events for veNFTs
+  #       - event: Transfer(indexed address,indexed address,indexed uint256)
+  #         handler: handleTransfer
+  #       - event: Approval(indexed address,indexed address,indexed uint256)
+  #         handler: handleApproval
+  #       - event: ApprovalForAll(indexed address,indexed address,bool)
+  #         handler: handleApprovalForAll
+  #
+  #       # Delegation events
+  #       - event: DelegateChanged(indexed address,indexed address,indexed address)
+  #         handler: handleDelegateChanged
+  #       - event: DelegateVotesChanged(indexed address,uint256,uint256)
+  #         handler: handleDelegateVotesChanged
+  #     file: ./src/voting-escrow.ts
+  # MinterUpgradeable - Token emissions and minting (COMMENTED OUT)
+  # - kind: ethereum
+  #   name: MinterUpgradeable
+  #   network: plasma-testnet
+  #   source:
+  #     address: "0x4f00b43CD851ac5d5599834f71434f245A92D973"
+  #     abi: MinterUpgradeable
+  #     startBlock: 2893485
+  #   mapping:
+  #     kind: ethereum/events
+  #     apiVersion: 0.0.7
+  #     language: wasm/assemblyscript
+  #     entities:
+  #       - Minter
+  #       - MintEvent
+  #       - User
+  #     abis:
+  #       - name: MinterUpgradeable
+  #         file: ./abis/MinterUpgradeable.json
+  #       - name: ERC20
+  #         file: ./abis/ERC20.json
+  #     eventHandlers:
+  #       # Emission events
+  #       - event: Mint(indexed address,uint256,uint256,uint256)
+  #         handler: handleMint
+  #     file: ./src/minter.ts
+  # VoterV3 - Governance and gauge creation (COMMENTED OUT)
+  # - kind: ethereum
+  #   name: VoterV3
+  #   network: plasma-testnet
+  #   source:
+  #     address: "0x5C1f4391ad20475D76f4738d3faAF3B170A06919"
+  #     abi: VoterV3
+  #     startBlock: 2893482
+  #   mapping:
+  #     kind: ethereum/events
+  #     apiVersion: 0.0.7
+  #     language: wasm/assemblyscript
+  #     entities:
+  #       - Voter
+  #       - GaugeCreatedEvent
+  #       - Gauge
+  #       - Bribe
+  #       - BribeFactory
+  #       - Token
+  #     abis:
+  #       - name: VoterV3
+  #         file: ./abis/VoterV3.json
+  #       - name: ERC20
+  #         file: ./abis/ERC20.json
+  #     eventHandlers:
+  #       # Gauge creation events (also creates bribes)
+  #       - event: GaugeCreated(indexed address,address,address,indexed address,indexed address)
+  #         handler: handleGaugeCreated
+  #     file: ./src/voter.ts
 
 templates:
   # Pair template - Dynamic pairs created by factory
   - kind: ethereum/contract
     name: Pair
-    network: plasma-testnet # or polygon, base, etc.
+    network: plasma-mainnet # or polygon, base, etc.
     source:
       abi: Pair
     mapping:
@@ -220,103 +222,101 @@ templates:
         - event: Approval(indexed address,indexed address,uint256)
           handler: handleApproval
       file: ./src/pair.ts
-
-  # Bribes template - Dynamic bribes created by BribeFactory
-  - kind: ethereum/contract
-    name: Bribes
-    network: plasma-testnet
-    source:
-      abi: Bribes
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - Bribe
-        - BribeRewardToken
-        - BribeRewardAdded
-        - BribeStake
-        - BribeWithdraw
-        - BribeRewardPaid
-        - User
-        - Token
-        - VeNFT
-      abis:
-        - name: Bribes
-          file: ./abis/Bribes.json
-        - name: ERC20
-          file: ./abis/ERC20.json
-      eventHandlers:
-        # Reward management
-        - event: RewardAdded(indexed address,uint256,uint256)
-          handler: handleRewardAdded
-
-        # Voting power management (called by VoterV3)
-        - event: Staked(indexed uint256,uint256)
-          handler: handleStaked
-        - event: Withdrawn(indexed uint256,uint256)
-          handler: handleWithdrawn
-
-        # Reward claims
-        - event: RewardPaid(indexed address,indexed address,uint256)
-          handler: handleRewardPaid
-
-        # Administrative
-        - event: Recovered(indexed address,uint256)
-          handler: handleRecovered
-        - event: SetOwner(indexed address)
-          handler: handleSetOwner
-      file: ./src/bribes.ts
-
-  # GaugeV2 template - Dynamic gauges created by GaugeFactory
-  - kind: ethereum/contract
-    name: GaugeV2
-    network: plasma-testnet
-    source:
-      abi: GaugeV2
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - Gauge
-        - GaugePosition
-        - GaugeDeposit
-        - GaugeWithdraw
-        - GaugeRewardAdded
-        - GaugeHarvest
-        - GaugeFeeClaim
-        - GaugeEmergencyEvent
-        - User
-        - Token
-        - Bribe
-      abis:
-        - name: GaugeV2
-          file: ./abis/GaugeV2.json
-        - name: ERC20
-          file: ./abis/ERC20.json
-      eventHandlers:
-        # Reward distribution from VoterV3
-        - event: RewardAdded(uint256)
-          handler: handleRewardAdded
-
-        # LP token staking/unstaking
-        - event: Deposit(indexed address,uint256)
-          handler: handleDeposit
-        - event: Withdraw(indexed address,uint256)
-          handler: handleWithdraw
-
-        # Reward harvesting
-        - event: Harvest(indexed address,uint256)
-          handler: handleHarvest
-
-        # Fee collection from trading pairs
-        - event: ClaimFees(indexed address,uint256,uint256)
-          handler: handleClaimFees
-
-        # Emergency mode events
-        - event: EmergencyActivated(indexed address,uint256)
-          handler: handleEmergencyActivated
-        - event: EmergencyDeactivated(indexed address,uint256)
-          handler: handleEmergencyDeactivated
-      file: ./src/gauge.ts
+  # Bribes template - Dynamic bribes created by BribeFactory (COMMENTED OUT)
+  # - kind: ethereum/contract
+  #   name: Bribes
+  #   network: plasma-testnet
+  #   source:
+  #     abi: Bribes
+  #   mapping:
+  #     kind: ethereum/events
+  #     apiVersion: 0.0.7
+  #     language: wasm/assemblyscript
+  #     entities:
+  #       - Bribe
+  #       - BribeRewardToken
+  #       - BribeRewardAdded
+  #       - BribeStake
+  #       - BribeWithdraw
+  #       - BribeRewardPaid
+  #       - User
+  #       - Token
+  #       - VeNFT
+  #     abis:
+  #       - name: Bribes
+  #         file: ./abis/Bribes.json
+  #       - name: ERC20
+  #         file: ./abis/ERC20.json
+  #     eventHandlers:
+  #       # Reward management
+  #       - event: RewardAdded(indexed address,uint256,uint256)
+  #         handler: handleRewardAdded
+  #
+  #       # Voting power management (called by VoterV3)
+  #       - event: Staked(indexed uint256,uint256)
+  #         handler: handleStaked
+  #       - event: Withdrawn(indexed uint256,uint256)
+  #         handler: handleWithdrawn
+  #
+  #       # Reward claims
+  #       - event: RewardPaid(indexed address,indexed address,uint256)
+  #         handler: handleRewardPaid
+  #
+  #       # Administrative
+  #       - event: Recovered(indexed address,uint256)
+  #         handler: handleRecovered
+  #       - event: SetOwner(indexed address)
+  #         handler: handleSetOwner
+  #     file: ./src/bribes.ts
+  # GaugeV2 template - Dynamic gauges created by GaugeFactory (COMMENTED OUT)
+  # - kind: ethereum/contract
+  #   name: GaugeV2
+  #   network: plasma-testnet
+  #   source:
+  #     abi: GaugeV2
+  #   mapping:
+  #     kind: ethereum/events
+  #     apiVersion: 0.0.7
+  #     language: wasm/assemblyscript
+  #     entities:
+  #       - Gauge
+  #       - GaugePosition
+  #       - GaugeDeposit
+  #       - GaugeWithdraw
+  #       - GaugeRewardAdded
+  #       - GaugeHarvest
+  #       - GaugeFeeClaim
+  #       - GaugeEmergencyEvent
+  #       - User
+  #       - Token
+  #       - Bribe
+  #     abis:
+  #       - name: GaugeV2
+  #         file: ./abis/GaugeV2.json
+  #       - name: ERC20
+  #         file: ./abis/ERC20.json
+  #     eventHandlers:
+  #       # Reward distribution from VoterV3
+  #       - event: RewardAdded(uint256)
+  #         handler: handleRewardAdded
+  #
+  #       # LP token staking/unstaking
+  #       - event: Deposit(indexed address,uint256)
+  #         handler: handleDeposit
+  #       - event: Withdraw(indexed address,uint256)
+  #         handler: handleWithdraw
+  #
+  #       # Reward harvesting
+  #       - event: Harvest(indexed address,uint256)
+  #         handler: handleHarvest
+  #
+  #       # Fee collection from trading pairs
+  #       - event: ClaimFees(indexed address,uint256,uint256)
+  #         handler: handleClaimFees
+  #
+  #       # Emergency mode events
+  #       - event: EmergencyActivated(indexed address,uint256)
+  #         handler: handleEmergencyActivated
+  #       - event: EmergencyDeactivated(indexed address,uint256)
+  #         handler: handleEmergencyDeactivated
+  #     file: ./src/gauge.ts

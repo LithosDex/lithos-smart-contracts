@@ -4,11 +4,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: PairFactory
-    network: plasma-testnet
+    network: plasma-mainnet
     source:
-      address: "0xa74848bAC41c4B1E6d1CFA6615Afb8893805075A"
+      address: "0x71a870D1c935C2146b87644DF3B5316e8756aE18"
       abi: PairFactory
-      startBlock: 2893469
+      startBlock: 2204716
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -31,11 +31,11 @@ dataSources:
       file: PairFactory/PairFactory.wasm
   - kind: ethereum
     name: RouterV2
-    network: plasma-testnet
+    network: plasma-mainnet
     source:
-      address: "0xb7Be9aB86d1A18c0425C3f6ABbbD58d0Ef19f1a9"
+      address: "0xD70962bd7C6B3567a8c893b55a8aBC1E151759f3"
       abi: RouterV2
-      startBlock: 2893474
+      startBlock: 2204949
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -54,103 +54,10 @@ dataSources:
         - event: Swap(indexed address,uint256,address,indexed address,bool)
           handler: handleRouterSwap
       file: RouterV2/RouterV2.wasm
-  - kind: ethereum
-    name: VotingEscrow
-    network: plasma-testnet
-    source:
-      address: "0x516C42d4BcF32531Cb7cf5Eb89Bb8870A4a60011"
-      abi: VotingEscrow
-      startBlock: 2893467
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - VotingEscrow
-        - VeNFT
-        - User
-        - VeDeposit
-        - VeWithdraw
-        - VeTransfer
-        - VeDelegation
-      abis:
-        - name: VotingEscrow
-          file: VotingEscrow/abis/VotingEscrow.json
-        - name: ERC20
-          file: VotingEscrow/abis/ERC20.json
-      eventHandlers:
-        - event: Deposit(indexed address,uint256,uint256,indexed uint256,uint8,uint256)
-          handler: handleDeposit
-        - event: Withdraw(indexed address,uint256,uint256,uint256)
-          handler: handleWithdraw
-        - event: Supply(uint256,uint256)
-          handler: handleSupply
-        - event: Transfer(indexed address,indexed address,indexed uint256)
-          handler: handleTransfer
-        - event: Approval(indexed address,indexed address,indexed uint256)
-          handler: handleApproval
-        - event: ApprovalForAll(indexed address,indexed address,bool)
-          handler: handleApprovalForAll
-        - event: DelegateChanged(indexed address,indexed address,indexed address)
-          handler: handleDelegateChanged
-        - event: DelegateVotesChanged(indexed address,uint256,uint256)
-          handler: handleDelegateVotesChanged
-      file: VotingEscrow/VotingEscrow.wasm
-  - kind: ethereum
-    name: MinterUpgradeable
-    network: plasma-testnet
-    source:
-      address: "0x4f00b43CD851ac5d5599834f71434f245A92D973"
-      abi: MinterUpgradeable
-      startBlock: 2893485
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - Minter
-        - MintEvent
-        - User
-      abis:
-        - name: MinterUpgradeable
-          file: MinterUpgradeable/abis/MinterUpgradeable.json
-        - name: ERC20
-          file: MinterUpgradeable/abis/ERC20.json
-      eventHandlers:
-        - event: Mint(indexed address,uint256,uint256,uint256)
-          handler: handleMint
-      file: MinterUpgradeable/MinterUpgradeable.wasm
-  - kind: ethereum
-    name: VoterV3
-    network: plasma-testnet
-    source:
-      address: "0x5C1f4391ad20475D76f4738d3faAF3B170A06919"
-      abi: VoterV3
-      startBlock: 2893482
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - Voter
-        - GaugeCreatedEvent
-        - Gauge
-        - Bribe
-        - BribeFactory
-        - Token
-      abis:
-        - name: VoterV3
-          file: VoterV3/abis/VoterV3.json
-        - name: ERC20
-          file: VoterV3/abis/ERC20.json
-      eventHandlers:
-        - event: GaugeCreated(indexed address,address,address,indexed address,indexed address)
-          handler: handleGaugeCreated
-      file: VoterV3/VoterV3.wasm
 templates:
   - kind: ethereum/contract
     name: Pair
-    network: plasma-testnet
+    network: plasma-mainnet
     source:
       abi: Pair
     mapping:
@@ -192,83 +99,3 @@ templates:
         - event: Approval(indexed address,indexed address,uint256)
           handler: handleApproval
       file: templates/Pair/Pair.wasm
-  - kind: ethereum/contract
-    name: Bribes
-    network: plasma-testnet
-    source:
-      abi: Bribes
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - Bribe
-        - BribeRewardToken
-        - BribeRewardAdded
-        - BribeStake
-        - BribeWithdraw
-        - BribeRewardPaid
-        - User
-        - Token
-        - VeNFT
-      abis:
-        - name: Bribes
-          file: Bribes/abis/Bribes.json
-        - name: ERC20
-          file: Bribes/abis/ERC20.json
-      eventHandlers:
-        - event: RewardAdded(indexed address,uint256,uint256)
-          handler: handleRewardAdded
-        - event: Staked(indexed uint256,uint256)
-          handler: handleStaked
-        - event: Withdrawn(indexed uint256,uint256)
-          handler: handleWithdrawn
-        - event: RewardPaid(indexed address,indexed address,uint256)
-          handler: handleRewardPaid
-        - event: Recovered(indexed address,uint256)
-          handler: handleRecovered
-        - event: SetOwner(indexed address)
-          handler: handleSetOwner
-      file: templates/Bribes/Bribes.wasm
-  - kind: ethereum/contract
-    name: GaugeV2
-    network: plasma-testnet
-    source:
-      abi: GaugeV2
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - Gauge
-        - GaugePosition
-        - GaugeDeposit
-        - GaugeWithdraw
-        - GaugeRewardAdded
-        - GaugeHarvest
-        - GaugeFeeClaim
-        - GaugeEmergencyEvent
-        - User
-        - Token
-        - Bribe
-      abis:
-        - name: GaugeV2
-          file: GaugeV2/abis/GaugeV2.json
-        - name: ERC20
-          file: GaugeV2/abis/ERC20.json
-      eventHandlers:
-        - event: RewardAdded(uint256)
-          handler: handleRewardAdded
-        - event: Deposit(indexed address,uint256)
-          handler: handleDeposit
-        - event: Withdraw(indexed address,uint256)
-          handler: handleWithdraw
-        - event: Harvest(indexed address,uint256)
-          handler: handleHarvest
-        - event: ClaimFees(indexed address,uint256,uint256)
-          handler: handleClaimFees
-        - event: EmergencyActivated(indexed address,uint256)
-          handler: handleEmergencyActivated
-        - event: EmergencyDeactivated(indexed address,uint256)
-          handler: handleEmergencyDeactivated
-      file: templates/GaugeV2/GaugeV2.wasm

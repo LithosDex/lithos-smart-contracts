@@ -4,9 +4,9 @@ version: "1.0.0"
 
 # Network configuration for Plasma
 network:
-  name: plasma-testnet
-  chain_id: 9746 # Actual Plasma testnet chain ID
-  rpc_url: https://testnet-rpc.plasma.to
+  name: plasma-mainnet
+  chain_id: 9745 # Actual Plasma testnet chain ID
+  rpc_url: https://rpc.plasma.to
 
 # Subgraph configuration
 subgraph:
@@ -16,12 +16,12 @@ subgraph:
 # Data sources
 sources:
   - name: PairFactory
-    address: "0xF1471A005b7557C1d472f0a060040f93ae074297"
-    start_block: 2810500
+    address: "0x71a870D1c935C2146b87644DF3B5316e8756aE18"
+    start_block: 2204716
 
   - name: RouterV2
-    address: "0x84E8a39C85F645c7f7671689a9337B33Bdc784f8"
-    start_block: 2810500
+    address: "0xD70962bd7C6B3567a8c893b55a8aBC1E151759f3"
+    start_block: 2204949
 
 # Deployment settings
 deployment:
