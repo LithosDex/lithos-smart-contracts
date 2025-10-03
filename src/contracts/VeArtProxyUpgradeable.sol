@@ -7,7 +7,9 @@ import {IVeArtProxy} from "./interfaces/IVeArtProxy.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract VeArtProxyUpgradeable is IVeArtProxy, OwnableUpgradeable {
-    constructor() {}
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize() public initializer {
         __Ownable_init(msg.sender);
