@@ -116,7 +116,7 @@ contract E2ETest is Test {
 
         // Fast forward to Oct 9, 2025: Activate minter (Phase 2)
         step_FastForwardToLaunch();
-        step_LaunchLITHAndVoting();
+        step_ActivateMinter();
         step_VerifyNoEarlyDistribution();
 
         step_CreateLocks();
@@ -644,15 +644,15 @@ contract E2ETest is Test {
         vm.stopPrank();
     }
 
-    // Activate minter and launch LITH (Oct 9)
-    function step_LaunchLITHAndVoting() internal {
+    // Activate minter and set LITH minter (Oct 9)
+    function step_ActivateMinter() internal {
         console.log("\n=== Activate Minter & Launch LITH (Oct 9) ===");
 
         vm.startPrank(DEPLOYER);
 
-        // Activate minter - mints 50M LITH to deployer
-        DeploymentHelpers.activateMinter(ve33.lithos, ve33.minter, DEPLOYER);
-        console.log("Minter activated! 50M LITH minted to DEPLOYER");
+        // Activate minter
+        DeploymentHelpers.activateMinter(ve33.lithos, ve33.minter);
+        console.log("Minter activated and set as minter on Lithos");
 
         console.log("LITH launched and voting system activated!");
 

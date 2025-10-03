@@ -69,6 +69,9 @@ library DeploymentHelpers {
         Lithos lithos = new Lithos();
         contracts.lithos = address(lithos);
 
+        // Mint initial 50M LITH to deployer immediately
+        Lithos(lithos).initialMint(deployer);
+
         // 3. Deploy VeArtProxy with TransparentUpgradeableProxy
         // NOTE: OZ v5 creates ProxyAdmin internally, deployer becomes its owner
         VeArtProxyUpgradeable veArtImpl = new VeArtProxyUpgradeable();
@@ -195,19 +198,11 @@ library DeploymentHelpers {
     /// @notice Activate minter with initial supply (Oct 9)
     /// @param lithos Address of Lithos token
     /// @param minter Address of Minter proxy
-    /// @param deployer Address of deployer (receives initial LITH)
-    function activateMinter(
-        address lithos,
-        address minter,
-        address deployer
-    ) internal {
-        // 1. Mint initial 50M LITH to deployer
-        Lithos(lithos).initialMint(deployer);
-
-        // 2. Set minter role on Lithos token
+    function activateMinter(address lithos, address minter) internal {
+        // Set minter role on Lithos token
         Lithos(lithos).setMinter(minter);
 
-        // 3. Activate minter (no additional minting needed)
+        // Activate minter (no additional minting needed)
         address[] memory claimants = new address[](0);
         uint256[] memory amounts = new uint256[](0);
         MinterUpgradeable(minter)._initialize(claimants, amounts, 0);

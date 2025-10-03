@@ -1,18 +1,26 @@
 # Lithos Protocol ve(3,3) Deployment Scripts
 
+# Epochs
+- Epoch 0: Oct 2-9 - deployment
+- Epoch 1: Oct 9-16
+  - Bribes start coming in: Oct 9-12
+  - TGE: Oct 12
+- Epoch 2: Oct 16-23
+- Epoch 3: Oct 23-30
+
 ## Overview
 The DEX infrastructure is already deployed on mainnet. These scripts handle the ve(3,3) governance system deployment.
 
 **DEX (Already Deployed - Mainnet):**
-- PairFactoryUpgradeable
+- PairFactoryUpgradeable - not actually upgradeable rip
 - TradeHelper
 - GlobalRouter
 - RouterV2
 
 **ve(3,3) (To Deploy - Oct 3-16):**
-- Phase 1 (Oct 3): Deploy contracts (inactive)
-- Phase 2 (Oct 9): Activate minter with initial supply
-- Phase 3 (Oct 12): Airdrop and voting
+- Phase 1 (Oct 3): Deploy contracts and mint 50M LITHOS to deployer
+- Phase 2 (Oct 9): Activate minter and set as minter on Lithos
+- Phase 3 (Oct 12): Airdrop and locking/voting
 - Phase 4 (Oct 16): First emissions distributed
 
 ## Deployment Timeline
@@ -81,7 +89,7 @@ forge script script/DeployAndInitVe33.s.sol \
 ```
 
 **What it deploys:**
-- Lithos token
+- Lithos token - mints 50M LITHOS to deployer
 - VotingEscrow (veNFT system)
 - VeArtProxyUpgradeable (via TransparentProxy)
 - VoterV3
@@ -105,7 +113,6 @@ forge script script/DeployAndInitVe33.s.sol \
 ```
 
 **What it does:**
-- Mints 50M LITHOS to deployer
 - Activates minter (sets `active_period` to Oct 9)
 - Deployer can now distribute LITHOS for airdrop and emissions
 

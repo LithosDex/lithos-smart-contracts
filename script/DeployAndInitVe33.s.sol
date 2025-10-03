@@ -56,11 +56,7 @@ contract DeployAndInitVe33Script is Script {
         if (activateMinter) {
             console2.log("\n=== PHASE 2: Activating Minter (Oct 9) ===");
             _loadVe33State(statePath);
-            DeploymentHelpers.activateMinter(
-                ve33.lithos,
-                ve33.minter,
-                deployer
-            );
+            DeploymentHelpers.activateMinter(ve33.lithos, ve33.minter);
         } else {
             console2.log("\n=== PHASE 1: Deploying ve33 System (Oct 3) ===");
 
