@@ -1,163 +1,161 @@
-# Lithos Protocol Deployment Scripts
+# Lithos Protocol ve(3,3) Deployment Scripts
 
 ## Overview
-The deployment process is split into four distinct phases, each with its own script:
+The DEX infrastructure is already deployed on mainnet. These scripts handle the ve(3,3) governance system deployment.
 
-1. **DeployAndInit.s.sol** - Deploys all contracts and initializes them in one atomic pass
-2. **Link.s.sol** - Wires contracts together and performs initial mint
-3. **InitialPairAndGauge.s.sol** - Creates the initial LITHOS/WXPL pair and gauge
-4. **Ownership.s.sol** - Transfers control to governance multisig
+**DEX (Already Deployed - Mainnet):**
+- PairFactoryUpgradeable
+- TradeHelper
+- GlobalRouter
+- RouterV2
 
-## Quick Start
+**ve(3,3) (To Deploy - Oct 3-16):**
+- Phase 1 (Oct 3): Deploy contracts (inactive)
+- Phase 2 (Oct 9): Activate minter with initial supply
+- Phase 3 (Oct 12): Airdrop and voting
+- Phase 4 (Oct 16): First emissions distributed
 
-### Prerequisites
-```bash
-# Required environment variables
-export DEPLOY_ENV=mainnet           # or testnet
-export PRIVATE_KEY=0x...            # Deployer private key
-export RPC_URL=https://...          # Network RPC endpoint
-export MULTISIG=0x...               # Governance multisig address
-export WXPL=0x...                   # Wrapped native token (XPL)
+## Deployment Timeline
 
-# Optional for contract verification
-export ETHERSCAN_API_KEY=...        # Enables contract verification via Routescan
+**Oct 3:** Deploy all contracts (Phase 1)
+- Contracts deployed but minter inactive
+- `active_period` set to Oct 16
 
-# For Phase 3 (Initial Pair & Gauge)
-export INITIAL_LITHOS_AMOUNT=...    # Amount of LITHOS for initial liquidity
-export INITIAL_WXPL_AMOUNT=...      # Amount of WXPL for initial liquidity
+**Oct 9:** Activate minter (Phase 2)
+- Mint 50M LITHOS to deployer
+- Set `active_period` to Oct 9
+- Transfer LITHOS to Minter for emissions
 
-# Gas configuration (recommended for Plasma)
-export GAS_LIMIT=30000000           # 30M gas limit
-export GAS_PRICE=1000000000         # 1 gwei
-```
+**Oct 12:** Airdrop & voting (Phase 3)
+- Users lock LITHOS → receive veLITH NFTs
+- Users vote on gauges
+- Votes recorded for Oct 9 epoch
 
-### Run Deployment
-```bash
-# Phase 1: Deploy & initialize all contracts
-source .env
-forge script script/DeployAndInit.s.sol \
-  --rpc-url "$RPC_URL" \
-  --gas-limit "$GAS_LIMIT" \
-  --gas-price "$GAS_PRICE" \
-  --legacy \
-  --broadcast \
-  --slow
+**Oct 16:** First distribution (Phase 4)
+- Call `distributeAll()` - uses Oct 9 votes
+- Gauges receive emissions
 
-# To resume if interrupted:
-forge script script/DeployAndInit.s.sol --rpc-url "$RPC_URL" --gas-limit "$GAS_LIMIT" --gas-price "$GAS_PRICE" --legacy --broadcast --resume --skip-simulation -vvv
-
-# Phase 2: Link contracts
-forge script script/Link.s.sol \
-  --rpc-url "$RPC_URL" \
-  --gas-limit "$GAS_LIMIT" \
-  --gas-price "$GAS_PRICE" \
-  --legacy \
-  --broadcast \
-  --slow
-
-# Phase 3: Create initial pair & gauge
-forge script script/InitialPairAndGauge.s.sol \
-  --rpc-url "$RPC_URL" \
-  --gas-limit "$GAS_LIMIT" \
-  --gas-price "$GAS_PRICE" \
-  --legacy \
-  --broadcast \
-  --slow
-
-# Phase 4: Transfer ownership to multisig
-forge script script/Ownership.s.sol \
-  --rpc-url "$RPC_URL" \
-  --gas-limit "$GAS_LIMIT" \
-  --gas-price "$GAS_PRICE" \
-  --legacy \
-  --broadcast \
-  --slow
-```
+**Oct 16+:** Ownership handoff
+1. Verify system stable for several days
+2. Run `TransferToTimelock.s.sol` (control → timelock)
+3. Run `RenounceTimelockAdmin.s.sol` (remove admin backdoor)
 
 ## State Management
-- Deployment state is saved to `deployments/<env>/state.json`
-- Scripts automatically resume from last successful deployment
-- State file contains all deployed contract addresses
-- Delete or rename state file to run a fresh deployment
 
-## Directory Structure
+The deployment uses `deployments/{env}/state.json` to persist contract addresses between phases:
+
+**Phase 1 (Deploy):**
+- Loads DEX addresses (must exist)
+- Deploys ve33 contracts
+- Saves all addresses to state.json
+
+**Phase 2 (Activate):**
+- Loads ve33 addresses from state.json
+- Activates minter with saved addresses
+
+**IMPORTANT:** Do not delete or modify `deployments/mainnet/state.json` between phases. Other scripts (TransferToTimelock, RenounceTimelockAdmin) also read from this file.
+
+## Deployment Scripts
+
+### 1. DeployAndInitVe33.s.sol
+Deploys ve(3,3) governance system with two-phase activation.
+
+#### Prerequisites
+```bash
+export DEPLOY_ENV=mainnet
+export PRIVATE_KEY=0x...
+export RPC_URL=https://...
+export GAS_LIMIT=30000000
+export GAS_PRICE=1000000000
 ```
-deployments/
-  ├── mainnet/
-  │   └── state.json
-  └── testnet/
-      └── state.json
+
+#### Phase 1 - Oct 3 (Deploy)
+```bash
+forge script script/DeployAndInitVe33.s.sol \
+  --rpc-url "$RPC_URL" \
+  --gas-limit "$GAS_LIMIT" \
+  --gas-price "$GAS_PRICE" \
+  --legacy \
+  --broadcast \
+  --verify
 ```
 
-## Contract Deployment Order
+**What it deploys:**
+- Lithos token
+- VotingEscrow (veNFT system)
+- VeArtProxyUpgradeable (via TransparentProxy)
+- VoterV3
+- MinterUpgradeable (via TransparentProxy)
+- GaugeFactoryV2
+- BribeFactoryV3
+- RewardsDistributor
+- PermissionsRegistry
+- ProxyAdmin
+- TimelockController (48hr delay)
 
-### Phase 1: Deploy & Initialize
-Deploys every contract and executes its initializer in the same transaction bundle:
+#### Phase 2 - Oct 9 (Activate)
+```bash
+ACTIVATE_MINTER=true \
+forge script script/DeployAndInitVe33.s.sol \
+  --rpc-url "$RPC_URL" \
+  --gas-limit "$GAS_LIMIT" \
+  --gas-price "$GAS_PRICE" \
+  --legacy \
+  --broadcast
+```
 
-1. **Core Token System**
-   - Lithos Token
-   - VeArtProxyUpgradeable (NFT metadata)
-   - VotingEscrow (veNFT system)
+**What it does:**
+- Mints 50M LITHOS to deployer
+- Activates minter (sets `active_period` to Oct 9)
+- Deployer can now distribute LITHOS for airdrop and emissions
 
-2. **DEX Infrastructure**
-   - PairFactoryUpgradeable
-   - TradeHelper (depends on PairFactory)
-   - GlobalRouter (depends on TradeHelper)
-   - RouterV2 (legacy compatibility, depends on PairFactory & WXPL)
+## Governance Transfer (Run after deployment is stable)
 
-3. **Gauge & Voting System**
-   - GaugeFactoryV2
-   - PermissionsRegistry
-   - BribeFactoryV3
-   - VoterV3
-   - RewardsDistributor
-   - MinterUpgradeable
+### 2. TransferToTimelock.s.sol
+Transfer control from deployer to TimelockController.
 
-### Phase 2: Link
-Wires contracts together once every initializer is complete:
-- Configure PairFactory trade fees (0.04% stable, 0.18% volatile)
-- Set staking fee handler to deployer (keeps fees accessible until ownership transfer)
-- Point BribeFactory at the live voter
-- Wire VotingEscrow → VoterV3 connections
-- **Perform initial mint of 50M LITHOS to deployer** (must be done before setting minter)
-- Set Lithos minter to MinterUpgradeable contract
-- Assign RewardsDistributor depositor rights to MinterUpgradeable
-- Configure emission parameters (990 decay, 300 rebase, 40 team rate)
+**Run after system is stable (Oct 16+):**
+```bash
+export PROXY_ADMIN=0x...
+export PERMISSIONS_REGISTRY=0x...
+export TIMELOCK=0x...
+export DEPLOYER=0x...
 
-### Phase 3: Initial Pair & Gauge
-Sets up the initial LITHOS/WXPL trading pair and gauge:
-- Create the LITHOS/WXPL volatile pair
-- Add initial liquidity to bootstrap the pair
-- Whitelist LITHOS and WXPL tokens in VoterV3
-- Create a gauge for the pair to receive emissions
-- Save pair and gauge addresses to state.json
+forge script script/TransferToTimelock.s.sol \
+  --rpc-url "$RPC_URL" \
+  --broadcast
+```
 
-### Phase 4: Transfer Ownership
-Transfers ownership to multisig and finalizes control:
-- VoterV3 → Multisig
-- GaugeFactoryV2 → VoterV3 (special case: owned by VoterV3)
-- PairFactoryUpgradeable → Multisig
-- BribeFactoryV3 → Multisig
-- VeArtProxyUpgradeable → Multisig
-- VotingEscrow team → Multisig
-- Stage MinterUpgradeable team transfer (multisig must call `acceptTeam()`)
-- Confirms Lithos minter is the Minter contract
+**What it does:**
+- Transfers ProxyAdmin ownership → Timelock (all upgrades require 48hr delay)
+- Grants GOVERNANCE + VOTER_ADMIN roles → Timelock
+- Revokes deployer roles (optional security measure)
 
-## Security Notes
+### 3. RenounceTimelockAdmin.s.sol
+**IRREVERSIBLE**
 
-- **Upgradeables**: All upgradeable contracts are deployed and initialized in the same transaction to prevent takeover
-- **Initial Mint**: 50M LITHOS minted to deployer in Phase 2, must be distributed according to tokenomics
-- **Ownership Transfer**: Phase 4 is critical - ensure multisig is ready to accept roles
-- **Two-Step Transfers**: Some roles (like MinterUpgradeable team) require the multisig to call `acceptTeam()` after Phase 4
+**Run after first distribution succeeds (Oct 16+):**
+```bash
+export CONFIRM_RENOUNCE=true
 
-## Additional Scripts
+forge script script/RenounceTimelockAdmin.s.sol \
+  --rpc-url "$RPC_URL" \
+  --broadcast
+```
 
-### WeeklyDistro.s.sol [TODO: Documentation]
-Handles weekly emission distribution after protocol launch.
+**What it does:**
+- Deployer renounces TIMELOCK_ADMIN_ROLE
+- ALL future role changes require 48hr timelock process
+- No admin backdoor
 
-### Post-Deployment Operations [TODO: Scripts]
-The following operational tasks from DEPLOYMENT.md still need scripts:
-- Token whitelisting for additional tokens beyond LITHOS/WXPL
-- Creating additional trading pairs and gauges
-- Emergency procedures (pause trading, kill/revive gauges)
-- Monitoring and metrics collection
+**Only proceed if:**
+1. First distribution (Oct 16) succeeded
+2. System verified stable for several days
+3. All necessary roles properly configured
+4. Emergency procedures documented
+
+## Security
+
+**Upgradeability:**
+- MinterUpgradeable & VeArtProxyUpgradeable use TransparentProxy pattern
+- ProxyAdmin controls upgrades
