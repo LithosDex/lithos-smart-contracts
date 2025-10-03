@@ -46,6 +46,7 @@ import {
   updatePlasmaDayData,
   findEthPerToken,
   fetchTokenDecimals,
+  ZERO_ADDRESS,
 } from "./helpers";
 
 export function handleMint(event: MintEvent): void {
@@ -102,13 +103,6 @@ export function handleMint(event: MintEvent): void {
   mint.logIndex = event.logIndex;
   mint.amountUSD = amountTotalUSD;
   mint.sender = event.transaction.from;
-
-  // Create or update liquidity position
-  let position = createLiquidityPosition(event.transaction.from, event.address);
-  if (liquidityAmount.gt(ZERO_BD)) {
-    position.liquidityTokenBalance = position.liquidityTokenBalance.plus(liquidityAmount);
-    position.save();
-  }
 
   // Update hourly and daily data
   updatePairHourData(event);
@@ -178,13 +172,6 @@ export function handleBurn(event: BurnEvent): void {
   burn.logIndex = event.logIndex;
   burn.amountUSD = amountTotalUSD;
   burn.sender = event.transaction.from;
-
-  // Update liquidity position
-  let position = createLiquidityPosition(event.params.to, event.address);
-  if (liquidityAmount.gt(ZERO_BD)) {
-    position.liquidityTokenBalance = position.liquidityTokenBalance.minus(liquidityAmount);
-    position.save();
-  }
 
   // Update hourly and daily data
   updatePairHourData(event);
@@ -354,36 +341,28 @@ export function handleTransfer(event: Transfer): void {
     return;
   }
 
-  // Only handle non-zero transfers (skip mint/burn to zero address)
-  if (
-    event.params.from.toHexString() ==
-    "0x0000000000000000000000000000000000000000"
-  ) {
-    return;
-  }
-
-  if (
-    event.params.to.toHexString() ==
-    "0x0000000000000000000000000000000000000000"
-  ) {
-    return;
-  }
-
   // Update liquidity positions
-  let fromPosition = createLiquidityPosition(event.params.from, event.address);
-  let toPosition = createLiquidityPosition(event.params.to, event.address);
-
   let value = convertTokenToDecimal(event.params.amount, BigInt.fromI32(18));
 
-  fromPosition.liquidityTokenBalance = fromPosition.liquidityTokenBalance.minus(
-    value
-  );
-  toPosition.liquidityTokenBalance = toPosition.liquidityTokenBalance.plus(
-    value
-  );
+  let pairAddress = event.address.toHexString();
+  let from = event.params.from.toHexString();
+  let to = event.params.to.toHexString();
 
-  fromPosition.save();
-  toPosition.save();
+  if (from != ZERO_ADDRESS && from != pairAddress) {
+    let fromPosition = createLiquidityPosition(event.params.from, event.address);
+    fromPosition.liquidityTokenBalance = fromPosition.liquidityTokenBalance.minus(
+      value
+    );
+    fromPosition.save();
+  }
+
+  if (to != ZERO_ADDRESS && to != pairAddress) {
+    let toPosition = createLiquidityPosition(event.params.to, event.address);
+    toPosition.liquidityTokenBalance = toPosition.liquidityTokenBalance.plus(
+      value
+    );
+    toPosition.save();
+  }
 }
 
 export function handleFees(event: Fees): void {
