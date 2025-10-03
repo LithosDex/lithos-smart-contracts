@@ -78,10 +78,10 @@ library DeploymentHelpers {
             VeArtProxyUpgradeable.initialize.selector
         );
         TransparentUpgradeableProxy veArtProxy = new TransparentUpgradeableProxy(
-                address(veArtImpl),
-                deployer,  // initialOwner of the ProxyAdmin created internally
-                veArtInitData
-            );
+            address(veArtImpl),
+            deployer, // initialOwner of the ProxyAdmin created internally
+            veArtInitData
+        );
         contracts.veArtProxy = address(veArtProxy);
 
         // 5. Deploy VotingEscrow (not upgradeable)
@@ -121,10 +121,10 @@ library DeploymentHelpers {
             contracts.rewardsDistributor
         );
         TransparentUpgradeableProxy minterProxy = new TransparentUpgradeableProxy(
-                address(minterImpl),
-                deployer,  // initialOwner of the ProxyAdmin created internally
-                minterInitData
-            );
+            address(minterImpl),
+            deployer, // initialOwner of the ProxyAdmin created internally
+            minterInitData
+        );
         contracts.minter = address(minterProxy);
 
         // NOTE: In OZ v5, each proxy creates its own internal ProxyAdmin
@@ -182,6 +182,12 @@ library DeploymentHelpers {
 
         // Set up cross-references
         VotingEscrow(contracts.votingEscrow).setVoter(contracts.voter);
+        BribeFactoryV3(contracts.bribeFactory).setVoter(contracts.voter);
+
+        // Set Minter as depositor for RewardsDistributor
+        RewardsDistributor(contracts.rewardsDistributor).setDepositor(
+            contracts.minter
+        );
 
         // Note: Minter and VeArtProxy already initialized via proxy deployment
     }
@@ -198,7 +204,10 @@ library DeploymentHelpers {
         // 1. Mint initial 50M LITH to deployer
         Lithos(lithos).initialMint(deployer);
 
-        // 2. Activate minter (no additional minting needed)
+        // 2. Set minter role on Lithos token
+        Lithos(lithos).setMinter(minter);
+
+        // 3. Activate minter (no additional minting needed)
         address[] memory claimants = new address[](0);
         uint256[] memory amounts = new uint256[](0);
         MinterUpgradeable(minter)._initialize(claimants, amounts, 0);
