@@ -39,7 +39,9 @@ contract MinterUpgradeable is IMinter, Initializable, OwnableUpgradeable {
 
     event Mint(address indexed sender, uint256 weekly, uint256 circulating_supply, uint256 circulating_emission);
 
-    constructor() {}
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(
         address __voter, // the voting & distribution system

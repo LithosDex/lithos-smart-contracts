@@ -15,10 +15,71 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 
 ### Mainnet (Plasma)
 
-- **PairFactory**: [0x71a870D1c935C2146b87644DF3B5316e8756aE18](https://testnet.plasmascan.to/address/0x71a870D1c935C2146b87644DF3B5316e8756aE18)
-- **RouterV2** (Main): [0xD70962bd7C6B3567a8c893b55a8aBC1E151759f3](https://testnet.plasmascan.to/address/0xD70962bd7C6B3567a8c893b55a8aBC1E151759f3)
-- **GlobalRouter**: [0xC7E4BCC695a9788fd0f952250cA058273BE7F6A3](https://testnet.plasmascan.to/address/0xC7E4BCC695a9788fd0f952250cA058273BE7F6A3)
-- **TradeHelper**: [0xf2e70f25a712B2FEE0B76d5728a620707AF5D42c](https://testnet.plasmascan.to/address/0xf2e70f25a712B2FEE0B76d5728a620707AF5D42c)
+- **PairFactory**: [0x71a870D1c935C2146b87644DF3B5316e8756aE18](https://plasmascan.to/address/0x71a870D1c935C2146b87644DF3B5316e8756aE18)
+- **RouterV2** (Main): [0xD70962bd7C6B3567a8c893b55a8aBC1E151759f3](https://plasmascan.to/address/0xD70962bd7C6B3567a8c893b55a8aBC1E151759f3)
+- **GlobalRouter**: [0xC7E4BCC695a9788fd0f952250cA058273BE7F6A3](https://plasmascan.to/address/0xC7E4BCC695a9788fd0f952250cA058273BE7F6A3)
+- **TradeHelper**: [0xf2e70f25a712B2FEE0B76d5728a620707AF5D42c](https://plasmascan.to/address/0xf2e70f25a712B2FEE0B76d5728a620707AF5D42c)
+
+#### Tokens
+
+- **WXPL**: [0x6100e367285b01f48d07953803a2d8dca5d19873](https://plasmascan.to/address/0x6100e367285b01f48d07953803a2d8dca5d19873)
+- **USDT0**: [0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb](https://plasmascan.to/address/0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb)
+- **USDe**: [0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34](https://plasmascan.to/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34)
+- **USDai**: [0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef](https://plasmascan.to/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef)
+- **WETH**: [0x9895d81bb462a195b4922ed7de0e3acd007c32cb](https://plasmascan.to/address/0x9895d81bb462a195b4922ed7de0e3acd007c32cb)
+- **weETH**: [0xa3d68b74bf0528fdd07263c60d6488749044914b](https://plasmascan.to/address/0xa3d68b74bf0528fdd07263c60d6488749044914b)
+- **xUSD**: [0x6eaf19b2fc24552925db245f9ff613157a7dbb4c](https://plasmascan.to/address/0x6eaf19b2fc24552925db245f9ff613157a7dbb4c)
+- **tcUSDT0**: [0xa9c251f8304b1b3fc2b9e8fcae78d94eff82ac66](https://plasmascan.to/address/0xa9c251f8304b1b3fc2b9e8fcae78d94eff82ac66)
+
+> **Note**: RouterV2 is the primary contract for frontend integration. It handles all liquidity and swap operations.
+
+#### Pairs
+
+1. **WXPL/USDT0** (Volatile)
+   - Pair: [0xa0926801a2abc718822a60d8fa1bc2a51fa09f1e](https://plasmascan.to/address/0xa0926801a2abc718822a60d8fa1bc2a51fa09f1e)
+
+2. **USDe/USDT0** (Stable)
+   - Pair: [0x01b968c1b663c3921da5be3c99ee3c9b89a40b54](https://plasmascan.to/address/0x01b968c1b663c3921da5be3c99ee3c9b89a40b54)
+
+3. **USDe/USDT0** (Volatile)
+   - Pair: [0x08f68c9d37ce08470099dc9a8d43038de9674a8b](https://plasmascan.to/address/0x08f68c9d37ce08470099dc9a8d43038de9674a8b)
+
+4. **USDai/USDT0** (Stable)
+   - Pair: [0x548064df5e0c2d7f9076f75de0a4c6c3d72a5acc](https://plasmascan.to/address/0x548064df5e0c2d7f9076f75de0a4c6c3d72a5acc)
+
+5. **WETH/weETH** (Volatile)
+   - Pair: [0x7483ed877a1423f34dc5e46cf463ea4a0783d165](https://plasmascan.to/address/0x7483ed877a1423f34dc5e46cf463ea4a0783d165)
+
+6. **WXPL/WETH** (Volatile)
+   - Pair: [0x15df11a0b0917956fea2b0d6382e5ba100b312df](https://plasmascan.to/address/0x15df11a0b0917956fea2b0d6382e5ba100b312df)
+
+7. **xUSD/tcUSDT0** (Stable)
+   - Pair: [0x0d6f93edff269656dfac82e8992afa9e719b137e](https://plasmascan.to/address/0x0d6f93edff269656dfac82e8992afa9e719b137e)
+
+#### ve(3,3) Governance (Deploying Oct 3-9, 2025)
+
+**Deployment Schedule:**
+- **Oct 3**: Core contracts deployed (inactive)
+- **Oct 9**: System activated with initial LITH supply
+- **Oct 12**: LITH airdrop and voting begins
+- **Oct 16**: First emissions distributed
+
+**Contracts (Pending Oct 3 Deployment):**
+- **Lithos Token**: [Pending]
+- **VotingEscrow**: [Pending]
+- **VoterV3**: [Pending]
+- **MinterUpgradeable** (proxy): [Pending]
+- **VeArtProxyUpgradeable** (proxy): [Pending]
+- **GaugeFactoryV2**: [Pending]
+- **BribeFactoryV3**: [Pending]
+- **RewardsDistributor**: [Pending]
+- **PermissionsRegistry**: [Pending]
+- **ProxyAdmin**: [Pending]
+- **TimelockController**: [Pending]
+
+**Initial Gauges (Created Oct 9):**
+- LITH/WXPL: [Pending]
+- [Additional gauges TBD]
 
 
 ### Testnet (Plasma)
