@@ -14,6 +14,7 @@ import {Lithos} from "../src/contracts/Lithos.sol";
 import {VotingEscrow} from "../src/contracts/VotingEscrow.sol";
 import {VoterV3} from "../src/contracts/VoterV3.sol";
 import {MinterUpgradeable} from "../src/contracts/MinterUpgradeable.sol";
+import {Bribe} from "../src/contracts/Bribes.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {PermissionsRegistry} from "../src/contracts/PermissionsRegistry.sol";
@@ -155,6 +156,11 @@ contract E2ETest is Test {
         // Act as DEPLOYER for all deployments
         vm.startPrank(DEPLOYER);
 
+        console.log(
+            "Permissions registry team multisig:",
+            PermissionsRegistry(ve33.permissionsRegistry).lithosTeamMultisig()
+        );
+
         // Deploy PairFactory first
         pairFactory = new PairFactory();
         console.log("PairFactory deployed:", address(pairFactory));
@@ -216,6 +222,16 @@ contract E2ETest is Test {
         console.log("Deployer WETH balance:", ERC20(WETH).balanceOf(DEPLOYER));
         console.log("Deployer WXPL balance:", ERC20(WXPL).balanceOf(DEPLOYER));
         console.log("Deployer USDe balance:", ERC20(USDe).balanceOf(DEPLOYER));
+
+        // Transfer initial LITH mint to deployer for liquidity provisioning and incentives
+        uint256 initialLithBalance = lithos.balanceOf(INITIAL_MINT_RECIPIENT);
+        vm.startPrank(INITIAL_MINT_RECIPIENT);
+        lithos.transfer(DEPLOYER, initialLithBalance);
+        vm.stopPrank();
+        console.log(
+            "Deployer LITH balance:",
+            lithos.balanceOf(DEPLOYER)
+        );
     }
 
     // Add LP
@@ -414,8 +430,10 @@ contract E2ETest is Test {
 
         uint256 usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
         uint256 wethAfter = ERC20(WETH).balanceOf(DEPLOYER);
-        console.log("- USDT spent:", usdtBefore - usdtAfter);
-        console.log("- WETH received:", wethAfter - wethBefore);
+        int256 usdtNetSpent = int256(usdtBefore) - int256(usdtAfter);
+        int256 wethNetReceived = int256(wethAfter) - int256(wethBefore);
+        console.log("- USDT spent:", usdtNetSpent);
+        console.log("- WETH received:", wethNetReceived);
         console.log("- Route amounts:", amounts1[0], amounts1[1], amounts1[2]);
 
         // === Swap 2: WETH -> USDT ===
@@ -438,8 +456,10 @@ contract E2ETest is Test {
 
         wethAfter = ERC20(WETH).balanceOf(DEPLOYER);
         usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
-        console.log("- WETH spent:", wethBefore - wethAfter);
-        console.log("- USDT received:", usdtAfter - usdtBefore);
+        int256 wethNetSpent = int256(wethBefore) - int256(wethAfter);
+        int256 usdtNetReceived = int256(usdtAfter) - int256(usdtBefore);
+        console.log("- WETH spent:", wethNetSpent);
+        console.log("- USDT received:", usdtNetReceived);
         console.log("- Route amounts:", amounts2[0], amounts2[1], amounts2[2]);
 
         // === Swap 3: USDT -> USDe ===
@@ -461,8 +481,10 @@ contract E2ETest is Test {
 
         usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
         uint256 usdeAfter = ERC20(USDe).balanceOf(DEPLOYER);
-        console.log("- USDT spent:", usdtBefore - usdtAfter);
-        console.log("- USDe received:", usdeAfter - usdeBefore);
+        int256 usdtNetSpent2 = int256(usdtBefore) - int256(usdtAfter);
+        int256 usdeNetReceived = int256(usdeAfter) - int256(usdeBefore);
+        console.log("- USDT spent:", usdtNetSpent2);
+        console.log("- USDe received:", usdeNetReceived);
         console.log("- Route amounts:", amounts3[0], "->", amounts3[1]);
 
         // === Swap 4: USDe -> USDT ===
@@ -484,8 +506,10 @@ contract E2ETest is Test {
 
         usdeAfter = ERC20(USDe).balanceOf(DEPLOYER);
         usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
-        console.log("- USDe spent:", usdeBefore - usdeAfter);
-        console.log("- USDT received:", usdtAfter - usdtBefore);
+        int256 usdeNetSpent = int256(usdeBefore) - int256(usdeAfter);
+        int256 usdtNetReceived2 = int256(usdtAfter) - int256(usdtBefore);
+        console.log("- USDe spent:", usdeNetSpent);
+        console.log("- USDT received:", usdtNetReceived2);
         console.log("- Route amounts:", amounts4[0], "->", amounts4[1]);
 
         // Note: WXPL/USDT pool gets 0 swap volume intentionally (testing edge case)
@@ -540,9 +564,17 @@ contract E2ETest is Test {
         uint256 wethAfter = ERC20(WETH).balanceOf(LP_UNSTAKED);
         uint256 usdeAfter = ERC20(USDe).balanceOf(LP_UNSTAKED);
 
-        uint256 usdtReceived = usdtAfter - usdtBefore;
-        uint256 wethReceived = wethAfter - wethBefore;
-        uint256 usdeReceived = usdeAfter - usdeBefore;
+        int256 usdtDelta = int256(usdtAfter) - int256(usdtBefore);
+        int256 wethDelta = int256(wethAfter) - int256(wethBefore);
+        int256 usdeDelta = int256(usdeAfter) - int256(usdeBefore);
+
+        uint256 usdtReceived = usdtDelta > 0 ? uint256(usdtDelta) : 0;
+        uint256 wethReceived = wethDelta > 0 ? uint256(wethDelta) : 0;
+        uint256 usdeReceived = usdeDelta > 0 ? uint256(usdeDelta) : 0;
+
+        if (usdtDelta <= 0 && wethDelta <= 0 && usdeDelta <= 0) {
+            console.log("  Warning: fee claim did not increase balances");
+        }
 
         console.log("\nFees claimed by LP_UNSTAKED:");
         if (usdtReceived > 0) {
@@ -772,10 +804,8 @@ contract E2ETest is Test {
         // Check LITH balance after lock
         uint256 lithBalanceAfter = lithos.balanceOf(VOTER);
         console.log("LITH balance after lock:", lithBalanceAfter);
-        console.log(
-            "LITH tokens locked:",
-            lithBalanceBefore - lithBalanceAfter
-        );
+        int256 lithLocked = int256(lithBalanceBefore) - int256(lithBalanceAfter);
+        console.log("LITH tokens locked:", lithLocked);
 
         // Check voting power
         uint256 votingPower = votingEscrow.balanceOfNFT(voterTokenId);
@@ -847,14 +877,26 @@ contract E2ETest is Test {
         // Pool tokens: WXPL, WETH (automatically added as reward tokens)
         // Additional reward tokens: LITH (must be added manually)
 
-        (
-            wxplWethGaugeAddress,
-            wxplWethInternalBribe,
-            wxplWethExternalBribe
-        ) = voter.createGauge(wxplWethPair, 0);
-        console.log("Gauge created for WXPL/WETH pair:", wxplWethGaugeAddress);
-        console.log("Internal bribe address:", wxplWethInternalBribe);
-        console.log("External bribe address:", wxplWethExternalBribe);
+        address existingWxplWethGauge = voter.gauges(wxplWethPair);
+        if (existingWxplWethGauge != address(0)) {
+            wxplWethGaugeAddress = existingWxplWethGauge;
+            wxplWethInternalBribe = voter.internal_bribes(existingWxplWethGauge);
+            wxplWethExternalBribe = voter.external_bribes(existingWxplWethGauge);
+            console.log("Gauge already exists for WXPL/WETH pair:", wxplWethGaugeAddress);
+        } else {
+            (
+                wxplWethGaugeAddress,
+                wxplWethInternalBribe,
+                wxplWethExternalBribe
+            ) = voter.createGauge(wxplWethPair, 0);
+            console.log("Gauge created for WXPL/WETH pair:", wxplWethGaugeAddress);
+            console.log("Internal bribe address:", wxplWethInternalBribe);
+            console.log("External bribe address:", wxplWethExternalBribe);
+        }
+        console.log(
+            "WXPL/WETH bribe owner:",
+            Bribe(wxplWethExternalBribe).owner()
+        );
 
         // Add LITH as reward token
         (bool addLithSuccessWxplWeth, ) = wxplWethExternalBribe.call(
@@ -867,14 +909,26 @@ contract E2ETest is Test {
         // Pool tokens: WXPL, LITH (automatically added as reward tokens)
         // Additional reward tokens: USDT (must be added manually)
 
-        (
-            wxplLithGaugeAddress,
-            wxplLithInternalBribe,
-            wxplLithExternalBribe
-        ) = voter.createGauge(wxplLithPair, 0);
-        console.log("Gauge created for WXPL/LITH pair:", wxplLithGaugeAddress);
-        console.log("Internal bribe address:", wxplLithInternalBribe);
-        console.log("External bribe address:", wxplLithExternalBribe);
+        address existingWxplLithGauge = voter.gauges(wxplLithPair);
+        if (existingWxplLithGauge != address(0)) {
+            wxplLithGaugeAddress = existingWxplLithGauge;
+            wxplLithInternalBribe = voter.internal_bribes(existingWxplLithGauge);
+            wxplLithExternalBribe = voter.external_bribes(existingWxplLithGauge);
+            console.log("Gauge already exists for WXPL/LITH pair:", wxplLithGaugeAddress);
+        } else {
+            (
+                wxplLithGaugeAddress,
+                wxplLithInternalBribe,
+                wxplLithExternalBribe
+            ) = voter.createGauge(wxplLithPair, 0);
+            console.log("Gauge created for WXPL/LITH pair:", wxplLithGaugeAddress);
+            console.log("Internal bribe address:", wxplLithInternalBribe);
+            console.log("External bribe address:", wxplLithExternalBribe);
+        }
+        console.log(
+            "WXPL/LITH bribe owner:",
+            Bribe(wxplLithExternalBribe).owner()
+        );
 
         (bool addUsdtSuccess, ) = wxplLithExternalBribe.call(
             abi.encodeWithSignature("addRewardToken(address)", USDT)
@@ -886,27 +940,51 @@ contract E2ETest is Test {
         // Pool tokens: WXPL, USDT (automatically added as reward tokens)
         // Additional reward tokens: none
 
-        (
-            wxplUsdtGaugeAddress,
-            wxplUsdtInternalBribe,
-            wxplUsdtExternalBribe
-        ) = voter.createGauge(wxplUsdtPair, 0);
-        console.log("Gauge created for WXPL/USDT pair:", wxplUsdtGaugeAddress);
-        console.log("Internal bribe address:", wxplUsdtInternalBribe);
-        console.log("External bribe address:", wxplUsdtExternalBribe);
+        address existingWxplUsdtGauge = voter.gauges(wxplUsdtPair);
+        if (existingWxplUsdtGauge != address(0)) {
+            wxplUsdtGaugeAddress = existingWxplUsdtGauge;
+            wxplUsdtInternalBribe = voter.internal_bribes(existingWxplUsdtGauge);
+            wxplUsdtExternalBribe = voter.external_bribes(existingWxplUsdtGauge);
+            console.log("Gauge already exists for WXPL/USDT pair:", wxplUsdtGaugeAddress);
+        } else {
+            (
+                wxplUsdtGaugeAddress,
+                wxplUsdtInternalBribe,
+                wxplUsdtExternalBribe
+            ) = voter.createGauge(wxplUsdtPair, 0);
+            console.log("Gauge created for WXPL/USDT pair:", wxplUsdtGaugeAddress);
+            console.log("Internal bribe address:", wxplUsdtInternalBribe);
+            console.log("External bribe address:", wxplUsdtExternalBribe);
+        }
+        console.log(
+            "WXPL/USDT bribe owner:",
+            Bribe(wxplUsdtExternalBribe).owner()
+        );
 
         // ========== USDT/USDe GAUGE ==========
         // Pool tokens: USDT, USDe (automatically added as reward tokens)
         // Additional reward tokens: LITH (must be added manually)
 
-        (
-            usdtUsdeGaugeAddress,
-            usdtUsdeInternalBribe,
-            usdtUsdeExternalBribe
-        ) = voter.createGauge(usdtUsdePair, 0);
-        console.log("Gauge created for USDT/USDE pair:", usdtUsdeGaugeAddress);
-        console.log("Internal bribe address:", usdtUsdeInternalBribe);
-        console.log("External bribe address:", usdtUsdeExternalBribe);
+        address existingUsdtUsdeGauge = voter.gauges(usdtUsdePair);
+        if (existingUsdtUsdeGauge != address(0)) {
+            usdtUsdeGaugeAddress = existingUsdtUsdeGauge;
+            usdtUsdeInternalBribe = voter.internal_bribes(existingUsdtUsdeGauge);
+            usdtUsdeExternalBribe = voter.external_bribes(existingUsdtUsdeGauge);
+            console.log("Gauge already exists for USDT/USDe pair:", usdtUsdeGaugeAddress);
+        } else {
+            (
+                usdtUsdeGaugeAddress,
+                usdtUsdeInternalBribe,
+                usdtUsdeExternalBribe
+            ) = voter.createGauge(usdtUsdePair, 0);
+            console.log("Gauge created for USDT/USDE pair:", usdtUsdeGaugeAddress);
+            console.log("Internal bribe address:", usdtUsdeInternalBribe);
+            console.log("External bribe address:", usdtUsdeExternalBribe);
+        }
+        console.log(
+            "USDT/USDe bribe owner:",
+            Bribe(usdtUsdeExternalBribe).owner()
+        );
 
         // Add LITH as reward token
         (bool addLithSuccessUsdtUsde, ) = usdtUsdeExternalBribe.call(
