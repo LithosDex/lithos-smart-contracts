@@ -82,9 +82,7 @@ contract PermissionsRegistryTest is Test {
         assertTrue(registry.hasRole(bytes(GOVERNANCE), user2));
         assertTrue(registry.hasRole(bytes(VOTER_ADMIN), user3));
 
-        address[] memory governanceAddresses = registry.roleToAddresses(
-            GOVERNANCE
-        );
+        address[] memory governanceAddresses = registry.roleToAddresses(GOVERNANCE);
         assertEq(governanceAddresses.length, 2);
 
         vm.stopPrank();
@@ -125,9 +123,7 @@ contract PermissionsRegistryTest is Test {
         assertTrue(registry.hasRole(bytes(GOVERNANCE), user2));
         assertTrue(registry.hasRole(bytes(VOTER_ADMIN), user1));
 
-        address[] memory governanceAddresses = registry.roleToAddresses(
-            GOVERNANCE
-        );
+        address[] memory governanceAddresses = registry.roleToAddresses(GOVERNANCE);
         assertEq(governanceAddresses.length, 1);
         assertEq(governanceAddresses[0], user2);
 
@@ -234,9 +230,7 @@ contract PermissionsRegistryTest is Test {
         assertTrue(registry.hasRole(bytes(GAUGE_ADMIN), user2));
         assertTrue(registry.hasRole(bytes(BRIBE_ADMIN), user3));
 
-        address[] memory governanceAddresses = registry.roleToAddresses(
-            GOVERNANCE
-        );
+        address[] memory governanceAddresses = registry.roleToAddresses(GOVERNANCE);
         assertEq(governanceAddresses.length, 2);
 
         vm.stopPrank();
@@ -404,9 +398,7 @@ contract PermissionsRegistryTest is Test {
 
         string[] memory roles = registry.rolesToString();
         for (uint256 i = 0; i < roles.length; i++) {
-            assertTrue(
-                keccak256(bytes(roles[i])) != keccak256(bytes(NEW_ROLE))
-            );
+            assertTrue(keccak256(bytes(roles[i])) != keccak256(bytes(NEW_ROLE)));
         }
 
         vm.stopPrank();
@@ -429,9 +421,7 @@ contract PermissionsRegistryTest is Test {
         uint256 rolesLength = registry.rolesLength();
         assertEq(rolesLength, 6);
 
-        address[] memory governanceAddresses = registry.roleToAddresses(
-            GOVERNANCE
-        );
+        address[] memory governanceAddresses = registry.roleToAddresses(GOVERNANCE);
         assertEq(governanceAddresses.length, 1);
         assertEq(governanceAddresses[0], user1);
 

@@ -9,21 +9,13 @@ contract VerifyContractsScript is Script {
     function run() external {
         string memory env = vm.envString("DEPLOY_ENV");
 
-        string memory statePath = string.concat(
-            "deployments/",
-            env,
-            "/state.json"
-        );
+        string memory statePath = string.concat("deployments/", env, "/state.json");
 
         // Load deployed contract addresses
-        require(
-            vm.exists(statePath),
-            "State file not found. Deploy contracts first!"
-        );
+        require(vm.exists(statePath), "State file not found. Deploy contracts first!");
         _loadState(statePath);
 
-        string memory verifierUrl = keccak256(abi.encodePacked(env)) ==
-            keccak256(abi.encodePacked("testnet"))
+        string memory verifierUrl = keccak256(abi.encodePacked(env)) == keccak256(abi.encodePacked("testnet"))
             ? "https://api.routescan.io/v2/network/testnet/evm/9746_5/etherscan"
             : "https://api.routescan.io/v2/network/mainnet/evm/9746/etherscan";
 
@@ -229,16 +221,15 @@ contract VerifyContractsScript is Script {
                 " --etherscan-api-key 'verifyContract'",
                 " --num-of-optimizations 200",
                 " --compiler-version v0.8.29+commit.e719f8ab"
-                // Note: Constructor args for Timelock are complex, will need manual verification
             )
         );
+        // Note: Constructor args for Timelock are complex, will need manual verification
+
         console2.log("");
 
         console2.log("=== Notes ===");
         console2.log("- Copy and paste each command individually");
-        console2.log(
-            "- Some contracts (like proxies and Timelock) may need manual constructor args"
-        );
+        console2.log("- Some contracts (like proxies and Timelock) may need manual constructor args");
         console2.log("- Check the actual deployer address for proxy contracts");
         console2.log("- Ensure you're using the correct compiler version");
     }
@@ -249,24 +240,15 @@ contract VerifyContractsScript is Script {
         // Load all deployed contract addresses
         deployed["Lithos"] = vm.parseJsonAddress(json, ".Lithos");
         deployed["VeArtProxy"] = vm.parseJsonAddress(json, ".VeArtProxy");
-        deployed["VeArtProxyImpl"] = vm.parseJsonAddress(
-            json,
-            ".VeArtProxyImpl"
-        );
+        deployed["VeArtProxyImpl"] = vm.parseJsonAddress(json, ".VeArtProxyImpl");
         deployed["Minter"] = vm.parseJsonAddress(json, ".Minter");
         deployed["MinterImpl"] = vm.parseJsonAddress(json, ".MinterImpl");
         deployed["VotingEscrow"] = vm.parseJsonAddress(json, ".VotingEscrow");
         deployed["GaugeFactory"] = vm.parseJsonAddress(json, ".GaugeFactory");
-        deployed["PermissionsRegistry"] = vm.parseJsonAddress(
-            json,
-            ".PermissionsRegistry"
-        );
+        deployed["PermissionsRegistry"] = vm.parseJsonAddress(json, ".PermissionsRegistry");
         deployed["BribeFactory"] = vm.parseJsonAddress(json, ".BribeFactory");
         deployed["Voter"] = vm.parseJsonAddress(json, ".Voter");
-        deployed["RewardsDistributor"] = vm.parseJsonAddress(
-            json,
-            ".RewardsDistributor"
-        );
+        deployed["RewardsDistributor"] = vm.parseJsonAddress(json, ".RewardsDistributor");
         deployed["Timelock"] = vm.parseJsonAddress(json, ".Timelock");
     }
 }
