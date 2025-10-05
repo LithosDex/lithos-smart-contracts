@@ -14,11 +14,7 @@ contract WeeklyDistroScript is Script {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerKey);
 
-        string memory statePath = string.concat(
-            "deployments/",
-            env,
-            "/state.json"
-        );
+        string memory statePath = string.concat("deployments/", env, "/state.json");
 
         // Load deployed addresses
         _loadState(statePath);
@@ -29,9 +25,7 @@ contract WeeklyDistroScript is Script {
         console2.log("Timestamp:", block.timestamp);
 
         VoterV3 voter = VoterV3(deployed["VoterV3"]);
-        MinterUpgradeable minter = MinterUpgradeable(
-            deployed["MinterUpgradeable"]
-        );
+        MinterUpgradeable minter = MinterUpgradeable(deployed["MinterUpgradeable"]);
 
         vm.startBroadcast(deployerKey);
 
@@ -41,20 +35,13 @@ contract WeeklyDistroScript is Script {
             console2.log("New emission period available!");
 
             // Step 2: Distribute emissions to all gauges (this calls update_period internally)
-            console2.log(
-                "\n--- Step 2: Distributing emissions to all gauges ---"
-            );
-            console2.log(
-                "Calling distributeAll() which triggers update_period() and distributes to gauges..."
-            );
+            console2.log("\n--- Step 2: Distributing emissions to all gauges ---");
+            console2.log("Calling distributeAll() which triggers update_period() and distributes to gauges...");
             voter.distributeAll();
             console2.log("Emissions distributed successfully!");
         } else {
             console2.log("Not time for new emission period yet.");
-            console2.log(
-                "Next period starts at:",
-                minter.active_period() + 604800
-            );
+            console2.log("Next period starts at:", minter.active_period() + 604800);
 
             // Still try to distribute in case there are pending distributions
             console2.log("\n--- Checking for pending distributions ---");
@@ -93,11 +80,7 @@ contract WeeklyDistroScript is Script {
                 }
             }
 
-            console2.log(
-                "Distributing fees for",
-                activeGaugeCount,
-                "active gauges..."
-            );
+            console2.log("Distributing fees for", activeGaugeCount, "active gauges...");
             voter.distributeFees(activeGauges);
             console2.log("Fees distributed successfully!");
         } else {
@@ -109,11 +92,7 @@ contract WeeklyDistroScript is Script {
         // Summary
         console2.log("\n=== Weekly Maintenance Complete ===");
         console2.log("Weekly emissions:", minter.weekly() / 1e18, "LITHOS");
-        console2.log(
-            "Current circulating supply:",
-            minter.circulating_supply() / 1e18,
-            "LITHOS"
-        );
+        console2.log("Current circulating supply:", minter.circulating_supply() / 1e18, "LITHOS");
         console2.log("Active period:", minter.active_period());
         console2.log("Next period:", minter.active_period() + 604800);
 
@@ -124,52 +103,26 @@ contract WeeklyDistroScript is Script {
     }
 
     function _loadState(string memory path) private {
-        require(
-            vm.exists(path),
-            "State file not found. Run DeployAndInit.s.sol first!"
-        );
+        require(vm.exists(path), "State file not found. Run DeployAndInit.s.sol first!");
 
         string memory json = vm.readFile(path);
 
         deployed["Lithos"] = vm.parseJsonAddress(json, ".Lithos");
-        deployed["VeArtProxyUpgradeable"] = vm.parseJsonAddress(
-            json,
-            ".VeArtProxyUpgradeable"
-        );
+        deployed["VeArtProxyUpgradeable"] = vm.parseJsonAddress(json, ".VeArtProxyUpgradeable");
         deployed["VotingEscrow"] = vm.parseJsonAddress(json, ".VotingEscrow");
-        deployed["PairFactoryUpgradeable"] = vm.parseJsonAddress(
-            json,
-            ".PairFactoryUpgradeable"
-        );
+        deployed["PairFactoryUpgradeable"] = vm.parseJsonAddress(json, ".PairFactoryUpgradeable");
         deployed["TradeHelper"] = vm.parseJsonAddress(json, ".TradeHelper");
         deployed["GlobalRouter"] = vm.parseJsonAddress(json, ".GlobalRouter");
         deployed["RouterV2"] = vm.parseJsonAddress(json, ".RouterV2");
-        deployed["GaugeFactoryV2"] = vm.parseJsonAddress(
-            json,
-            ".GaugeFactoryV2"
-        );
-        deployed["PermissionsRegistry"] = vm.parseJsonAddress(
-            json,
-            ".PermissionsRegistry"
-        );
-        deployed["BribeFactoryV3"] = vm.parseJsonAddress(
-            json,
-            ".BribeFactoryV3"
-        );
+        deployed["GaugeFactoryV2"] = vm.parseJsonAddress(json, ".GaugeFactoryV2");
+        deployed["PermissionsRegistry"] = vm.parseJsonAddress(json, ".PermissionsRegistry");
+        deployed["BribeFactoryV3"] = vm.parseJsonAddress(json, ".BribeFactoryV3");
         deployed["VoterV3"] = vm.parseJsonAddress(json, ".VoterV3");
-        deployed["RewardsDistributor"] = vm.parseJsonAddress(
-            json,
-            ".RewardsDistributor"
-        );
-        deployed["MinterUpgradeable"] = vm.parseJsonAddress(
-            json,
-            ".MinterUpgradeable"
-        );
+        deployed["RewardsDistributor"] = vm.parseJsonAddress(json, ".RewardsDistributor");
+        deployed["MinterUpgradeable"] = vm.parseJsonAddress(json, ".MinterUpgradeable");
 
         // Optional: Load gauge addresses if they exist
-        try vm.parseJsonAddress(json, ".LITHOS_WXPL_Gauge") returns (
-            address gauge
-        ) {
+        try vm.parseJsonAddress(json, ".LITHOS_WXPL_Gauge") returns (address gauge) {
             deployed["LITHOS_WXPL_Gauge"] = gauge;
         } catch {}
     }
