@@ -44,12 +44,15 @@ library DeploymentHelpers {
 
     /// @notice Deploy all ve33 contracts with proxy pattern
     /// @param deployer Address of the deployer (gets initial roles)
+    /// @param initialMintRecipient Address to receive initial 50M LITH mint
     /// @return contracts Struct containing all deployed contract addresses
     function deployVe33System(
-        address deployer
+        address deployer,
+        address initialMintRecipient
     ) internal returns (Ve33Contracts memory contracts) {
         // 1. Deploy TimelockController (48 hour delay for governance actions)
         address[] memory proposers = new address[](1);
+
         proposers[0] = deployer; // Deployer can propose initially
 
         address[] memory executors = new address[](1);
@@ -58,7 +61,7 @@ library DeploymentHelpers {
         // Setting deployer as admin for initial flexibility
         // Should renounce after first distribution succeeds (Oct 16+)
         TimelockController timelock = new TimelockController(
-            48 hours,
+            30 minutes, // 30 minutes initally
             proposers,
             executors,
             deployer
@@ -69,8 +72,8 @@ library DeploymentHelpers {
         Lithos lithos = new Lithos();
         contracts.lithos = address(lithos);
 
-        // Mint initial 50M LITH to deployer immediately
-        Lithos(lithos).initialMint(deployer);
+        // Mint initial 50M LITH to specified recipient immediately
+        Lithos(lithos).initialMint(initialMintRecipient);
 
         // 3. Deploy VeArtProxy with TransparentUpgradeableProxy
         // NOTE: OZ v5 creates ProxyAdmin internally, deployer becomes its owner
@@ -81,10 +84,10 @@ library DeploymentHelpers {
             VeArtProxyUpgradeable.initialize.selector
         );
         TransparentUpgradeableProxy veArtProxy = new TransparentUpgradeableProxy(
-            address(veArtImpl),
-            deployer, // initialOwner of the ProxyAdmin created internally
-            veArtInitData
-        );
+                address(veArtImpl),
+                deployer, // initialOwner of the ProxyAdmin created internally
+                veArtInitData
+            );
         contracts.veArtProxy = address(veArtProxy);
 
         // 5. Deploy VotingEscrow (not upgradeable)
@@ -124,10 +127,10 @@ library DeploymentHelpers {
             contracts.rewardsDistributor
         );
         TransparentUpgradeableProxy minterProxy = new TransparentUpgradeableProxy(
-            address(minterImpl),
-            deployer, // initialOwner of the ProxyAdmin created internally
-            minterInitData
-        );
+                address(minterImpl),
+                deployer, // initialOwner of the ProxyAdmin created internally
+                minterInitData
+            );
         contracts.minter = address(minterProxy);
 
         // NOTE: In OZ v5, each proxy creates its own internal ProxyAdmin
@@ -136,8 +139,6 @@ library DeploymentHelpers {
         // Or store the ProxyAdmin address separately during deployment
         // For now, we leave this empty and handle it in upgrade scripts
         contracts.proxyAdmin = address(0);
-
-        return contracts;
     }
 
     /// @notice Initialize non-proxy contracts and setup permissions
@@ -155,12 +156,12 @@ library DeploymentHelpers {
         GaugeFactoryV2(contracts.gaugeFactory).initialize(
             contracts.permissionsRegistry
         );
-        BribeFactoryV3(contracts.bribeFactory).initialize(
-            deployer,
-            contracts.permissionsRegistry
-        );
+        BribeFactoryV3(contracts.bribeFactory).initialize( // need to check with rahul on bribefactory Initialisation
+                deployer,
+                contracts.permissionsRegistry
+            );
 
-        // Initialize Voter
+        // Initialize Voter // contract initilaisation not system.
         VoterV3(contracts.voter).initialize(
             contracts.votingEscrow,
             pairFactory,

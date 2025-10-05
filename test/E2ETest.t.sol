@@ -27,6 +27,8 @@ contract E2ETest is Test {
 
     // deployer
     address constant DEPLOYER = 0xa9040c08B0FA3D5cf8B1534A0686261Da948F82a;
+    address constant INITIAL_MINT_RECIPIENT =
+        0xe98c1e28805A06F23B41cf6d356dFC7709DB9385; // Inital mint recipient
 
     // Test accounts
     address constant LP = address(2);
@@ -605,7 +607,10 @@ contract E2ETest is Test {
         vm.startPrank(DEPLOYER);
 
         // Deploy all ve33 contracts with proxy pattern
-        ve33 = DeploymentHelpers.deployVe33System(DEPLOYER);
+        ve33 = DeploymentHelpers.deployVe33System(
+            DEPLOYER,
+            INITIAL_MINT_RECIPIENT
+        );
 
         console.log("\n--- ve33 Contracts Deployed ---");
         console.log("Lithos:", ve33.lithos);

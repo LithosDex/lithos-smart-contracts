@@ -61,7 +61,13 @@ contract DeployAndInitVe33Script is Script {
             console2.log("\n=== PHASE 1: Deploying ve33 System (Oct 3) ===");
 
             // Deploy ve33 system using shared library
-            ve33 = DeploymentHelpers.deployVe33System(deployer);
+            address initialMintRecipient = vm.envAddress(
+                "INITIAL_MINT_RECIPIENT"
+            );
+            ve33 = DeploymentHelpers.deployVe33System(
+                deployer,
+                initialMintRecipient
+            );
 
             // Prepare whitelist tokens
             address[] memory tokens = new address[](2);
