@@ -367,6 +367,10 @@ export function handleTransfer(event: Transfer): void {
 
 export function handleFees(event: Fees): void {
   let pair = Pair.load(event.address.toHexString())!;
+  let factory = Factory.load("1");
+  if (factory === null) {
+    return;
+  }
   let token0 = Token.load(pair.token0)!;
   let token1 = Token.load(pair.token1)!;
 
@@ -374,17 +378,58 @@ export function handleFees(event: Fees): void {
   let amount0 = convertTokenToDecimal(event.params.amount0, token0.decimals);
   let amount1 = convertTokenToDecimal(event.params.amount1, token1.decimals);
 
-  // Update pair fees
-  pair.feesToken0 = pair.feesToken0.plus(amount0);
-  pair.feesToken1 = pair.feesToken1.plus(amount1);
+  let denominator = BigDecimal.fromString("10000");
+  let referralRate = factory.maxReferralFee.toBigDecimal().div(denominator);
+  let stakingRate = factory.stakingNFTFee.toBigDecimal().div(denominator);
 
-  // Calculate USD value
+  let referralAmount0 = amount0.times(referralRate);
+  let referralAmount1 = amount1.times(referralRate);
+
+  let afterReferral0 = amount0.minus(referralAmount0);
+  let afterReferral1 = amount1.minus(referralAmount1);
+  if (afterReferral0.lt(ZERO_BD)) {
+    afterReferral0 = ZERO_BD;
+  }
+  if (afterReferral1.lt(ZERO_BD)) {
+    afterReferral1 = ZERO_BD;
+  }
+
+  let stakingAmount0 = afterReferral0.times(stakingRate);
+  let stakingAmount1 = afterReferral1.times(stakingRate);
+
+  let lpAmount0 = afterReferral0.minus(stakingAmount0);
+  let lpAmount1 = afterReferral1.minus(stakingAmount1);
+  if (lpAmount0.lt(ZERO_BD)) {
+    lpAmount0 = ZERO_BD;
+  }
+  if (lpAmount1.lt(ZERO_BD)) {
+    lpAmount1 = ZERO_BD;
+  }
+
+  // Update pair fees for each bucket
+  pair.feesToken0 = pair.feesToken0.plus(lpAmount0);
+  pair.feesToken1 = pair.feesToken1.plus(lpAmount1);
+  pair.referralFeesToken0 = pair.referralFeesToken0.plus(referralAmount0);
+  pair.referralFeesToken1 = pair.referralFeesToken1.plus(referralAmount1);
+  pair.stakingFeesToken0 = pair.stakingFeesToken0.plus(stakingAmount0);
+  pair.stakingFeesToken1 = pair.stakingFeesToken1.plus(stakingAmount1);
+
+  // Calculate USD value for each bucket
   let bundle = Bundle.load("1")!;
-  let feeUSD = amount0
-    .times(token0.derivedETH.times(bundle.ethPrice))
-    .plus(amount1.times(token1.derivedETH.times(bundle.ethPrice)));
+  let price0USD = token0.derivedETH.times(bundle.ethPrice);
+  let price1USD = token1.derivedETH.times(bundle.ethPrice);
 
-  pair.feesUSD = pair.feesUSD.plus(feeUSD);
+  let lpUSD = lpAmount0.times(price0USD).plus(lpAmount1.times(price1USD));
+  let referralUSD = referralAmount0
+    .times(price0USD)
+    .plus(referralAmount1.times(price1USD));
+  let stakingUSD = stakingAmount0
+    .times(price0USD)
+    .plus(stakingAmount1.times(price1USD));
+
+  pair.feesUSD = pair.feesUSD.plus(lpUSD);
+  pair.referralFeesUSD = pair.referralFeesUSD.plus(referralUSD);
+  pair.stakingFeesUSD = pair.stakingFeesUSD.plus(stakingUSD);
 
   pair.save();
 }

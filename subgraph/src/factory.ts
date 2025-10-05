@@ -2,15 +2,8 @@ import { PairCreated } from "../generated/PairFactory/PairFactory";
 import { Factory, Pair, Token, Bundle } from "../generated/schema";
 import { Pair as PairTemplate } from "../generated/templates";
 import { ERC20 } from "../generated/PairFactory/ERC20";
-import { Pair as PairContract } from "../generated/PairFactory/Pair";
 import { BigDecimal, BigInt, Address } from "@graphprotocol/graph-ts";
-import {
-  ZERO_BD,
-  ZERO_BI,
-  ONE_BI,
-  createUser,
-  createLiquidityPosition,
-} from "./helpers";
+import { ZERO_BD, ZERO_BI } from "./helpers";
 
 export function handlePairCreated(event: PairCreated): void {
   // Load factory
@@ -24,10 +17,10 @@ export function handlePairCreated(event: PairCreated): void {
     factory.totalLiquidityETH = ZERO_BD;
     factory.txCount = ZERO_BI;
 
-    // Initialize fee settings (these should be fetched from contract)
+    // Seed with current mainnet configuration
     factory.stableFee = BigInt.fromI32(4); // 0.04%
     factory.volatileFee = BigInt.fromI32(18); // 0.18%
-    factory.stakingNFTFee = BigInt.fromI32(3000); // 30%
+    factory.stakingNFTFee = BigInt.fromI32(0); // staking disabled
     factory.maxReferralFee = BigInt.fromI32(1200); // 12%
 
     factory.pauser = Address.fromString(
@@ -36,7 +29,9 @@ export function handlePairCreated(event: PairCreated): void {
     factory.feeManager = Address.fromString(
       "0x0000000000000000000000000000000000000000"
     );
-    factory.dibs = null;
+    factory.dibs = Address.fromString(
+      "0xe98c1e28805A06F23B41cf6d356dFC7709DB9385"
+    );
     factory.stakingFeeHandler = null;
     factory.isPaused = false;
 
@@ -48,6 +43,14 @@ export function handlePairCreated(event: PairCreated): void {
       bundle.save();
     }
   }
+
+  // Hardcoded mainnet configuration
+  factory.stableFee = BigInt.fromI32(4); // 0.04%
+  factory.volatileFee = BigInt.fromI32(18); // 0.18%
+  factory.stakingNFTFee = BigInt.fromI32(0); // staking disabled
+  factory.maxReferralFee = BigInt.fromI32(1200); // 12%
+  factory.dibs = Address.fromString("0xe98c1e28805A06F23B41cf6d356dFC7709DB9385");
+  factory.stakingFeeHandler = null; // no staking handler on mainnet
 
   factory.pairCount = factory.pairCount + 1;
   factory.save();
@@ -143,6 +146,12 @@ export function handlePairCreated(event: PairCreated): void {
   pair.feesToken0 = ZERO_BD;
   pair.feesToken1 = ZERO_BD;
   pair.feesUSD = ZERO_BD;
+  pair.referralFeesToken0 = ZERO_BD;
+  pair.referralFeesToken1 = ZERO_BD;
+  pair.referralFeesUSD = ZERO_BD;
+  pair.stakingFeesToken0 = ZERO_BD;
+  pair.stakingFeesToken1 = ZERO_BD;
+  pair.stakingFeesUSD = ZERO_BD;
 
   pair.index0 = ZERO_BD;
   pair.index1 = ZERO_BD;

@@ -111,6 +111,12 @@ type Pair @entity {
   feesToken0: BigDecimal!
   feesToken1: BigDecimal!
   feesUSD: BigDecimal!
+  referralFeesToken0: BigDecimal!
+  referralFeesToken1: BigDecimal!
+  referralFeesUSD: BigDecimal!
+  stakingFeesToken0: BigDecimal!
+  stakingFeesToken1: BigDecimal!
+  stakingFeesUSD: BigDecimal!
 
   # Fee indexes for tracking
   index0: BigDecimal!

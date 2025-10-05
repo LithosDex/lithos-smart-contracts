@@ -717,6 +717,84 @@ export class Pair extends Entity {
     this.set("feesUSD", Value.fromBigDecimal(value));
   }
 
+  get referralFeesToken0(): BigDecimal {
+    let value = this.get("referralFeesToken0");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set referralFeesToken0(value: BigDecimal) {
+    this.set("referralFeesToken0", Value.fromBigDecimal(value));
+  }
+
+  get referralFeesToken1(): BigDecimal {
+    let value = this.get("referralFeesToken1");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set referralFeesToken1(value: BigDecimal) {
+    this.set("referralFeesToken1", Value.fromBigDecimal(value));
+  }
+
+  get referralFeesUSD(): BigDecimal {
+    let value = this.get("referralFeesUSD");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set referralFeesUSD(value: BigDecimal) {
+    this.set("referralFeesUSD", Value.fromBigDecimal(value));
+  }
+
+  get stakingFeesToken0(): BigDecimal {
+    let value = this.get("stakingFeesToken0");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set stakingFeesToken0(value: BigDecimal) {
+    this.set("stakingFeesToken0", Value.fromBigDecimal(value));
+  }
+
+  get stakingFeesToken1(): BigDecimal {
+    let value = this.get("stakingFeesToken1");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set stakingFeesToken1(value: BigDecimal) {
+    this.set("stakingFeesToken1", Value.fromBigDecimal(value));
+  }
+
+  get stakingFeesUSD(): BigDecimal {
+    let value = this.get("stakingFeesUSD");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set stakingFeesUSD(value: BigDecimal) {
+    this.set("stakingFeesUSD", Value.fromBigDecimal(value));
+  }
+
   get index0(): BigDecimal {
     let value = this.get("index0");
     if (!value || value.kind == ValueKind.NULL) {
