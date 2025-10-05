@@ -6,6 +6,7 @@ import {VotingEscrow} from "../src/contracts/VotingEscrow.sol";
 import {Lithos} from "../src/contracts/Lithos.sol";
 import {VeArtProxyUpgradeable} from "../src/contracts/VeArtProxyUpgradeable.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract VotingEscrowTest is Test, IERC721Receiver {
     VotingEscrow public votingEscrow;
@@ -52,8 +53,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
 
         // Deploy contracts
         lithos = new Lithos();
-        artProxy = new VeArtProxyUpgradeable();
-        artProxy.initialize();
+        artProxy = _deployAndInitArtProxy(deployer);
         votingEscrow = new VotingEscrow(address(lithos), address(artProxy));
 
         // Setup initial state
@@ -119,8 +119,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
     }
 
     function test_SetArtProxy_Success() public {
-        VeArtProxyUpgradeable newProxy = new VeArtProxyUpgradeable();
-        newProxy.initialize();
+        VeArtProxyUpgradeable newProxy = _deployAndInitArtProxy(team);
 
         vm.prank(team);
         votingEscrow.setArtProxy(address(newProxy));
@@ -532,15 +531,16 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         vm.startPrank(user1);
         lithos.approve(address(votingEscrow), LOCK_AMOUNT);
 
-        uint256 timestamp1 = block.timestamp;
         uint256 tokenId = votingEscrow.create_lock(LOCK_AMOUNT, MAXTIME);
         uint256 balance1 = votingEscrow.balanceOfNFT(tokenId);
+        uint256 epoch = votingEscrow.user_point_epoch(tokenId);
+        uint256 recordedTimestamp = votingEscrow.user_point_history__ts(tokenId, epoch);
 
-        vm.warp(timestamp1 + 365 days);
+        vm.warp(recordedTimestamp + 365 days);
         uint256 balance2 = votingEscrow.balanceOfNFT(tokenId);
 
         // Query historical balance
-        uint256 historicalBalance = votingEscrow.balanceOfNFTAt(tokenId, timestamp1);
+        uint256 historicalBalance = votingEscrow.balanceOfNFTAt(tokenId, recordedTimestamp);
 
         assertApproxEqAbs(historicalBalance, balance1, 1e15); // Small margin for rounding
         assertLt(balance2, balance1);
@@ -1001,5 +1001,18 @@ contract VotingEscrowTest is Test, IERC721Receiver {
         assertTrue(votingEscrow.supportsInterface(0x80ac58cd)); // ERC721
         assertTrue(votingEscrow.supportsInterface(0x5b5e139f)); // ERC721Metadata
         assertFalse(votingEscrow.supportsInterface(0x12345678)); // Random interface
+    }
+
+    function _deployAndInitArtProxy(address admin) internal returns (VeArtProxyUpgradeable) {
+        VeArtProxyUpgradeable artProxyImpl = new VeArtProxyUpgradeable();
+        TransparentUpgradeableProxy artProxyProxy = new TransparentUpgradeableProxy(
+            address(artProxyImpl),
+            admin,
+            ""
+        );
+        VeArtProxyUpgradeable proxied = VeArtProxyUpgradeable(address(artProxyProxy));
+        vm.prank(admin);
+        proxied.initialize();
+        return proxied;
     }
 }

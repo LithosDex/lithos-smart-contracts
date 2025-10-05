@@ -7,6 +7,7 @@ import {RewardsDistributor} from "../src/contracts/RewardsDistributor.sol";
 import {VotingEscrow} from "../src/contracts/VotingEscrow.sol";
 import {Lithos} from "../src/contracts/Lithos.sol";
 import {VeArtProxyUpgradeable} from "../src/contracts/VeArtProxyUpgradeable.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
@@ -47,7 +48,13 @@ contract RewardsDistributorTest is Test, IERC721Receiver {
 
         // Deploy contracts in correct order
         lithos = new Lithos();
-        artProxy = new VeArtProxyUpgradeable();
+        VeArtProxyUpgradeable artProxyImpl = new VeArtProxyUpgradeable();
+        TransparentUpgradeableProxy artProxyProxy = new TransparentUpgradeableProxy(
+            address(artProxyImpl),
+            deployer,
+            ""
+        );
+        artProxy = VeArtProxyUpgradeable(address(artProxyProxy));
         artProxy.initialize();
 
         // Deploy VotingEscrow (deployer becomes initial team and voter)
