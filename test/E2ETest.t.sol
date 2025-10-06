@@ -27,7 +27,7 @@ contract E2ETest is Test {
     address constant USDe = 0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34; // Ethena USDe
 
     // deployer
-    address constant DEPLOYER = 0xa9040c08B0FA3D5cf8B1534A0686261Da948F82a;
+    address constant DEPLOYER = 0x18D14a96cfBD74a7d489d0f983995C82FA4A3AB1;
     address constant INITIAL_MINT_RECIPIENT = 0xe98c1e28805A06F23B41cf6d356dFC7709DB9385; // Inital mint recipient
 
     // Test accounts
@@ -43,13 +43,27 @@ contract E2ETest is Test {
     TradeHelper public tradeHelper = TradeHelper(0xf2e70f25a712B2FEE0B76d5728a620707AF5D42c);
 
     // ve33 contracts deployed via DeploymentHelpers
-    DeploymentHelpers.Ve33Contracts public ve33;
+    DeploymentHelpers.Ve33Contracts public ve33 = DeploymentHelpers.Ve33Contracts({
+        lithos: 0xB8f92504e33B194A57af64AF982796243d599f47,
+        veArtProxy: 0x014C737867b57C8f52c34eA557B65550B51a109F,
+        minter: 0x22C3c778153Dc4d9376140aE403c5f22aC2eb107,
+        veArtProxyImpl: 0x2e4d5414B91CbAbCCc216ba518210936f0f7461d,
+        minterImpl: 0xBcCA0C406EBD1ae4E54E3D639e597db55E23Df4f,
+        votingEscrow: 0x80f2eE51FEBF9A56b74f95c6db2df4E239a9FF9c,
+        gaugeFactory: 0x68A67496ADF74AC87C11206a980f59461E247CfB,
+        permissionsRegistry: 0xE74e6F21777fd27DE78cF7eD2BD98CAab7EF1f1C,
+        bribeFactory: 0xCa92281cfEa8F4Cb39037b14c40de0399ca4FB54,
+        voter: 0xAfc98B2373F250313E7e0832FDD250fDe7C8c188,
+        rewardsDistributor: 0x939684315D094702685aD0f004bce9bFD230959F,
+        proxyAdmin: 0x0000000000000000000000000000000000000000,
+        timelock: 0x9f7d46cE1EA22859814e51E9D3Fe07a665f21794
+    });
 
     // Convenience references (pointing to ve33 struct addresses)
-    Lithos public lithos;
-    VotingEscrow public votingEscrow;
-    VoterV3 public voter;
-    MinterUpgradeable public minterUpgradeable;
+    Lithos public lithos = Lithos(0xB8f92504e33B194A57af64AF982796243d599f47);
+    VotingEscrow public votingEscrow = VotingEscrow(0x80f2eE51FEBF9A56b74f95c6db2df4E239a9FF9c);
+    VoterV3 public voter = VoterV3(0xAfc98B2373F250313E7e0832FDD250fDe7C8c188);
+    MinterUpgradeable public minterUpgradeable = MinterUpgradeable(0x22C3c778153Dc4d9376140aE403c5f22aC2eb107);
 
     // Test data
     uint256 public voterTokenId;
@@ -82,8 +96,8 @@ contract E2ETest is Test {
     uint256 public lpUnstakedInitialUSDe;
 
     function setUp() public {
-        // Set time to Fri Oct 3, 2025 00:00:00 UT
-        vm.warp(1759449600);
+        // Set time to Monday, October 6, 2025 6:01:48 AM, post ve3,3 deployment
+        vm.warp(1759730508);
         console.log("Time set to Oct 3, 2025 00:00:00 UTC");
         console.log("Current timestamp:", block.timestamp);
 
@@ -106,8 +120,9 @@ contract E2ETest is Test {
         // Mainnet DEX contracts already deployed
         // step_DeployDEXContracts();
 
-        // Oct 3, 2025: Deploy ve33 system (Phase 1) - already at this time from setUp()
-        step_DeployVotingContracts();
+        // Oct 6, 2025: Deploy ve33 system (Phase 1) - already at this time from setUp()
+        // Mainnet ve3,3 contracts already deployed
+        // step_DeployVotingContracts();
 
         // Get tokens from mainnet whales
         step_GetFunds();
