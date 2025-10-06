@@ -16,3 +16,7 @@ broadcast/
 # macOS
 .DS_STORE
 /src/.DS_STORE
+
+# Node
+node_modules/
+dist/

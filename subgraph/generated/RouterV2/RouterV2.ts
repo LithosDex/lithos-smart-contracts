@@ -7,7 +7,7 @@ import {
   Entity,
   Bytes,
   Address,
-  BigInt
+  BigInt,
 } from "@graphprotocol/graph-ts";
 
 export class Swap extends ethereum.Event {
@@ -423,7 +423,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amounts: Array<BigInt>,
     routes: Array<RouterV2__UNSAFE_swapExactTokensForTokensInputRoutesStruct>,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): Array<BigInt> {
     let result = super.call(
       "UNSAFE_swapExactTokensForTokens",
@@ -432,8 +432,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigIntArray(amounts),
         ethereum.Value.fromTupleArray(routes),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
 
     return result[0].toBigIntArray();
@@ -443,7 +443,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amounts: Array<BigInt>,
     routes: Array<RouterV2__UNSAFE_swapExactTokensForTokensInputRoutesStruct>,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): ethereum.CallResult<Array<BigInt>> {
     let result = super.tryCall(
       "UNSAFE_swapExactTokensForTokens",
@@ -452,8 +452,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigIntArray(amounts),
         ethereum.Value.fromTupleArray(routes),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -471,7 +471,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amountAMin: BigInt,
     amountBMin: BigInt,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): RouterV2__addLiquidityResult {
     let result = super.call(
       "addLiquidity",
@@ -485,14 +485,14 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigInt(amountAMin),
         ethereum.Value.fromUnsignedBigInt(amountBMin),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
 
     return new RouterV2__addLiquidityResult(
       result[0].toBigInt(),
       result[1].toBigInt(),
-      result[2].toBigInt()
+      result[2].toBigInt(),
     );
   }
 
@@ -505,7 +505,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amountAMin: BigInt,
     amountBMin: BigInt,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): ethereum.CallResult<RouterV2__addLiquidityResult> {
     let result = super.tryCall(
       "addLiquidity",
@@ -519,8 +519,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigInt(amountAMin),
         ethereum.Value.fromUnsignedBigInt(amountBMin),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -530,8 +530,8 @@ export class RouterV2 extends ethereum.SmartContract {
       new RouterV2__addLiquidityResult(
         value[0].toBigInt(),
         value[1].toBigInt(),
-        value[2].toBigInt()
-      )
+        value[2].toBigInt(),
+      ),
     );
   }
 
@@ -553,7 +553,7 @@ export class RouterV2 extends ethereum.SmartContract {
   getAmountOut(
     amountIn: BigInt,
     tokenIn: Address,
-    tokenOut: Address
+    tokenOut: Address,
   ): RouterV2__getAmountOutResult {
     let result = super.call(
       "getAmountOut",
@@ -561,20 +561,20 @@ export class RouterV2 extends ethereum.SmartContract {
       [
         ethereum.Value.fromUnsignedBigInt(amountIn),
         ethereum.Value.fromAddress(tokenIn),
-        ethereum.Value.fromAddress(tokenOut)
-      ]
+        ethereum.Value.fromAddress(tokenOut),
+      ],
     );
 
     return new RouterV2__getAmountOutResult(
       result[0].toBigInt(),
-      result[1].toBoolean()
+      result[1].toBoolean(),
     );
   }
 
   try_getAmountOut(
     amountIn: BigInt,
     tokenIn: Address,
-    tokenOut: Address
+    tokenOut: Address,
   ): ethereum.CallResult<RouterV2__getAmountOutResult> {
     let result = super.tryCall(
       "getAmountOut",
@@ -582,8 +582,8 @@ export class RouterV2 extends ethereum.SmartContract {
       [
         ethereum.Value.fromUnsignedBigInt(amountIn),
         ethereum.Value.fromAddress(tokenIn),
-        ethereum.Value.fromAddress(tokenOut)
-      ]
+        ethereum.Value.fromAddress(tokenOut),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -592,22 +592,22 @@ export class RouterV2 extends ethereum.SmartContract {
     return ethereum.CallResult.fromValue(
       new RouterV2__getAmountOutResult(
         value[0].toBigInt(),
-        value[1].toBoolean()
-      )
+        value[1].toBoolean(),
+      ),
     );
   }
 
   getAmountsOut(
     amountIn: BigInt,
-    routes: Array<RouterV2__getAmountsOutInputRoutesStruct>
+    routes: Array<RouterV2__getAmountsOutInputRoutesStruct>,
   ): Array<BigInt> {
     let result = super.call(
       "getAmountsOut",
       "getAmountsOut(uint256,(address,address,bool)[]):(uint256[])",
       [
         ethereum.Value.fromUnsignedBigInt(amountIn),
-        ethereum.Value.fromTupleArray(routes)
-      ]
+        ethereum.Value.fromTupleArray(routes),
+      ],
     );
 
     return result[0].toBigIntArray();
@@ -615,15 +615,15 @@ export class RouterV2 extends ethereum.SmartContract {
 
   try_getAmountsOut(
     amountIn: BigInt,
-    routes: Array<RouterV2__getAmountsOutInputRoutesStruct>
+    routes: Array<RouterV2__getAmountsOutInputRoutesStruct>,
   ): ethereum.CallResult<Array<BigInt>> {
     let result = super.tryCall(
       "getAmountsOut",
       "getAmountsOut(uint256,(address,address,bool)[]):(uint256[])",
       [
         ethereum.Value.fromUnsignedBigInt(amountIn),
-        ethereum.Value.fromTupleArray(routes)
-      ]
+        ethereum.Value.fromTupleArray(routes),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -635,7 +635,7 @@ export class RouterV2 extends ethereum.SmartContract {
   getReserves(
     tokenA: Address,
     tokenB: Address,
-    stable: boolean
+    stable: boolean,
   ): RouterV2__getReservesResult {
     let result = super.call(
       "getReserves",
@@ -643,20 +643,20 @@ export class RouterV2 extends ethereum.SmartContract {
       [
         ethereum.Value.fromAddress(tokenA),
         ethereum.Value.fromAddress(tokenB),
-        ethereum.Value.fromBoolean(stable)
-      ]
+        ethereum.Value.fromBoolean(stable),
+      ],
     );
 
     return new RouterV2__getReservesResult(
       result[0].toBigInt(),
-      result[1].toBigInt()
+      result[1].toBigInt(),
     );
   }
 
   try_getReserves(
     tokenA: Address,
     tokenB: Address,
-    stable: boolean
+    stable: boolean,
   ): ethereum.CallResult<RouterV2__getReservesResult> {
     let result = super.tryCall(
       "getReserves",
@@ -664,21 +664,21 @@ export class RouterV2 extends ethereum.SmartContract {
       [
         ethereum.Value.fromAddress(tokenA),
         ethereum.Value.fromAddress(tokenB),
-        ethereum.Value.fromBoolean(stable)
-      ]
+        ethereum.Value.fromBoolean(stable),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
     }
     let value = result.value;
     return ethereum.CallResult.fromValue(
-      new RouterV2__getReservesResult(value[0].toBigInt(), value[1].toBigInt())
+      new RouterV2__getReservesResult(value[0].toBigInt(), value[1].toBigInt()),
     );
   }
 
   isPair(pair: Address): boolean {
     let result = super.call("isPair", "isPair(address):(bool)", [
-      ethereum.Value.fromAddress(pair)
+      ethereum.Value.fromAddress(pair),
     ]);
 
     return result[0].toBoolean();
@@ -686,7 +686,7 @@ export class RouterV2 extends ethereum.SmartContract {
 
   try_isPair(pair: Address): ethereum.CallResult<boolean> {
     let result = super.tryCall("isPair", "isPair(address):(bool)", [
-      ethereum.Value.fromAddress(pair)
+      ethereum.Value.fromAddress(pair),
     ]);
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -702,8 +702,8 @@ export class RouterV2 extends ethereum.SmartContract {
       [
         ethereum.Value.fromAddress(tokenA),
         ethereum.Value.fromAddress(tokenB),
-        ethereum.Value.fromBoolean(stable)
-      ]
+        ethereum.Value.fromBoolean(stable),
+      ],
     );
 
     return result[0].toAddress();
@@ -712,7 +712,7 @@ export class RouterV2 extends ethereum.SmartContract {
   try_pairFor(
     tokenA: Address,
     tokenB: Address,
-    stable: boolean
+    stable: boolean,
   ): ethereum.CallResult<Address> {
     let result = super.tryCall(
       "pairFor",
@@ -720,8 +720,8 @@ export class RouterV2 extends ethereum.SmartContract {
       [
         ethereum.Value.fromAddress(tokenA),
         ethereum.Value.fromAddress(tokenB),
-        ethereum.Value.fromBoolean(stable)
-      ]
+        ethereum.Value.fromBoolean(stable),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -735,7 +735,7 @@ export class RouterV2 extends ethereum.SmartContract {
     tokenB: Address,
     stable: boolean,
     amountADesired: BigInt,
-    amountBDesired: BigInt
+    amountBDesired: BigInt,
   ): RouterV2__quoteAddLiquidityResult {
     let result = super.call(
       "quoteAddLiquidity",
@@ -745,14 +745,14 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromAddress(tokenB),
         ethereum.Value.fromBoolean(stable),
         ethereum.Value.fromUnsignedBigInt(amountADesired),
-        ethereum.Value.fromUnsignedBigInt(amountBDesired)
-      ]
+        ethereum.Value.fromUnsignedBigInt(amountBDesired),
+      ],
     );
 
     return new RouterV2__quoteAddLiquidityResult(
       result[0].toBigInt(),
       result[1].toBigInt(),
-      result[2].toBigInt()
+      result[2].toBigInt(),
     );
   }
 
@@ -761,7 +761,7 @@ export class RouterV2 extends ethereum.SmartContract {
     tokenB: Address,
     stable: boolean,
     amountADesired: BigInt,
-    amountBDesired: BigInt
+    amountBDesired: BigInt,
   ): ethereum.CallResult<RouterV2__quoteAddLiquidityResult> {
     let result = super.tryCall(
       "quoteAddLiquidity",
@@ -771,8 +771,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromAddress(tokenB),
         ethereum.Value.fromBoolean(stable),
         ethereum.Value.fromUnsignedBigInt(amountADesired),
-        ethereum.Value.fromUnsignedBigInt(amountBDesired)
-      ]
+        ethereum.Value.fromUnsignedBigInt(amountBDesired),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -782,8 +782,8 @@ export class RouterV2 extends ethereum.SmartContract {
       new RouterV2__quoteAddLiquidityResult(
         value[0].toBigInt(),
         value[1].toBigInt(),
-        value[2].toBigInt()
-      )
+        value[2].toBigInt(),
+      ),
     );
   }
 
@@ -791,7 +791,7 @@ export class RouterV2 extends ethereum.SmartContract {
     tokenA: Address,
     tokenB: Address,
     stable: boolean,
-    liquidity: BigInt
+    liquidity: BigInt,
   ): RouterV2__quoteRemoveLiquidityResult {
     let result = super.call(
       "quoteRemoveLiquidity",
@@ -800,13 +800,13 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromAddress(tokenA),
         ethereum.Value.fromAddress(tokenB),
         ethereum.Value.fromBoolean(stable),
-        ethereum.Value.fromUnsignedBigInt(liquidity)
-      ]
+        ethereum.Value.fromUnsignedBigInt(liquidity),
+      ],
     );
 
     return new RouterV2__quoteRemoveLiquidityResult(
       result[0].toBigInt(),
-      result[1].toBigInt()
+      result[1].toBigInt(),
     );
   }
 
@@ -814,7 +814,7 @@ export class RouterV2 extends ethereum.SmartContract {
     tokenA: Address,
     tokenB: Address,
     stable: boolean,
-    liquidity: BigInt
+    liquidity: BigInt,
   ): ethereum.CallResult<RouterV2__quoteRemoveLiquidityResult> {
     let result = super.tryCall(
       "quoteRemoveLiquidity",
@@ -823,8 +823,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromAddress(tokenA),
         ethereum.Value.fromAddress(tokenB),
         ethereum.Value.fromBoolean(stable),
-        ethereum.Value.fromUnsignedBigInt(liquidity)
-      ]
+        ethereum.Value.fromUnsignedBigInt(liquidity),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -833,8 +833,8 @@ export class RouterV2 extends ethereum.SmartContract {
     return ethereum.CallResult.fromValue(
       new RouterV2__quoteRemoveLiquidityResult(
         value[0].toBigInt(),
-        value[1].toBigInt()
-      )
+        value[1].toBigInt(),
+      ),
     );
   }
 
@@ -846,7 +846,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amountAMin: BigInt,
     amountBMin: BigInt,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): RouterV2__removeLiquidityResult {
     let result = super.call(
       "removeLiquidity",
@@ -859,13 +859,13 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigInt(amountAMin),
         ethereum.Value.fromUnsignedBigInt(amountBMin),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
 
     return new RouterV2__removeLiquidityResult(
       result[0].toBigInt(),
-      result[1].toBigInt()
+      result[1].toBigInt(),
     );
   }
 
@@ -877,7 +877,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amountAMin: BigInt,
     amountBMin: BigInt,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): ethereum.CallResult<RouterV2__removeLiquidityResult> {
     let result = super.tryCall(
       "removeLiquidity",
@@ -890,8 +890,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigInt(amountAMin),
         ethereum.Value.fromUnsignedBigInt(amountBMin),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -900,8 +900,8 @@ export class RouterV2 extends ethereum.SmartContract {
     return ethereum.CallResult.fromValue(
       new RouterV2__removeLiquidityResult(
         value[0].toBigInt(),
-        value[1].toBigInt()
-      )
+        value[1].toBigInt(),
+      ),
     );
   }
 
@@ -912,7 +912,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amountTokenMin: BigInt,
     amountETHMin: BigInt,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): RouterV2__removeLiquidityETHResult {
     let result = super.call(
       "removeLiquidityETH",
@@ -924,13 +924,13 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigInt(amountTokenMin),
         ethereum.Value.fromUnsignedBigInt(amountETHMin),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
 
     return new RouterV2__removeLiquidityETHResult(
       result[0].toBigInt(),
-      result[1].toBigInt()
+      result[1].toBigInt(),
     );
   }
 
@@ -941,7 +941,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amountTokenMin: BigInt,
     amountETHMin: BigInt,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): ethereum.CallResult<RouterV2__removeLiquidityETHResult> {
     let result = super.tryCall(
       "removeLiquidityETH",
@@ -953,8 +953,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigInt(amountTokenMin),
         ethereum.Value.fromUnsignedBigInt(amountETHMin),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -963,8 +963,8 @@ export class RouterV2 extends ethereum.SmartContract {
     return ethereum.CallResult.fromValue(
       new RouterV2__removeLiquidityETHResult(
         value[0].toBigInt(),
-        value[1].toBigInt()
-      )
+        value[1].toBigInt(),
+      ),
     );
   }
 
@@ -975,7 +975,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amountTokenMin: BigInt,
     amountETHMin: BigInt,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): RouterV2__removeLiquidityETHSupportingFeeOnTransferTokensResult {
     let result = super.call(
       "removeLiquidityETHSupportingFeeOnTransferTokens",
@@ -987,13 +987,13 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigInt(amountTokenMin),
         ethereum.Value.fromUnsignedBigInt(amountETHMin),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
 
     return new RouterV2__removeLiquidityETHSupportingFeeOnTransferTokensResult(
       result[0].toBigInt(),
-      result[1].toBigInt()
+      result[1].toBigInt(),
     );
   }
 
@@ -1004,10 +1004,8 @@ export class RouterV2 extends ethereum.SmartContract {
     amountTokenMin: BigInt,
     amountETHMin: BigInt,
     to: Address,
-    deadline: BigInt
-  ): ethereum.CallResult<
-    RouterV2__removeLiquidityETHSupportingFeeOnTransferTokensResult
-  > {
+    deadline: BigInt,
+  ): ethereum.CallResult<RouterV2__removeLiquidityETHSupportingFeeOnTransferTokensResult> {
     let result = super.tryCall(
       "removeLiquidityETHSupportingFeeOnTransferTokens",
       "removeLiquidityETHSupportingFeeOnTransferTokens(address,bool,uint256,uint256,uint256,address,uint256):(uint256,uint256)",
@@ -1018,8 +1016,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigInt(amountTokenMin),
         ethereum.Value.fromUnsignedBigInt(amountETHMin),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -1028,8 +1026,8 @@ export class RouterV2 extends ethereum.SmartContract {
     return ethereum.CallResult.fromValue(
       new RouterV2__removeLiquidityETHSupportingFeeOnTransferTokensResult(
         value[0].toBigInt(),
-        value[1].toBigInt()
-      )
+        value[1].toBigInt(),
+      ),
     );
   }
 
@@ -1044,7 +1042,7 @@ export class RouterV2 extends ethereum.SmartContract {
     approveMax: boolean,
     v: i32,
     r: Bytes,
-    s: Bytes
+    s: Bytes,
   ): RouterV2__removeLiquidityETHWithPermitResult {
     let result = super.call(
       "removeLiquidityETHWithPermit",
@@ -1060,13 +1058,13 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromBoolean(approveMax),
         ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(v)),
         ethereum.Value.fromFixedBytes(r),
-        ethereum.Value.fromFixedBytes(s)
-      ]
+        ethereum.Value.fromFixedBytes(s),
+      ],
     );
 
     return new RouterV2__removeLiquidityETHWithPermitResult(
       result[0].toBigInt(),
-      result[1].toBigInt()
+      result[1].toBigInt(),
     );
   }
 
@@ -1081,7 +1079,7 @@ export class RouterV2 extends ethereum.SmartContract {
     approveMax: boolean,
     v: i32,
     r: Bytes,
-    s: Bytes
+    s: Bytes,
   ): ethereum.CallResult<RouterV2__removeLiquidityETHWithPermitResult> {
     let result = super.tryCall(
       "removeLiquidityETHWithPermit",
@@ -1097,8 +1095,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromBoolean(approveMax),
         ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(v)),
         ethereum.Value.fromFixedBytes(r),
-        ethereum.Value.fromFixedBytes(s)
-      ]
+        ethereum.Value.fromFixedBytes(s),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -1107,8 +1105,8 @@ export class RouterV2 extends ethereum.SmartContract {
     return ethereum.CallResult.fromValue(
       new RouterV2__removeLiquidityETHWithPermitResult(
         value[0].toBigInt(),
-        value[1].toBigInt()
-      )
+        value[1].toBigInt(),
+      ),
     );
   }
 
@@ -1123,7 +1121,7 @@ export class RouterV2 extends ethereum.SmartContract {
     approveMax: boolean,
     v: i32,
     r: Bytes,
-    s: Bytes
+    s: Bytes,
   ): RouterV2__removeLiquidityETHWithPermitSupportingFeeOnTransferTokensResult {
     let result = super.call(
       "removeLiquidityETHWithPermitSupportingFeeOnTransferTokens",
@@ -1139,13 +1137,13 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromBoolean(approveMax),
         ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(v)),
         ethereum.Value.fromFixedBytes(r),
-        ethereum.Value.fromFixedBytes(s)
-      ]
+        ethereum.Value.fromFixedBytes(s),
+      ],
     );
 
     return new RouterV2__removeLiquidityETHWithPermitSupportingFeeOnTransferTokensResult(
       result[0].toBigInt(),
-      result[1].toBigInt()
+      result[1].toBigInt(),
     );
   }
 
@@ -1160,10 +1158,8 @@ export class RouterV2 extends ethereum.SmartContract {
     approveMax: boolean,
     v: i32,
     r: Bytes,
-    s: Bytes
-  ): ethereum.CallResult<
-    RouterV2__removeLiquidityETHWithPermitSupportingFeeOnTransferTokensResult
-  > {
+    s: Bytes,
+  ): ethereum.CallResult<RouterV2__removeLiquidityETHWithPermitSupportingFeeOnTransferTokensResult> {
     let result = super.tryCall(
       "removeLiquidityETHWithPermitSupportingFeeOnTransferTokens",
       "removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(address,bool,uint256,uint256,uint256,address,uint256,bool,uint8,bytes32,bytes32):(uint256,uint256)",
@@ -1178,8 +1174,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromBoolean(approveMax),
         ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(v)),
         ethereum.Value.fromFixedBytes(r),
-        ethereum.Value.fromFixedBytes(s)
-      ]
+        ethereum.Value.fromFixedBytes(s),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -1188,8 +1184,8 @@ export class RouterV2 extends ethereum.SmartContract {
     return ethereum.CallResult.fromValue(
       new RouterV2__removeLiquidityETHWithPermitSupportingFeeOnTransferTokensResult(
         value[0].toBigInt(),
-        value[1].toBigInt()
-      )
+        value[1].toBigInt(),
+      ),
     );
   }
 
@@ -1205,7 +1201,7 @@ export class RouterV2 extends ethereum.SmartContract {
     approveMax: boolean,
     v: i32,
     r: Bytes,
-    s: Bytes
+    s: Bytes,
   ): RouterV2__removeLiquidityWithPermitResult {
     let result = super.call(
       "removeLiquidityWithPermit",
@@ -1222,13 +1218,13 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromBoolean(approveMax),
         ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(v)),
         ethereum.Value.fromFixedBytes(r),
-        ethereum.Value.fromFixedBytes(s)
-      ]
+        ethereum.Value.fromFixedBytes(s),
+      ],
     );
 
     return new RouterV2__removeLiquidityWithPermitResult(
       result[0].toBigInt(),
-      result[1].toBigInt()
+      result[1].toBigInt(),
     );
   }
 
@@ -1244,7 +1240,7 @@ export class RouterV2 extends ethereum.SmartContract {
     approveMax: boolean,
     v: i32,
     r: Bytes,
-    s: Bytes
+    s: Bytes,
   ): ethereum.CallResult<RouterV2__removeLiquidityWithPermitResult> {
     let result = super.tryCall(
       "removeLiquidityWithPermit",
@@ -1261,8 +1257,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromBoolean(approveMax),
         ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(v)),
         ethereum.Value.fromFixedBytes(r),
-        ethereum.Value.fromFixedBytes(s)
-      ]
+        ethereum.Value.fromFixedBytes(s),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -1271,8 +1267,8 @@ export class RouterV2 extends ethereum.SmartContract {
     return ethereum.CallResult.fromValue(
       new RouterV2__removeLiquidityWithPermitResult(
         value[0].toBigInt(),
-        value[1].toBigInt()
-      )
+        value[1].toBigInt(),
+      ),
     );
   }
 
@@ -1280,30 +1276,33 @@ export class RouterV2 extends ethereum.SmartContract {
     let result = super.call(
       "sortTokens",
       "sortTokens(address,address):(address,address)",
-      [ethereum.Value.fromAddress(tokenA), ethereum.Value.fromAddress(tokenB)]
+      [ethereum.Value.fromAddress(tokenA), ethereum.Value.fromAddress(tokenB)],
     );
 
     return new RouterV2__sortTokensResult(
       result[0].toAddress(),
-      result[1].toAddress()
+      result[1].toAddress(),
     );
   }
 
   try_sortTokens(
     tokenA: Address,
-    tokenB: Address
+    tokenB: Address,
   ): ethereum.CallResult<RouterV2__sortTokensResult> {
     let result = super.tryCall(
       "sortTokens",
       "sortTokens(address,address):(address,address)",
-      [ethereum.Value.fromAddress(tokenA), ethereum.Value.fromAddress(tokenB)]
+      [ethereum.Value.fromAddress(tokenA), ethereum.Value.fromAddress(tokenB)],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
     }
     let value = result.value;
     return ethereum.CallResult.fromValue(
-      new RouterV2__sortTokensResult(value[0].toAddress(), value[1].toAddress())
+      new RouterV2__sortTokensResult(
+        value[0].toAddress(),
+        value[1].toAddress(),
+      ),
     );
   }
 
@@ -1312,7 +1311,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amountOutMin: BigInt,
     routes: Array<RouterV2__swapExactTokensForETHInputRoutesStruct>,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): Array<BigInt> {
     let result = super.call(
       "swapExactTokensForETH",
@@ -1322,8 +1321,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigInt(amountOutMin),
         ethereum.Value.fromTupleArray(routes),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
 
     return result[0].toBigIntArray();
@@ -1334,7 +1333,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amountOutMin: BigInt,
     routes: Array<RouterV2__swapExactTokensForETHInputRoutesStruct>,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): ethereum.CallResult<Array<BigInt>> {
     let result = super.tryCall(
       "swapExactTokensForETH",
@@ -1344,8 +1343,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigInt(amountOutMin),
         ethereum.Value.fromTupleArray(routes),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -1359,7 +1358,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amountOutMin: BigInt,
     routes: Array<RouterV2__swapExactTokensForTokensInputRoutesStruct>,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): Array<BigInt> {
     let result = super.call(
       "swapExactTokensForTokens",
@@ -1369,8 +1368,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigInt(amountOutMin),
         ethereum.Value.fromTupleArray(routes),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
 
     return result[0].toBigIntArray();
@@ -1381,7 +1380,7 @@ export class RouterV2 extends ethereum.SmartContract {
     amountOutMin: BigInt,
     routes: Array<RouterV2__swapExactTokensForTokensInputRoutesStruct>,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): ethereum.CallResult<Array<BigInt>> {
     let result = super.tryCall(
       "swapExactTokensForTokens",
@@ -1391,8 +1390,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromUnsignedBigInt(amountOutMin),
         ethereum.Value.fromTupleArray(routes),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -1408,7 +1407,7 @@ export class RouterV2 extends ethereum.SmartContract {
     tokenTo: Address,
     stable: boolean,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): Array<BigInt> {
     let result = super.call(
       "swapExactTokensForTokensSimple",
@@ -1420,8 +1419,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromAddress(tokenTo),
         ethereum.Value.fromBoolean(stable),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
 
     return result[0].toBigIntArray();
@@ -1434,7 +1433,7 @@ export class RouterV2 extends ethereum.SmartContract {
     tokenTo: Address,
     stable: boolean,
     to: Address,
-    deadline: BigInt
+    deadline: BigInt,
   ): ethereum.CallResult<Array<BigInt>> {
     let result = super.tryCall(
       "swapExactTokensForTokensSimple",
@@ -1446,8 +1445,8 @@ export class RouterV2 extends ethereum.SmartContract {
         ethereum.Value.fromAddress(tokenTo),
         ethereum.Value.fromBoolean(stable),
         ethereum.Value.fromAddress(to),
-        ethereum.Value.fromUnsignedBigInt(deadline)
-      ]
+        ethereum.Value.fromUnsignedBigInt(deadline),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -1528,9 +1527,7 @@ export class UNSAFE_swapExactTokensForTokensCall__Inputs {
   }
 
   get routes(): Array<UNSAFE_swapExactTokensForTokensCallRoutesStruct> {
-    return this._call.inputValues[1].value.toTupleArray<
-      UNSAFE_swapExactTokensForTokensCallRoutesStruct
-    >();
+    return this._call.inputValues[1].value.toTupleArray<UNSAFE_swapExactTokensForTokensCallRoutesStruct>();
   }
 
   get to(): Address {
@@ -1839,13 +1836,13 @@ export class RemoveLiquidityETHCall__Outputs {
 export class RemoveLiquidityETHSupportingFeeOnTransferTokensCall extends ethereum.Call {
   get inputs(): RemoveLiquidityETHSupportingFeeOnTransferTokensCall__Inputs {
     return new RemoveLiquidityETHSupportingFeeOnTransferTokensCall__Inputs(
-      this
+      this,
     );
   }
 
   get outputs(): RemoveLiquidityETHSupportingFeeOnTransferTokensCall__Outputs {
     return new RemoveLiquidityETHSupportingFeeOnTransferTokensCall__Outputs(
-      this
+      this,
     );
   }
 }
@@ -1983,13 +1980,13 @@ export class RemoveLiquidityETHWithPermitCall__Outputs {
 export class RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall extends ethereum.Call {
   get inputs(): RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall__Inputs {
     return new RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall__Inputs(
-      this
+      this,
     );
   }
 
   get outputs(): RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall__Outputs {
     return new RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall__Outputs(
-      this
+      this,
     );
   }
 }
@@ -1998,7 +1995,7 @@ export class RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall__Inpu
   _call: RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall;
 
   constructor(
-    call: RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall
+    call: RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall,
   ) {
     this._call = call;
   }
@@ -2052,7 +2049,7 @@ export class RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall__Outp
   _call: RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall;
 
   constructor(
-    call: RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall
+    call: RemoveLiquidityETHWithPermitSupportingFeeOnTransferTokensCall,
   ) {
     this._call = call;
   }
@@ -2170,9 +2167,7 @@ export class SwapExactETHForTokensCall__Inputs {
   }
 
   get routes(): Array<SwapExactETHForTokensCallRoutesStruct> {
-    return this._call.inputValues[1].value.toTupleArray<
-      SwapExactETHForTokensCallRoutesStruct
-    >();
+    return this._call.inputValues[1].value.toTupleArray<SwapExactETHForTokensCallRoutesStruct>();
   }
 
   get to(): Address {
@@ -2213,13 +2208,13 @@ export class SwapExactETHForTokensCallRoutesStruct extends ethereum.Tuple {
 export class SwapExactETHForTokensSupportingFeeOnTransferTokensCall extends ethereum.Call {
   get inputs(): SwapExactETHForTokensSupportingFeeOnTransferTokensCall__Inputs {
     return new SwapExactETHForTokensSupportingFeeOnTransferTokensCall__Inputs(
-      this
+      this,
     );
   }
 
   get outputs(): SwapExactETHForTokensSupportingFeeOnTransferTokensCall__Outputs {
     return new SwapExactETHForTokensSupportingFeeOnTransferTokensCall__Outputs(
-      this
+      this,
     );
   }
 }
@@ -2235,12 +2230,8 @@ export class SwapExactETHForTokensSupportingFeeOnTransferTokensCall__Inputs {
     return this._call.inputValues[0].value.toBigInt();
   }
 
-  get routes(): Array<
-    SwapExactETHForTokensSupportingFeeOnTransferTokensCallRoutesStruct
-  > {
-    return this._call.inputValues[1].value.toTupleArray<
-      SwapExactETHForTokensSupportingFeeOnTransferTokensCallRoutesStruct
-    >();
+  get routes(): Array<SwapExactETHForTokensSupportingFeeOnTransferTokensCallRoutesStruct> {
+    return this._call.inputValues[1].value.toTupleArray<SwapExactETHForTokensSupportingFeeOnTransferTokensCallRoutesStruct>();
   }
 
   get to(): Address {
@@ -2300,9 +2291,7 @@ export class SwapExactTokensForETHCall__Inputs {
   }
 
   get routes(): Array<SwapExactTokensForETHCallRoutesStruct> {
-    return this._call.inputValues[2].value.toTupleArray<
-      SwapExactTokensForETHCallRoutesStruct
-    >();
+    return this._call.inputValues[2].value.toTupleArray<SwapExactTokensForETHCallRoutesStruct>();
   }
 
   get to(): Address {
@@ -2343,13 +2332,13 @@ export class SwapExactTokensForETHCallRoutesStruct extends ethereum.Tuple {
 export class SwapExactTokensForETHSupportingFeeOnTransferTokensCall extends ethereum.Call {
   get inputs(): SwapExactTokensForETHSupportingFeeOnTransferTokensCall__Inputs {
     return new SwapExactTokensForETHSupportingFeeOnTransferTokensCall__Inputs(
-      this
+      this,
     );
   }
 
   get outputs(): SwapExactTokensForETHSupportingFeeOnTransferTokensCall__Outputs {
     return new SwapExactTokensForETHSupportingFeeOnTransferTokensCall__Outputs(
-      this
+      this,
     );
   }
 }
@@ -2369,12 +2358,8 @@ export class SwapExactTokensForETHSupportingFeeOnTransferTokensCall__Inputs {
     return this._call.inputValues[1].value.toBigInt();
   }
 
-  get routes(): Array<
-    SwapExactTokensForETHSupportingFeeOnTransferTokensCallRoutesStruct
-  > {
-    return this._call.inputValues[2].value.toTupleArray<
-      SwapExactTokensForETHSupportingFeeOnTransferTokensCallRoutesStruct
-    >();
+  get routes(): Array<SwapExactTokensForETHSupportingFeeOnTransferTokensCallRoutesStruct> {
+    return this._call.inputValues[2].value.toTupleArray<SwapExactTokensForETHSupportingFeeOnTransferTokensCallRoutesStruct>();
   }
 
   get to(): Address {
@@ -2434,9 +2419,7 @@ export class SwapExactTokensForTokensCall__Inputs {
   }
 
   get routes(): Array<SwapExactTokensForTokensCallRoutesStruct> {
-    return this._call.inputValues[2].value.toTupleArray<
-      SwapExactTokensForTokensCallRoutesStruct
-    >();
+    return this._call.inputValues[2].value.toTupleArray<SwapExactTokensForTokensCallRoutesStruct>();
   }
 
   get to(): Address {
@@ -2535,13 +2518,13 @@ export class SwapExactTokensForTokensSimpleCall__Outputs {
 export class SwapExactTokensForTokensSupportingFeeOnTransferTokensCall extends ethereum.Call {
   get inputs(): SwapExactTokensForTokensSupportingFeeOnTransferTokensCall__Inputs {
     return new SwapExactTokensForTokensSupportingFeeOnTransferTokensCall__Inputs(
-      this
+      this,
     );
   }
 
   get outputs(): SwapExactTokensForTokensSupportingFeeOnTransferTokensCall__Outputs {
     return new SwapExactTokensForTokensSupportingFeeOnTransferTokensCall__Outputs(
-      this
+      this,
     );
   }
 }
@@ -2561,12 +2544,8 @@ export class SwapExactTokensForTokensSupportingFeeOnTransferTokensCall__Inputs {
     return this._call.inputValues[1].value.toBigInt();
   }
 
-  get routes(): Array<
-    SwapExactTokensForTokensSupportingFeeOnTransferTokensCallRoutesStruct
-  > {
-    return this._call.inputValues[2].value.toTupleArray<
-      SwapExactTokensForTokensSupportingFeeOnTransferTokensCallRoutesStruct
-    >();
+  get routes(): Array<SwapExactTokensForTokensSupportingFeeOnTransferTokensCallRoutesStruct> {
+    return this._call.inputValues[2].value.toTupleArray<SwapExactTokensForTokensSupportingFeeOnTransferTokensCallRoutesStruct>();
   }
 
   get to(): Address {

@@ -7,7 +7,7 @@ import {
   Entity,
   Bytes,
   Address,
-  BigInt
+  BigInt,
 } from "@graphprotocol/graph-ts";
 
 export class PairCreated extends ethereum.Event {
@@ -100,7 +100,7 @@ export class PairFactory extends ethereum.SmartContract {
     let result = super.call(
       "MAX_REFERRAL_FEE",
       "MAX_REFERRAL_FEE():(uint256)",
-      []
+      [],
     );
 
     return result[0].toBigInt();
@@ -110,7 +110,7 @@ export class PairFactory extends ethereum.SmartContract {
     let result = super.tryCall(
       "MAX_REFERRAL_FEE",
       "MAX_REFERRAL_FEE():(uint256)",
-      []
+      [],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -121,7 +121,7 @@ export class PairFactory extends ethereum.SmartContract {
 
   allPairs(param0: BigInt): Address {
     let result = super.call("allPairs", "allPairs(uint256):(address)", [
-      ethereum.Value.fromUnsignedBigInt(param0)
+      ethereum.Value.fromUnsignedBigInt(param0),
     ]);
 
     return result[0].toAddress();
@@ -129,7 +129,7 @@ export class PairFactory extends ethereum.SmartContract {
 
   try_allPairs(param0: BigInt): ethereum.CallResult<Address> {
     let result = super.tryCall("allPairs", "allPairs(uint256):(address)", [
-      ethereum.Value.fromUnsignedBigInt(param0)
+      ethereum.Value.fromUnsignedBigInt(param0),
     ]);
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -148,7 +148,7 @@ export class PairFactory extends ethereum.SmartContract {
     let result = super.tryCall(
       "allPairsLength",
       "allPairsLength():(uint256)",
-      []
+      [],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -164,8 +164,8 @@ export class PairFactory extends ethereum.SmartContract {
       [
         ethereum.Value.fromAddress(tokenA),
         ethereum.Value.fromAddress(tokenB),
-        ethereum.Value.fromBoolean(stable)
-      ]
+        ethereum.Value.fromBoolean(stable),
+      ],
     );
 
     return result[0].toAddress();
@@ -174,7 +174,7 @@ export class PairFactory extends ethereum.SmartContract {
   try_createPair(
     tokenA: Address,
     tokenB: Address,
-    stable: boolean
+    stable: boolean,
   ): ethereum.CallResult<Address> {
     let result = super.tryCall(
       "createPair",
@@ -182,8 +182,8 @@ export class PairFactory extends ethereum.SmartContract {
       [
         ethereum.Value.fromAddress(tokenA),
         ethereum.Value.fromAddress(tokenB),
-        ethereum.Value.fromBoolean(stable)
-      ]
+        ethereum.Value.fromBoolean(stable),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -224,7 +224,7 @@ export class PairFactory extends ethereum.SmartContract {
 
   getFee(_stable: boolean): BigInt {
     let result = super.call("getFee", "getFee(bool):(uint256)", [
-      ethereum.Value.fromBoolean(_stable)
+      ethereum.Value.fromBoolean(_stable),
     ]);
 
     return result[0].toBigInt();
@@ -232,7 +232,7 @@ export class PairFactory extends ethereum.SmartContract {
 
   try_getFee(_stable: boolean): ethereum.CallResult<BigInt> {
     let result = super.tryCall("getFee", "getFee(bool):(uint256)", [
-      ethereum.Value.fromBoolean(_stable)
+      ethereum.Value.fromBoolean(_stable),
     ]);
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -245,23 +245,21 @@ export class PairFactory extends ethereum.SmartContract {
     let result = super.call(
       "getInitializable",
       "getInitializable():(address,address,bool)",
-      []
+      [],
     );
 
     return new PairFactory__getInitializableResult(
       result[0].toAddress(),
       result[1].toAddress(),
-      result[2].toBoolean()
+      result[2].toBoolean(),
     );
   }
 
-  try_getInitializable(): ethereum.CallResult<
-    PairFactory__getInitializableResult
-  > {
+  try_getInitializable(): ethereum.CallResult<PairFactory__getInitializableResult> {
     let result = super.tryCall(
       "getInitializable",
       "getInitializable():(address,address,bool)",
-      []
+      [],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -271,8 +269,8 @@ export class PairFactory extends ethereum.SmartContract {
       new PairFactory__getInitializableResult(
         value[0].toAddress(),
         value[1].toAddress(),
-        value[2].toBoolean()
-      )
+        value[2].toBoolean(),
+      ),
     );
   }
 
@@ -283,8 +281,8 @@ export class PairFactory extends ethereum.SmartContract {
       [
         ethereum.Value.fromAddress(param0),
         ethereum.Value.fromAddress(param1),
-        ethereum.Value.fromBoolean(param2)
-      ]
+        ethereum.Value.fromBoolean(param2),
+      ],
     );
 
     return result[0].toAddress();
@@ -293,7 +291,7 @@ export class PairFactory extends ethereum.SmartContract {
   try_getPair(
     param0: Address,
     param1: Address,
-    param2: boolean
+    param2: boolean,
   ): ethereum.CallResult<Address> {
     let result = super.tryCall(
       "getPair",
@@ -301,8 +299,8 @@ export class PairFactory extends ethereum.SmartContract {
       [
         ethereum.Value.fromAddress(param0),
         ethereum.Value.fromAddress(param1),
-        ethereum.Value.fromBoolean(param2)
-      ]
+        ethereum.Value.fromBoolean(param2),
+      ],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -313,7 +311,7 @@ export class PairFactory extends ethereum.SmartContract {
 
   isPair(param0: Address): boolean {
     let result = super.call("isPair", "isPair(address):(bool)", [
-      ethereum.Value.fromAddress(param0)
+      ethereum.Value.fromAddress(param0),
     ]);
 
     return result[0].toBoolean();
@@ -321,7 +319,7 @@ export class PairFactory extends ethereum.SmartContract {
 
   try_isPair(param0: Address): ethereum.CallResult<boolean> {
     let result = super.tryCall("isPair", "isPair(address):(bool)", [
-      ethereum.Value.fromAddress(param0)
+      ethereum.Value.fromAddress(param0),
     ]);
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -394,7 +392,7 @@ export class PairFactory extends ethereum.SmartContract {
     let result = super.call(
       "pendingFeeManager",
       "pendingFeeManager():(address)",
-      []
+      [],
     );
 
     return result[0].toAddress();
@@ -404,7 +402,7 @@ export class PairFactory extends ethereum.SmartContract {
     let result = super.tryCall(
       "pendingFeeManager",
       "pendingFeeManager():(address)",
-      []
+      [],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -423,7 +421,7 @@ export class PairFactory extends ethereum.SmartContract {
     let result = super.tryCall(
       "pendingPauser",
       "pendingPauser():(address)",
-      []
+      [],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -451,7 +449,7 @@ export class PairFactory extends ethereum.SmartContract {
     let result = super.call(
       "stakingFeeHandler",
       "stakingFeeHandler():(address)",
-      []
+      [],
     );
 
     return result[0].toAddress();
@@ -461,7 +459,7 @@ export class PairFactory extends ethereum.SmartContract {
     let result = super.tryCall(
       "stakingFeeHandler",
       "stakingFeeHandler():(address)",
-      []
+      [],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
@@ -480,7 +478,7 @@ export class PairFactory extends ethereum.SmartContract {
     let result = super.tryCall(
       "stakingNFTFee",
       "stakingNFTFee():(uint256)",
-      []
+      [],
     );
     if (result.reverted) {
       return new ethereum.CallResult();
