@@ -29,27 +29,15 @@ contract TransferToTimelockScript is Script {
 
         // 2. Grant roles to Timelock
         console2.log("\n2. Granting GOVERNANCE role to Timelock...");
-        PermissionsRegistry(permissionsRegistry).setRoleFor(
-            timelock,
-            "GOVERNANCE"
-        );
+        PermissionsRegistry(permissionsRegistry).setRoleFor(timelock, "GOVERNANCE");
 
         console2.log("\n3. Granting VOTER_ADMIN role to Timelock...");
-        PermissionsRegistry(permissionsRegistry).setRoleFor(
-            timelock,
-            "VOTER_ADMIN"
-        );
+        PermissionsRegistry(permissionsRegistry).setRoleFor(timelock, "VOTER_ADMIN");
 
         // 3. Revoke deployer roles (optional, for security)
         console2.log("\n4. Revoking deployer roles (optional)...");
-        PermissionsRegistry(permissionsRegistry).removeRoleFrom(
-            deployer,
-            "GOVERNANCE"
-        );
-        PermissionsRegistry(permissionsRegistry).removeRoleFrom(
-            deployer,
-            "VOTER_ADMIN"
-        );
+        PermissionsRegistry(permissionsRegistry).removeRoleFrom(deployer, "GOVERNANCE");
+        PermissionsRegistry(permissionsRegistry).removeRoleFrom(deployer, "VOTER_ADMIN");
 
         console2.log("\n=== Ownership Transfer Complete ===");
         console2.log("All governance actions now require 48-hour timelock.");

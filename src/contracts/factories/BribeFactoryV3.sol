@@ -11,14 +11,8 @@ interface IBribe {
     function setVoter(address _Voter) external;
     function setMinter(address _Voter) external;
     function setOwner(address _Voter) external;
-    function emergencyRecoverERC20(
-        address tokenAddress,
-        uint256 tokenAmount
-    ) external;
-    function recoverERC20AndUpdateData(
-        address tokenAddress,
-        uint256 tokenAmount
-    ) external;
+    function emergencyRecoverERC20(address tokenAddress, uint256 tokenAmount) external;
+    function recoverERC20AndUpdateData(address tokenAddress, uint256 tokenAmount) external;
 }
 
 contract BribeFactoryV3 is OwnableUpgradeable {
@@ -31,26 +25,18 @@ contract BribeFactoryV3 is OwnableUpgradeable {
     IPermissionsRegistry public permissionsRegistry;
 
     modifier onlyAllowed() {
-        require(
-            owner() == msg.sender ||
-                permissionsRegistry.hasRole("BRIBE_ADMIN", msg.sender),
-            "ERR: BRIBE_ADMIN"
-        );
+        require(owner() == msg.sender || permissionsRegistry.hasRole("BRIBE_ADMIN", msg.sender), "ERR: BRIBE_ADMIN");
         _;
     }
 
     constructor() {}
 
-    function initialize(
-        address _voter,
-        address _permissionsRegistry
-    ) public initializer {
+    function initialize(address _voter, address _permissionsRegistry) public initializer {
         __Ownable_init(msg.sender); //after deploy ownership to multisig
         voter = _voter;
 
-        defaultRewardToken.push(
-            address(0x3576E9157cF2e1dB071b3587dEbBFb67D9e0962d)
-        ); // $WXPL
+        defaultRewardToken.push(address(0x6100E367285b01F48D07953803A2d8dCA5D19873)); // $WXPL
+        defaultRewardToken.push(address(0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb)); // USDT
 
         // registry to check accesses
         permissionsRegistry = IPermissionsRegistry(_permissionsRegistry);
@@ -58,12 +44,10 @@ contract BribeFactoryV3 is OwnableUpgradeable {
 
     /// @notice create a bribe contract
     /// @dev    _owner must be lithTeamMultisig
-    function createBribe(
-        address _owner,
-        address _token0,
-        address _token1,
-        string memory _type
-    ) external returns (address) {
+    function createBribe(address _owner, address _token0, address _token1, string memory _type)
+        external
+        returns (address)
+    {
         require(msg.sender == voter || msg.sender == owner(), "only voter");
 
         Bribe lastBribe = new Bribe(_owner, voter, address(this), _type);
@@ -114,9 +98,7 @@ contract BribeFactoryV3 is OwnableUpgradeable {
         uint256 i = 0;
         for (i; i < defaultRewardToken.length; i++) {
             if (defaultRewardToken[i] == _token) {
-                defaultRewardToken[i] = defaultRewardToken[
-                    defaultRewardToken.length - 1
-                ];
+                defaultRewardToken[i] = defaultRewardToken[defaultRewardToken.length - 1];
                 defaultRewardToken.pop();
                 break;
             }
@@ -132,18 +114,12 @@ contract BribeFactoryV3 is OwnableUpgradeable {
     ----------------------------------------------------------------------------- */
 
     /// @notice Add a reward token to a given bribe
-    function addRewardToBribe(
-        address _token,
-        address __bribe
-    ) external onlyAllowed {
+    function addRewardToBribe(address _token, address __bribe) external onlyAllowed {
         IBribe(__bribe).addReward(_token);
     }
 
     /// @notice Add multiple reward token to a given bribe
-    function addRewardsToBribe(
-        address[] memory _token,
-        address __bribe
-    ) external onlyAllowed {
+    function addRewardsToBribe(address[] memory _token, address __bribe) external onlyAllowed {
         uint256 i = 0;
         for (i; i < _token.length; i++) {
             IBribe(__bribe).addReward(_token[i]);
@@ -151,10 +127,7 @@ contract BribeFactoryV3 is OwnableUpgradeable {
     }
 
     /// @notice Add a reward token to given bribes
-    function addRewardToBribes(
-        address _token,
-        address[] memory __bribes
-    ) external onlyAllowed {
+    function addRewardToBribes(address _token, address[] memory __bribes) external onlyAllowed {
         uint256 i = 0;
         for (i; i < __bribes.length; i++) {
             IBribe(__bribes[i]).addReward(_token);
@@ -162,10 +135,7 @@ contract BribeFactoryV3 is OwnableUpgradeable {
     }
 
     /// @notice Add multiple reward tokens to given bribes
-    function addRewardsToBribes(
-        address[][] memory _token,
-        address[] memory __bribes
-    ) external onlyAllowed {
+    function addRewardsToBribes(address[][] memory _token, address[] memory __bribes) external onlyAllowed {
         uint256 i = 0;
         uint256 k;
         for (i; i < __bribes.length; i++) {
@@ -177,10 +147,7 @@ contract BribeFactoryV3 is OwnableUpgradeable {
     }
 
     /// @notice set a new voter in given bribes
-    function setBribeVoter(
-        address[] memory _bribe,
-        address _voter
-    ) external onlyOwner {
+    function setBribeVoter(address[] memory _bribe, address _voter) external onlyOwner {
         uint256 i = 0;
         for (i; i < _bribe.length; i++) {
             IBribe(_bribe[i]).setVoter(_voter);
@@ -188,10 +155,7 @@ contract BribeFactoryV3 is OwnableUpgradeable {
     }
 
     /// @notice set a new minter in given bribes
-    function setBribeMinter(
-        address[] memory _bribe,
-        address _minter
-    ) external onlyOwner {
+    function setBribeMinter(address[] memory _bribe, address _minter) external onlyOwner {
         uint256 i = 0;
         for (i; i < _bribe.length; i++) {
             IBribe(_bribe[i]).setMinter(_minter);
@@ -199,10 +163,7 @@ contract BribeFactoryV3 is OwnableUpgradeable {
     }
 
     /// @notice set a new owner in given bribes
-    function setBribeOwner(
-        address[] memory _bribe,
-        address _owner
-    ) external onlyOwner {
+    function setBribeOwner(address[] memory _bribe, address _owner) external onlyOwner {
         uint256 i = 0;
         for (i; i < _bribe.length; i++) {
             IBribe(_bribe[i]).setOwner(_owner);
@@ -210,41 +171,33 @@ contract BribeFactoryV3 is OwnableUpgradeable {
     }
 
     /// @notice recover an ERC20 from bribe contracts.
-    function recoverERC20From(
-        address[] memory _bribe,
-        address[] memory _tokens,
-        uint256[] memory _amounts
-    ) external onlyOwner {
+    function recoverERC20From(address[] memory _bribe, address[] memory _tokens, uint256[] memory _amounts)
+        external
+        onlyOwner
+    {
         uint256 i = 0;
         require(_bribe.length == _tokens.length, "mismatch len");
         require(_tokens.length == _amounts.length, "mismatch len");
 
         for (i; i < _bribe.length; i++) {
             if (_amounts[i] > 0) {
-                IBribe(_bribe[i]).emergencyRecoverERC20(
-                    _tokens[i],
-                    _amounts[i]
-                );
+                IBribe(_bribe[i]).emergencyRecoverERC20(_tokens[i], _amounts[i]);
             }
         }
     }
 
     /// @notice recover an ERC20 from bribe contracts and update.
-    function recoverERC20AndUpdateData(
-        address[] memory _bribe,
-        address[] memory _tokens,
-        uint256[] memory _amounts
-    ) external onlyOwner {
+    function recoverERC20AndUpdateData(address[] memory _bribe, address[] memory _tokens, uint256[] memory _amounts)
+        external
+        onlyOwner
+    {
         uint256 i = 0;
         require(_bribe.length == _tokens.length, "mismatch len");
         require(_tokens.length == _amounts.length, "mismatch len");
 
         for (i; i < _bribe.length; i++) {
             if (_amounts[i] > 0) {
-                IBribe(_bribe[i]).emergencyRecoverERC20(
-                    _tokens[i],
-                    _amounts[i]
-                );
+                IBribe(_bribe[i]).emergencyRecoverERC20(_tokens[i], _amounts[i]);
             }
         }
     }
