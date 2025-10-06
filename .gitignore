@@ -17,5 +17,12 @@ broadcast/
 .DS_STORE
 /src/.DS_STORE
 
-node_modules
+# Node
+node_modules/
 dist/
+
+# Subgraph
+subgraph/generated/
+subgraph/node_modules/
+subgraph/.yarn/
+subgraph/yarn.lock

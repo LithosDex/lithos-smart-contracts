@@ -1,0 +1,40 @@
+{
+  "name": "lithos-smart-contracts",
+  "version": "1.0.0",
+  "description": "A decentralized exchange (DEX) built on Plasma testnet featuring both stable and volatile AMM pools, inspired by Solidly's design with Uniswap V2-like interface.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "ts:price-impact": "tsx ts/priceImpactTest.ts",
+    "ts:check": "tsc --noEmit",
+    "ts:liquidity": "tsx ts/liquidityPlanner.ts",
+    "ts:add-liquidity-sim": "tsx ts/addLiquiditySim.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LithosProtocol/lithos-smart-contracts.git"
+  },
+  "keywords": [],
+  "author": "Rahul Sethuram",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/LithosProtocol/lithos-smart-contracts/issues"
+  },
+  "homepage": "https://github.com/LithosProtocol/lithos-smart-contracts#readme",
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "ethers": "^6.15.0",
+    "viem": "^2.37.9"
+  }
+}
