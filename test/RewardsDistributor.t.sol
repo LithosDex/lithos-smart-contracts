@@ -49,11 +49,7 @@ contract RewardsDistributorTest is Test, IERC721Receiver {
         // Deploy contracts in correct order
         lithos = new Lithos();
         VeArtProxyUpgradeable artProxyImpl = new VeArtProxyUpgradeable();
-        TransparentUpgradeableProxy artProxyProxy = new TransparentUpgradeableProxy(
-            address(artProxyImpl),
-            deployer,
-            ""
-        );
+        TransparentUpgradeableProxy artProxyProxy = new TransparentUpgradeableProxy(address(artProxyImpl), deployer, "");
         artProxy = VeArtProxyUpgradeable(address(artProxyProxy));
         artProxy.initialize();
 

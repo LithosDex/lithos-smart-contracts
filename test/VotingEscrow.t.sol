@@ -1005,11 +1005,7 @@ contract VotingEscrowTest is Test, IERC721Receiver {
 
     function _deployAndInitArtProxy(address admin) internal returns (VeArtProxyUpgradeable) {
         VeArtProxyUpgradeable artProxyImpl = new VeArtProxyUpgradeable();
-        TransparentUpgradeableProxy artProxyProxy = new TransparentUpgradeableProxy(
-            address(artProxyImpl),
-            admin,
-            ""
-        );
+        TransparentUpgradeableProxy artProxyProxy = new TransparentUpgradeableProxy(address(artProxyImpl), admin, "");
         VeArtProxyUpgradeable proxied = VeArtProxyUpgradeable(address(artProxyProxy));
         vm.prank(admin);
         proxied.initialize();
