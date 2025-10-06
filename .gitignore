@@ -20,3 +20,9 @@ broadcast/
 # Node
 node_modules/
 dist/
+
+# Subgraph
+subgraph/generated/
+subgraph/node_modules/
+subgraph/.yarn/
+subgraph/yarn.lock

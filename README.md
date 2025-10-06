@@ -36,21 +36,27 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 #### Pairs
 
 1. **WXPL/USDT0** (Volatile)
+
    - Pair: [0xa0926801a2abc718822a60d8fa1bc2a51fa09f1e](https://plasmascan.to/address/0xa0926801a2abc718822a60d8fa1bc2a51fa09f1e)
 
 2. **USDe/USDT0** (Stable)
+
    - Pair: [0x01b968c1b663c3921da5be3c99ee3c9b89a40b54](https://plasmascan.to/address/0x01b968c1b663c3921da5be3c99ee3c9b89a40b54)
 
 3. **USDe/USDT0** (Volatile)
+
    - Pair: [0x08f68c9d37ce08470099dc9a8d43038de9674a8b](https://plasmascan.to/address/0x08f68c9d37ce08470099dc9a8d43038de9674a8b)
 
 4. **USDai/USDT0** (Stable)
+
    - Pair: [0x548064df5e0c2d7f9076f75de0a4c6c3d72a5acc](https://plasmascan.to/address/0x548064df5e0c2d7f9076f75de0a4c6c3d72a5acc)
 
 5. **WETH/weETH** (Volatile)
+
    - Pair: [0x7483ed877a1423f34dc5e46cf463ea4a0783d165](https://plasmascan.to/address/0x7483ed877a1423f34dc5e46cf463ea4a0783d165)
 
 6. **WXPL/WETH** (Volatile)
+
    - Pair: [0x15df11a0b0917956fea2b0d6382e5ba100b312df](https://plasmascan.to/address/0x15df11a0b0917956fea2b0d6382e5ba100b312df)
 
 7. **xUSD/tcUSDT0** (Stable)
@@ -59,12 +65,14 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 #### ve(3,3) Governance (Deploying Oct 3-9, 2025)
 
 **Deployment Schedule:**
+
 - **Oct 3**: Core contracts deployed (inactive)
 - **Oct 9**: System activated with initial LITH supply
 - **Oct 12**: LITH airdrop and voting begins
 - **Oct 16**: First emissions distributed
 
 **Contracts (Pending Oct 3 Deployment):**
+
 - **Lithos Token**: [Pending]
 - **VotingEscrow**: [Pending]
 - **VoterV3**: [Pending]
@@ -78,9 +86,9 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 - **TimelockController**: [Pending]
 
 **Initial Gauges (Created Oct 9):**
+
 - LITH/WXPL: [Pending]
 - [Additional gauges TBD]
-
 
 ### Testnet (Plasma)
 
@@ -607,3 +615,79 @@ $ forge --help
 $ anvil --help
 $ cast --help
 ```
+
+## Subgraph Deployment
+
+Deploy the subgraph to index blockchain data using Goldsky CLI:
+
+### Prerequisites
+
+1. **Install Goldsky CLI** (if not already installed):
+
+   ```shell
+   npm install -g @goldsky/cli
+   ```
+
+2. **Login to Goldsky** (if not already logged in):
+   ```shell
+   goldsky login
+   ```
+   Use the shared API key provided by the team.
+
+### Deployment Steps
+
+1. **Navigate to subgraph directory:**
+
+   ```shell
+   cd subgraph
+   ```
+
+2. **Generate types from schema:**
+
+   ```shell
+   yarn codegen
+   ```
+
+3. **Build the subgraph:**
+
+   ```shell
+   yarn build
+   ```
+
+4. **Deploy to Goldsky:**
+   ```shell
+   goldsky subgraph deploy <subgraph-name>/<version> --path .
+   ```
+
+### Example Deployment Commands
+
+**For mainnet:**
+
+```shell
+cd subgraph
+yarn codegen
+yarn build
+goldsky subgraph deploy lithos-subgraph-mainnet/v1.0.0 --path .
+```
+
+### Additional Goldsky Commands
+
+**List deployed subgraphs:**
+
+```shell
+goldsky subgraph list
+```
+
+**Get subgraph info:**
+
+```shell
+goldsky subgraph info <subgraph-name>/<version>
+```
+
+**Delete a subgraph:**
+
+```shell
+goldsky subgraph delete <subgraph-name>/<version>
+```
+
+> **Note:** Ensure your `subgraph.yaml` manifest has the correct contract addresses from your deployment state file before deploying.
