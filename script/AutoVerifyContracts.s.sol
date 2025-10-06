@@ -9,17 +9,10 @@ contract AutoVerifyContractsScript is Script {
     function run() external {
         string memory env = vm.envString("DEPLOY_ENV");
 
-        string memory statePath = string.concat(
-            "deployments/",
-            env,
-            "/state.json"
-        );
+        string memory statePath = string.concat("deployments/", env, "/state.json");
 
         // Load deployed contract addresses
-        require(
-            vm.exists(statePath),
-            "State file not found. Deploy contracts first!"
-        );
+        require(vm.exists(statePath), "State file not found. Deploy contracts first!");
         _loadState(statePath);
 
         string memory verifierUrl = keccak256(abi.encodePacked(env)) == keccak256(abi.encodePacked("testnet"))
@@ -44,9 +37,7 @@ contract AutoVerifyContractsScript is Script {
         _verifyTimelock(verifierUrl);
 
         console2.log("=== Verification Complete ===");
-        console2.log(
-            "Note: Proxy contracts may need manual verification with proper constructor args"
-        );
+        console2.log("Note: Proxy contracts may need manual verification with proper constructor args");
     }
 
     function _verifyLithos(string memory verifierUrl) private {
@@ -75,9 +66,7 @@ contract AutoVerifyContractsScript is Script {
         inputs[0] = "forge";
         inputs[1] = "verify-contract";
         inputs[2] = vm.toString(deployed["VeArtProxyImpl"]);
-        inputs[
-            3
-        ] = "src/contracts/VeArtProxyUpgradeable.sol:VeArtProxyUpgradeable";
+        inputs[3] = "src/contracts/VeArtProxyUpgradeable.sol:VeArtProxyUpgradeable";
         inputs[4] = string.concat("--verifier-url=", verifierUrl);
         inputs[5] = "--etherscan-api-key=verifyContract";
         inputs[6] = "--num-of-optimizations=200";
@@ -119,11 +108,7 @@ contract AutoVerifyContractsScript is Script {
         castInputs[0] = "cast";
         castInputs[1] = "abi-encode";
         castInputs[2] = "constructor(address,address)";
-        castInputs[3] = string.concat(
-            vm.toString(deployed["Lithos"]),
-            " ",
-            vm.toString(deployed["VeArtProxy"])
-        );
+        castInputs[3] = string.concat(vm.toString(deployed["Lithos"]), " ", vm.toString(deployed["VeArtProxy"]));
 
         bytes memory constructorArgs = vm.ffi(castInputs);
 
@@ -137,10 +122,7 @@ contract AutoVerifyContractsScript is Script {
         inputs[6] = "--num-of-optimizations=200";
         inputs[7] = "--compiler-version=v0.8.29+commit.e719f8ab";
         inputs[8] = "--watch";
-        inputs[9] = string.concat(
-            "--constructor-args=",
-            string(constructorArgs)
-        );
+        inputs[9] = string.concat("--constructor-args=", string(constructorArgs));
 
         try vm.ffi(inputs) {
             console2.log("SUCCESS: VotingEscrow verified successfully");
@@ -251,10 +233,7 @@ contract AutoVerifyContractsScript is Script {
         inputs[6] = "--num-of-optimizations=200";
         inputs[7] = "--compiler-version=v0.8.29+commit.e719f8ab";
         inputs[8] = "--watch";
-        inputs[9] = string.concat(
-            "--constructor-args=",
-            string(constructorArgs)
-        );
+        inputs[9] = string.concat("--constructor-args=", string(constructorArgs));
 
         try vm.ffi(inputs) {
             console2.log("SUCCESS: RewardsDistributor verified successfully");
@@ -269,9 +248,7 @@ contract AutoVerifyContractsScript is Script {
         inputs[0] = "forge";
         inputs[1] = "verify-contract";
         inputs[2] = vm.toString(deployed["Timelock"]);
-        inputs[
-            3
-        ] = "@openzeppelin/contracts/governance/TimelockController.sol:TimelockController";
+        inputs[3] = "@openzeppelin/contracts/governance/TimelockController.sol:TimelockController";
         inputs[4] = string.concat("--verifier-url=", verifierUrl);
         inputs[5] = "--etherscan-api-key=verifyContract";
         inputs[6] = "--num-of-optimizations=200";
@@ -281,9 +258,7 @@ contract AutoVerifyContractsScript is Script {
         try vm.ffi(inputs) {
             console2.log("SUCCESS: Timelock verified successfully");
         } catch {
-            console2.log(
-                "FAILED: Timelock verification failed (constructor args needed)"
-            );
+            console2.log("FAILED: Timelock verification failed (constructor args needed)");
         }
     }
 
@@ -292,24 +267,15 @@ contract AutoVerifyContractsScript is Script {
 
         deployed["Lithos"] = vm.parseJsonAddress(json, ".Lithos");
         deployed["VeArtProxy"] = vm.parseJsonAddress(json, ".VeArtProxy");
-        deployed["VeArtProxyImpl"] = vm.parseJsonAddress(
-            json,
-            ".VeArtProxyImpl"
-        );
+        deployed["VeArtProxyImpl"] = vm.parseJsonAddress(json, ".VeArtProxyImpl");
         deployed["Minter"] = vm.parseJsonAddress(json, ".Minter");
         deployed["MinterImpl"] = vm.parseJsonAddress(json, ".MinterImpl");
         deployed["VotingEscrow"] = vm.parseJsonAddress(json, ".VotingEscrow");
         deployed["GaugeFactory"] = vm.parseJsonAddress(json, ".GaugeFactory");
-        deployed["PermissionsRegistry"] = vm.parseJsonAddress(
-            json,
-            ".PermissionsRegistry"
-        );
+        deployed["PermissionsRegistry"] = vm.parseJsonAddress(json, ".PermissionsRegistry");
         deployed["BribeFactory"] = vm.parseJsonAddress(json, ".BribeFactory");
         deployed["Voter"] = vm.parseJsonAddress(json, ".Voter");
-        deployed["RewardsDistributor"] = vm.parseJsonAddress(
-            json,
-            ".RewardsDistributor"
-        );
+        deployed["RewardsDistributor"] = vm.parseJsonAddress(json, ".RewardsDistributor");
         deployed["Timelock"] = vm.parseJsonAddress(json, ".Timelock");
     }
 }

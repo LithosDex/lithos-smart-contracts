@@ -4,6 +4,7 @@ pragma solidity 0.8.29;
 import {Test} from "forge-std/Test.sol";
 import {VeArtProxyUpgradeable} from "../src/contracts/VeArtProxyUpgradeable.sol";
 import {Base64} from "../src/contracts/libraries/Base64.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract VeArtProxyUpgradeableTest is Test {
     VeArtProxyUpgradeable public veArtProxy;
@@ -19,8 +20,7 @@ contract VeArtProxyUpgradeableTest is Test {
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
 
-        veArtProxy = new VeArtProxyUpgradeable();
-        veArtProxy.initialize();
+        veArtProxy = _deployProxyAndInit(owner);
 
         // Verify initial state
         assertEq(veArtProxy.owner(), owner);
@@ -29,7 +29,7 @@ contract VeArtProxyUpgradeableTest is Test {
     // ============ Initialization Tests ============
 
     function test_Initialize_Success() public {
-        VeArtProxyUpgradeable newProxy = new VeArtProxyUpgradeable();
+        VeArtProxyUpgradeable newProxy = _deployProxy(owner);
 
         newProxy.initialize();
 
@@ -42,7 +42,7 @@ contract VeArtProxyUpgradeableTest is Test {
     }
 
     function test_Initialize_DifferentCaller() public {
-        VeArtProxyUpgradeable newProxy = new VeArtProxyUpgradeable();
+        VeArtProxyUpgradeable newProxy = _deployProxy(owner);
 
         vm.prank(user1);
         newProxy.initialize();
@@ -231,11 +231,14 @@ contract VeArtProxyUpgradeableTest is Test {
 
     function test_EdgeCase_EmptyContract() public {
         // Verify contract can be deployed and initialized properly
-        VeArtProxyUpgradeable newProxy = new VeArtProxyUpgradeable();
-
-        // Before initialization, should be able to call constructor
-        // After initialization, should work normally
-        newProxy.initialize();
+        VeArtProxyUpgradeable veArtImpl = new VeArtProxyUpgradeable();
+        bytes memory veArtInitData = abi.encodeWithSelector(VeArtProxyUpgradeable.initialize.selector);
+        TransparentUpgradeableProxy _veArtProxy = new TransparentUpgradeableProxy(
+            address(veArtImpl),
+            owner, // initialOwner of the ProxyAdmin created internally
+            veArtInitData
+        );
+        VeArtProxyUpgradeable newProxy = VeArtProxyUpgradeable(address(_veArtProxy));
 
         string memory result = newProxy._tokenURI(1, 100, 200, 300);
         assertTrue(bytes(result).length > 0);
@@ -336,8 +339,8 @@ contract VeArtProxyUpgradeableTest is Test {
 
     function test_InitializationEdgeCase_MultipleContracts() public {
         // Deploy multiple contracts and initialize them
-        VeArtProxyUpgradeable proxy1 = new VeArtProxyUpgradeable();
-        VeArtProxyUpgradeable proxy2 = new VeArtProxyUpgradeable();
+        VeArtProxyUpgradeable proxy1 = _deployProxy(owner);
+        VeArtProxyUpgradeable proxy2 = _deployProxy(owner);
 
         vm.prank(user1);
         proxy1.initialize();
@@ -441,5 +444,18 @@ contract VeArtProxyUpgradeableTest is Test {
         // Functionality should remain consistent
         string memory result2 = veArtProxy._tokenURI(1, 100, 200, 300);
         assertEq(keccak256(bytes(result1)), keccak256(bytes(result2)));
+    }
+
+    function _deployProxy(address admin) internal returns (VeArtProxyUpgradeable) {
+        VeArtProxyUpgradeable veArtImpl = new VeArtProxyUpgradeable();
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(veArtImpl), admin, "");
+        return VeArtProxyUpgradeable(address(proxy));
+    }
+
+    function _deployProxyAndInit(address admin) internal returns (VeArtProxyUpgradeable) {
+        VeArtProxyUpgradeable veArtImpl = new VeArtProxyUpgradeable();
+        bytes memory initData = abi.encodeWithSelector(VeArtProxyUpgradeable.initialize.selector);
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(veArtImpl), admin, initData);
+        return VeArtProxyUpgradeable(address(proxy));
     }
 }

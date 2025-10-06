@@ -14,6 +14,7 @@ import {Lithos} from "../src/contracts/Lithos.sol";
 import {VotingEscrow} from "../src/contracts/VotingEscrow.sol";
 import {VoterV3} from "../src/contracts/VoterV3.sol";
 import {MinterUpgradeable} from "../src/contracts/MinterUpgradeable.sol";
+import {Bribe} from "../src/contracts/Bribes.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {PermissionsRegistry} from "../src/contracts/PermissionsRegistry.sol";
@@ -27,8 +28,7 @@ contract E2ETest is Test {
 
     // deployer
     address constant DEPLOYER = 0xa9040c08B0FA3D5cf8B1534A0686261Da948F82a;
-    address constant INITIAL_MINT_RECIPIENT =
-        0xe98c1e28805A06F23B41cf6d356dFC7709DB9385; // Inital mint recipient
+    address constant INITIAL_MINT_RECIPIENT = 0xe98c1e28805A06F23B41cf6d356dFC7709DB9385; // Inital mint recipient
 
     // Test accounts
     address constant LP = address(2);
@@ -37,14 +37,10 @@ contract E2ETest is Test {
     address constant LP_UNSTAKED = address(5);
 
     // Mainnet deployments
-    PairFactory public pairFactory =
-        PairFactory(0x71a870D1c935C2146b87644DF3B5316e8756aE18);
-    RouterV2 public router =
-        RouterV2(payable(0xD70962bd7C6B3567a8c893b55a8aBC1E151759f3));
-    GlobalRouter public globalRouter =
-        GlobalRouter(0xC7E4BCC695a9788fd0f952250cA058273BE7F6A3);
-    TradeHelper public tradeHelper =
-        TradeHelper(0xf2e70f25a712B2FEE0B76d5728a620707AF5D42c);
+    PairFactory public pairFactory = PairFactory(0x71a870D1c935C2146b87644DF3B5316e8756aE18);
+    RouterV2 public router = RouterV2(payable(0xD70962bd7C6B3567a8c893b55a8aBC1E151759f3));
+    GlobalRouter public globalRouter = GlobalRouter(0xC7E4BCC695a9788fd0f952250cA058273BE7F6A3);
+    TradeHelper public tradeHelper = TradeHelper(0xf2e70f25a712B2FEE0B76d5728a620707AF5D42c);
 
     // ve33 contracts deployed via DeploymentHelpers
     DeploymentHelpers.Ve33Contracts public ve33;
@@ -155,6 +151,10 @@ contract E2ETest is Test {
         // Act as DEPLOYER for all deployments
         vm.startPrank(DEPLOYER);
 
+        console.log(
+            "Permissions registry team multisig:", PermissionsRegistry(ve33.permissionsRegistry).lithosTeamMultisig()
+        );
+
         // Deploy PairFactory first
         pairFactory = new PairFactory();
         console.log("PairFactory deployed:", address(pairFactory));
@@ -216,6 +216,13 @@ contract E2ETest is Test {
         console.log("Deployer WETH balance:", ERC20(WETH).balanceOf(DEPLOYER));
         console.log("Deployer WXPL balance:", ERC20(WXPL).balanceOf(DEPLOYER));
         console.log("Deployer USDe balance:", ERC20(USDe).balanceOf(DEPLOYER));
+
+        // Transfer initial LITH mint to deployer for liquidity provisioning and incentives
+        uint256 initialLithBalance = lithos.balanceOf(INITIAL_MINT_RECIPIENT);
+        vm.startPrank(INITIAL_MINT_RECIPIENT);
+        lithos.transfer(DEPLOYER, initialLithBalance);
+        vm.stopPrank();
+        console.log("Deployer LITH balance:", lithos.balanceOf(DEPLOYER));
     }
 
     // Add LP
@@ -254,18 +261,17 @@ contract E2ETest is Test {
         uint256 deadline = block.timestamp + 600; // 10 minutes
 
         console.log("Adding liquidity to WXPL/WETH pair:");
-        (uint256 amountA, uint256 amountB, uint256 liquidity) = router
-            .addLiquidity(
-                WXPL, // tokenA
-                WETH, // tokenB
-                false, // stable = false (volatile pair)
-                amountToLpWXPL, // amountADesired
-                amountToLpWETH, // amountBDesired
-                0, // amountAMin
-                0, // amountBMin
-                LP, // to
-                deadline // deadline
-            );
+        (uint256 amountA, uint256 amountB, uint256 liquidity) = router.addLiquidity(
+            WXPL, // tokenA
+            WETH, // tokenB
+            false, // stable = false (volatile pair)
+            amountToLpWXPL, // amountADesired
+            amountToLpWETH, // amountBDesired
+            0, // amountAMin
+            0, // amountBMin
+            LP, // to
+            deadline // deadline
+        );
 
         lpTokenBalance = liquidity;
         console.log("- WXPL amount:", amountA);
@@ -311,9 +317,7 @@ contract E2ETest is Test {
         vm.stopPrank();
 
         // LP_UNSTAKED adds liquidity (but won't stake)
-        console.log(
-            "\n=== LP_UNSTAKED Adding Liquidity (Will Keep Unstaked) ==="
-        );
+        console.log("\n=== LP_UNSTAKED Adding Liquidity (Will Keep Unstaked) ===");
         vm.startPrank(LP_UNSTAKED);
 
         // Approve RouterV2 to spend tokens
@@ -357,9 +361,7 @@ contract E2ETest is Test {
         console.log("- USDe amount:", amountB);
         console.log("- LP tokens minted:", liquidity);
 
-        console.log(
-            "\nLP_UNSTAKED keeps LP tokens unstaked to earn trading fees directly"
-        );
+        console.log("\nLP_UNSTAKED keeps LP tokens unstaked to earn trading fees directly");
 
         // Record initial balances after liquidity provision (before any swaps/fees)
         lpUnstakedInitialUSDT = ERC20(USDT).balanceOf(LP_UNSTAKED);
@@ -403,19 +405,15 @@ contract E2ETest is Test {
         route1[0] = ITradeHelper.Route({from: USDT, to: WXPL, stable: false});
         route1[1] = ITradeHelper.Route({from: WXPL, to: WETH, stable: false});
 
-        uint256[] memory amounts1 = globalRouter.swapExactTokensForTokens(
-            amountToSwapUSDT,
-            0,
-            route1,
-            DEPLOYER,
-            deadline,
-            true
-        );
+        uint256[] memory amounts1 =
+            globalRouter.swapExactTokensForTokens(amountToSwapUSDT, 0, route1, DEPLOYER, deadline, true);
 
         uint256 usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
         uint256 wethAfter = ERC20(WETH).balanceOf(DEPLOYER);
-        console.log("- USDT spent:", usdtBefore - usdtAfter);
-        console.log("- WETH received:", wethAfter - wethBefore);
+        int256 usdtNetSpent = int256(usdtBefore) - int256(usdtAfter);
+        int256 wethNetReceived = int256(wethAfter) - int256(wethBefore);
+        console.log("- USDT spent:", usdtNetSpent);
+        console.log("- WETH received:", wethNetReceived);
         console.log("- Route amounts:", amounts1[0], amounts1[1], amounts1[2]);
 
         // === Swap 2: WETH -> USDT ===
@@ -427,19 +425,15 @@ contract E2ETest is Test {
         route2[0] = ITradeHelper.Route({from: WETH, to: WXPL, stable: false});
         route2[1] = ITradeHelper.Route({from: WXPL, to: USDT, stable: false});
 
-        uint256[] memory amounts2 = globalRouter.swapExactTokensForTokens(
-            amountToSwapWETH,
-            0,
-            route2,
-            DEPLOYER,
-            deadline,
-            true
-        );
+        uint256[] memory amounts2 =
+            globalRouter.swapExactTokensForTokens(amountToSwapWETH, 0, route2, DEPLOYER, deadline, true);
 
         wethAfter = ERC20(WETH).balanceOf(DEPLOYER);
         usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
-        console.log("- WETH spent:", wethBefore - wethAfter);
-        console.log("- USDT received:", usdtAfter - usdtBefore);
+        int256 wethNetSpent = int256(wethBefore) - int256(wethAfter);
+        int256 usdtNetReceived = int256(usdtAfter) - int256(usdtBefore);
+        console.log("- WETH spent:", wethNetSpent);
+        console.log("- USDT received:", usdtNetReceived);
         console.log("- Route amounts:", amounts2[0], amounts2[1], amounts2[2]);
 
         // === Swap 3: USDT -> USDe ===
@@ -450,19 +444,15 @@ contract E2ETest is Test {
         ITradeHelper.Route[] memory route3 = new ITradeHelper.Route[](1);
         route3[0] = ITradeHelper.Route({from: USDT, to: USDe, stable: true});
 
-        uint256[] memory amounts3 = globalRouter.swapExactTokensForTokens(
-            amountToSwapUSDT,
-            0,
-            route3,
-            DEPLOYER,
-            deadline,
-            true
-        );
+        uint256[] memory amounts3 =
+            globalRouter.swapExactTokensForTokens(amountToSwapUSDT, 0, route3, DEPLOYER, deadline, true);
 
         usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
         uint256 usdeAfter = ERC20(USDe).balanceOf(DEPLOYER);
-        console.log("- USDT spent:", usdtBefore - usdtAfter);
-        console.log("- USDe received:", usdeAfter - usdeBefore);
+        int256 usdtNetSpent2 = int256(usdtBefore) - int256(usdtAfter);
+        int256 usdeNetReceived = int256(usdeAfter) - int256(usdeBefore);
+        console.log("- USDT spent:", usdtNetSpent2);
+        console.log("- USDe received:", usdeNetReceived);
         console.log("- Route amounts:", amounts3[0], "->", amounts3[1]);
 
         // === Swap 4: USDe -> USDT ===
@@ -473,19 +463,15 @@ contract E2ETest is Test {
         ITradeHelper.Route[] memory route4 = new ITradeHelper.Route[](1);
         route4[0] = ITradeHelper.Route({from: USDe, to: USDT, stable: true});
 
-        uint256[] memory amounts4 = globalRouter.swapExactTokensForTokens(
-            amountToSwapUSDe,
-            0,
-            route4,
-            DEPLOYER,
-            deadline,
-            true
-        );
+        uint256[] memory amounts4 =
+            globalRouter.swapExactTokensForTokens(amountToSwapUSDe, 0, route4, DEPLOYER, deadline, true);
 
         usdeAfter = ERC20(USDe).balanceOf(DEPLOYER);
         usdtAfter = ERC20(USDT).balanceOf(DEPLOYER);
-        console.log("- USDe spent:", usdeBefore - usdeAfter);
-        console.log("- USDT received:", usdtAfter - usdtBefore);
+        int256 usdeNetSpent = int256(usdeBefore) - int256(usdeAfter);
+        int256 usdtNetReceived2 = int256(usdtAfter) - int256(usdtBefore);
+        console.log("- USDe spent:", usdeNetSpent);
+        console.log("- USDT received:", usdtNetReceived2);
         console.log("- Route amounts:", amounts4[0], "->", amounts4[1]);
 
         // Note: WXPL/USDT pool gets 0 swap volume intentionally (testing edge case)
@@ -501,18 +487,12 @@ contract E2ETest is Test {
     // Claim trading fees for unstaked LP
     function step_ClaimTradingFeesUnstaked() internal {
         console.log("\n=== Step: Claim Trading Fees for Unstaked LP ===");
-        console.log(
-            "Demonstrating that unstaked LPs can claim trading fees directly"
-        );
+        console.log("Demonstrating that unstaked LPs can claim trading fees directly");
         console.log("while staked LPs cannot (their fees go to voters)\n");
 
         console.log("--- LP_UNSTAKED Claims Trading Fees ---");
-        console.log(
-            "Note: claimable0/claimable1 are only finalized when claimFees() is called"
-        );
-        console.log(
-            "So we claim first, then measure the actual fees received\n"
-        );
+        console.log("Note: claimable0/claimable1 are only finalized when claimFees() is called");
+        console.log("So we claim first, then measure the actual fees received\n");
 
         vm.startPrank(LP_UNSTAKED);
 
@@ -522,15 +502,13 @@ contract E2ETest is Test {
         uint256 usdeBefore = ERC20(USDe).balanceOf(LP_UNSTAKED);
 
         // Claim from WXPL/WETH pair (claimFees finalizes fees via _updateFor)
-        (bool success, ) = wxplWethPair.call(
-            abi.encodeWithSignature("claimFees()")
-        );
+        (bool success,) = wxplWethPair.call(abi.encodeWithSignature("claimFees()"));
         if (success) {
             console.log("Successfully claimed fees from WXPL/WETH pair");
         }
 
         // Claim from USDT/USDe pair
-        (success, ) = usdtUsdePair.call(abi.encodeWithSignature("claimFees()"));
+        (success,) = usdtUsdePair.call(abi.encodeWithSignature("claimFees()"));
         if (success) {
             console.log("Successfully claimed fees from USDT/USDe pair");
         }
@@ -540,9 +518,17 @@ contract E2ETest is Test {
         uint256 wethAfter = ERC20(WETH).balanceOf(LP_UNSTAKED);
         uint256 usdeAfter = ERC20(USDe).balanceOf(LP_UNSTAKED);
 
-        uint256 usdtReceived = usdtAfter - usdtBefore;
-        uint256 wethReceived = wethAfter - wethBefore;
-        uint256 usdeReceived = usdeAfter - usdeBefore;
+        int256 usdtDelta = int256(usdtAfter) - int256(usdtBefore);
+        int256 wethDelta = int256(wethAfter) - int256(wethBefore);
+        int256 usdeDelta = int256(usdeAfter) - int256(usdeBefore);
+
+        uint256 usdtReceived = usdtDelta > 0 ? uint256(usdtDelta) : 0;
+        uint256 wethReceived = wethDelta > 0 ? uint256(wethDelta) : 0;
+        uint256 usdeReceived = usdeDelta > 0 ? uint256(usdeDelta) : 0;
+
+        if (usdtDelta <= 0 && wethDelta <= 0 && usdeDelta <= 0) {
+            console.log("  Warning: fee claim did not increase balances");
+        }
 
         console.log("\nFees claimed by LP_UNSTAKED:");
         if (usdtReceived > 0) {
@@ -583,9 +569,7 @@ contract E2ETest is Test {
 
         console.log("\n=== Key Insight ===");
         console.log("LP_UNSTAKED earns trading fees directly from swaps");
-        console.log(
-            "LP (staked) cannot claim fees - they go to voters instead"
-        );
+        console.log("LP (staked) cannot claim fees - they go to voters instead");
         console.log("This is the tradeoff: trading fees vs LITH emissions");
     }
 
@@ -607,10 +591,7 @@ contract E2ETest is Test {
         vm.startPrank(DEPLOYER);
 
         // Deploy all ve33 contracts with proxy pattern
-        ve33 = DeploymentHelpers.deployVe33System(
-            DEPLOYER,
-            INITIAL_MINT_RECIPIENT
-        );
+        ve33 = DeploymentHelpers.deployVe33System(DEPLOYER, INITIAL_MINT_RECIPIENT);
 
         console.log("\n--- ve33 Contracts Deployed ---");
         console.log("Lithos:", ve33.lithos);
@@ -629,12 +610,7 @@ contract E2ETest is Test {
         whitelistTokens[1] = USDT;
 
         // Initialize all contracts (but NOT minter._initialize - that happens in step7)
-        DeploymentHelpers.initializeVe33(
-            ve33,
-            address(pairFactory),
-            DEPLOYER,
-            whitelistTokens
-        );
+        DeploymentHelpers.initializeVe33(ve33, address(pairFactory), DEPLOYER, whitelistTokens);
 
         console.log("\n--- ve33 System Initialized ---");
         console.log("Contracts deployed but NOT activated");
@@ -688,18 +664,17 @@ contract E2ETest is Test {
         console.log("Approved RouterV2 to spend WXPL and LITH");
 
         console.log("Adding liquidity to WXPL/LITH pair:");
-        (uint256 amountA, uint256 amountB, uint256 liquidity) = router
-            .addLiquidity(
-                WXPL, // tokenA
-                address(lithos), // tokenB
-                false, // stable = false (volatile pair)
-                amountToLpWXPL, // amountADesired
-                amountToLpLITH, // amountBDesired
-                0, // amountAMin
-                0, // amountBMin
-                LP, // to
-                deadline // deadline
-            );
+        (uint256 amountA, uint256 amountB, uint256 liquidity) = router.addLiquidity(
+            WXPL, // tokenA
+            address(lithos), // tokenB
+            false, // stable = false (volatile pair)
+            amountToLpWXPL, // amountADesired
+            amountToLpLITH, // amountBDesired
+            0, // amountAMin
+            0, // amountBMin
+            LP, // to
+            deadline // deadline
+        );
 
         lpTokenBalance = liquidity;
         console.log("- WXPL amount:", amountA);
@@ -717,10 +692,7 @@ contract E2ETest is Test {
         voter.distributeAll();
         uint256 voterLithAfter = lithos.balanceOf(address(voter));
 
-        require(
-            voterLithBefore == voterLithAfter,
-            "LITH distributed too early (before Oct 16)"
-        );
+        require(voterLithBefore == voterLithAfter, "LITH distributed too early (before Oct 16)");
 
         console.log("Confirmed: distributeAll() does nothing on Oct 9");
     }
@@ -744,10 +716,7 @@ contract E2ETest is Test {
         // Check LITH balance before lock
         uint256 lithBalanceBefore = lithos.balanceOf(VOTER);
         console.log("LITH balance before lock:", lithBalanceBefore);
-        require(
-            lithBalanceBefore >= lockAmount,
-            "Insufficient LITH balance for lock"
-        );
+        require(lithBalanceBefore >= lockAmount, "Insufficient LITH balance for lock");
 
         // Approve VotingEscrow contract to spend LITH tokens
         lithos.approve(address(votingEscrow), lockAmount);
@@ -772,10 +741,8 @@ contract E2ETest is Test {
         // Check LITH balance after lock
         uint256 lithBalanceAfter = lithos.balanceOf(VOTER);
         console.log("LITH balance after lock:", lithBalanceAfter);
-        console.log(
-            "LITH tokens locked:",
-            lithBalanceBefore - lithBalanceAfter
-        );
+        int256 lithLocked = int256(lithBalanceBefore) - int256(lithBalanceAfter);
+        console.log("LITH tokens locked:", lithLocked);
 
         // Check voting power
         uint256 votingPower = votingEscrow.balanceOfNFT(voterTokenId);
@@ -819,26 +786,17 @@ contract E2ETest is Test {
         }
 
         if (toWhitelistCount > 0) {
-            address[] memory tokensToWhitelist = new address[](
-                toWhitelistCount
-            );
+            address[] memory tokensToWhitelist = new address[](toWhitelistCount);
             uint256 index = 0;
             for (uint256 i = 0; i < tokensToCheck.length; i++) {
                 if (!voter.isWhitelisted(tokensToCheck[i])) {
                     tokensToWhitelist[index] = tokensToCheck[i];
-                    console.log(
-                        "Whitelisting token for gauge creation:",
-                        tokensToCheck[i]
-                    );
+                    console.log("Whitelisting token for gauge creation:", tokensToCheck[i]);
                     index++;
                 }
             }
             voter.whitelist(tokensToWhitelist);
-            console.log(
-                "Whitelisted",
-                toWhitelistCount,
-                "tokens for gauge creation"
-            );
+            console.log("Whitelisted", toWhitelistCount, "tokens for gauge creation");
         } else {
             console.log("All tokens already whitelisted");
         }
@@ -847,19 +805,23 @@ contract E2ETest is Test {
         // Pool tokens: WXPL, WETH (automatically added as reward tokens)
         // Additional reward tokens: LITH (must be added manually)
 
-        (
-            wxplWethGaugeAddress,
-            wxplWethInternalBribe,
-            wxplWethExternalBribe
-        ) = voter.createGauge(wxplWethPair, 0);
-        console.log("Gauge created for WXPL/WETH pair:", wxplWethGaugeAddress);
-        console.log("Internal bribe address:", wxplWethInternalBribe);
-        console.log("External bribe address:", wxplWethExternalBribe);
+        address existingWxplWethGauge = voter.gauges(wxplWethPair);
+        if (existingWxplWethGauge != address(0)) {
+            wxplWethGaugeAddress = existingWxplWethGauge;
+            wxplWethInternalBribe = voter.internal_bribes(existingWxplWethGauge);
+            wxplWethExternalBribe = voter.external_bribes(existingWxplWethGauge);
+            console.log("Gauge already exists for WXPL/WETH pair:", wxplWethGaugeAddress);
+        } else {
+            (wxplWethGaugeAddress, wxplWethInternalBribe, wxplWethExternalBribe) = voter.createGauge(wxplWethPair, 0);
+            console.log("Gauge created for WXPL/WETH pair:", wxplWethGaugeAddress);
+            console.log("Internal bribe address:", wxplWethInternalBribe);
+            console.log("External bribe address:", wxplWethExternalBribe);
+        }
+        console.log("WXPL/WETH bribe owner:", Bribe(wxplWethExternalBribe).owner());
 
         // Add LITH as reward token
-        (bool addLithSuccessWxplWeth, ) = wxplWethExternalBribe.call(
-            abi.encodeWithSignature("addRewardToken(address)", address(lithos))
-        );
+        (bool addLithSuccessWxplWeth,) =
+            wxplWethExternalBribe.call(abi.encodeWithSignature("addRewardToken(address)", address(lithos)));
         require(addLithSuccessWxplWeth, "Failed to add LITH as reward token");
         console.log("Added LITH as reward token to bribe contract");
 
@@ -867,18 +829,21 @@ contract E2ETest is Test {
         // Pool tokens: WXPL, LITH (automatically added as reward tokens)
         // Additional reward tokens: USDT (must be added manually)
 
-        (
-            wxplLithGaugeAddress,
-            wxplLithInternalBribe,
-            wxplLithExternalBribe
-        ) = voter.createGauge(wxplLithPair, 0);
-        console.log("Gauge created for WXPL/LITH pair:", wxplLithGaugeAddress);
-        console.log("Internal bribe address:", wxplLithInternalBribe);
-        console.log("External bribe address:", wxplLithExternalBribe);
+        address existingWxplLithGauge = voter.gauges(wxplLithPair);
+        if (existingWxplLithGauge != address(0)) {
+            wxplLithGaugeAddress = existingWxplLithGauge;
+            wxplLithInternalBribe = voter.internal_bribes(existingWxplLithGauge);
+            wxplLithExternalBribe = voter.external_bribes(existingWxplLithGauge);
+            console.log("Gauge already exists for WXPL/LITH pair:", wxplLithGaugeAddress);
+        } else {
+            (wxplLithGaugeAddress, wxplLithInternalBribe, wxplLithExternalBribe) = voter.createGauge(wxplLithPair, 0);
+            console.log("Gauge created for WXPL/LITH pair:", wxplLithGaugeAddress);
+            console.log("Internal bribe address:", wxplLithInternalBribe);
+            console.log("External bribe address:", wxplLithExternalBribe);
+        }
+        console.log("WXPL/LITH bribe owner:", Bribe(wxplLithExternalBribe).owner());
 
-        (bool addUsdtSuccess, ) = wxplLithExternalBribe.call(
-            abi.encodeWithSignature("addRewardToken(address)", USDT)
-        );
+        (bool addUsdtSuccess,) = wxplLithExternalBribe.call(abi.encodeWithSignature("addRewardToken(address)", USDT));
         require(addUsdtSuccess, "Failed to add USDT as reward token");
         console.log("Added USDT as reward token to bribe contract");
 
@@ -886,32 +851,41 @@ contract E2ETest is Test {
         // Pool tokens: WXPL, USDT (automatically added as reward tokens)
         // Additional reward tokens: none
 
-        (
-            wxplUsdtGaugeAddress,
-            wxplUsdtInternalBribe,
-            wxplUsdtExternalBribe
-        ) = voter.createGauge(wxplUsdtPair, 0);
-        console.log("Gauge created for WXPL/USDT pair:", wxplUsdtGaugeAddress);
-        console.log("Internal bribe address:", wxplUsdtInternalBribe);
-        console.log("External bribe address:", wxplUsdtExternalBribe);
+        address existingWxplUsdtGauge = voter.gauges(wxplUsdtPair);
+        if (existingWxplUsdtGauge != address(0)) {
+            wxplUsdtGaugeAddress = existingWxplUsdtGauge;
+            wxplUsdtInternalBribe = voter.internal_bribes(existingWxplUsdtGauge);
+            wxplUsdtExternalBribe = voter.external_bribes(existingWxplUsdtGauge);
+            console.log("Gauge already exists for WXPL/USDT pair:", wxplUsdtGaugeAddress);
+        } else {
+            (wxplUsdtGaugeAddress, wxplUsdtInternalBribe, wxplUsdtExternalBribe) = voter.createGauge(wxplUsdtPair, 0);
+            console.log("Gauge created for WXPL/USDT pair:", wxplUsdtGaugeAddress);
+            console.log("Internal bribe address:", wxplUsdtInternalBribe);
+            console.log("External bribe address:", wxplUsdtExternalBribe);
+        }
+        console.log("WXPL/USDT bribe owner:", Bribe(wxplUsdtExternalBribe).owner());
 
         // ========== USDT/USDe GAUGE ==========
         // Pool tokens: USDT, USDe (automatically added as reward tokens)
         // Additional reward tokens: LITH (must be added manually)
 
-        (
-            usdtUsdeGaugeAddress,
-            usdtUsdeInternalBribe,
-            usdtUsdeExternalBribe
-        ) = voter.createGauge(usdtUsdePair, 0);
-        console.log("Gauge created for USDT/USDE pair:", usdtUsdeGaugeAddress);
-        console.log("Internal bribe address:", usdtUsdeInternalBribe);
-        console.log("External bribe address:", usdtUsdeExternalBribe);
+        address existingUsdtUsdeGauge = voter.gauges(usdtUsdePair);
+        if (existingUsdtUsdeGauge != address(0)) {
+            usdtUsdeGaugeAddress = existingUsdtUsdeGauge;
+            usdtUsdeInternalBribe = voter.internal_bribes(existingUsdtUsdeGauge);
+            usdtUsdeExternalBribe = voter.external_bribes(existingUsdtUsdeGauge);
+            console.log("Gauge already exists for USDT/USDe pair:", usdtUsdeGaugeAddress);
+        } else {
+            (usdtUsdeGaugeAddress, usdtUsdeInternalBribe, usdtUsdeExternalBribe) = voter.createGauge(usdtUsdePair, 0);
+            console.log("Gauge created for USDT/USDE pair:", usdtUsdeGaugeAddress);
+            console.log("Internal bribe address:", usdtUsdeInternalBribe);
+            console.log("External bribe address:", usdtUsdeExternalBribe);
+        }
+        console.log("USDT/USDe bribe owner:", Bribe(usdtUsdeExternalBribe).owner());
 
         // Add LITH as reward token
-        (bool addLithSuccessUsdtUsde, ) = usdtUsdeExternalBribe.call(
-            abi.encodeWithSignature("addRewardToken(address)", address(lithos))
-        );
+        (bool addLithSuccessUsdtUsde,) =
+            usdtUsdeExternalBribe.call(abi.encodeWithSignature("addRewardToken(address)", address(lithos)));
         require(addLithSuccessUsdtUsde, "Failed to add LITH as reward token");
         console.log("Added LITH as reward token to bribe contract");
 
@@ -929,21 +903,11 @@ contract E2ETest is Test {
         uint256 lithBribeAmountForWxplWeth = 1_000e18; // 1000 LITH
         lithos.approve(wxplWethExternalBribe, lithBribeAmountForWxplWeth);
         console.log("Approved LITH for bribing:", lithBribeAmountForWxplWeth);
-        (bool notifyLithSuccessWxplWeth, ) = wxplWethExternalBribe.call(
-            abi.encodeWithSignature(
-                "notifyRewardAmount(address,uint256)",
-                address(lithos),
-                lithBribeAmountForWxplWeth
-            )
+        (bool notifyLithSuccessWxplWeth,) = wxplWethExternalBribe.call(
+            abi.encodeWithSignature("notifyRewardAmount(address,uint256)", address(lithos), lithBribeAmountForWxplWeth)
         );
-        require(
-            notifyLithSuccessWxplWeth,
-            "Failed to notify LITH reward amount for WXPL/WETH"
-        );
-        console.log(
-            "Notified LITH bribe amount for WXPL/WETH:",
-            lithBribeAmountForWxplWeth
-        );
+        require(notifyLithSuccessWxplWeth, "Failed to notify LITH reward amount for WXPL/WETH");
+        console.log("Notified LITH bribe amount for WXPL/WETH:", lithBribeAmountForWxplWeth);
 
         // Bribe WXPL/LITH gauge with WXPL, LITH, and USDT
         uint256 wxplBribeAmountForWxplLith = 1_000e18; // 1000 WXPL
@@ -956,53 +920,23 @@ contract E2ETest is Test {
         console.log("Approved LITH for bribing:", lithBribeAmountForWxplLith);
         console.log("Approved USDT for bribing:", usdtBribeAmountForWxplLith);
 
-        (bool notifyWxplSuccess, ) = wxplLithExternalBribe.call(
-            abi.encodeWithSignature(
-                "notifyRewardAmount(address,uint256)",
-                address(WXPL),
-                wxplBribeAmountForWxplLith
-            )
+        (bool notifyWxplSuccess,) = wxplLithExternalBribe.call(
+            abi.encodeWithSignature("notifyRewardAmount(address,uint256)", address(WXPL), wxplBribeAmountForWxplLith)
         );
-        require(
-            notifyWxplSuccess,
-            "Failed to notify WXPL reward amount for WXPL/LITH"
-        );
-        console.log(
-            "Notified WXPL bribe amount for WXPL/LITH:",
-            wxplBribeAmountForWxplLith
-        );
+        require(notifyWxplSuccess, "Failed to notify WXPL reward amount for WXPL/LITH");
+        console.log("Notified WXPL bribe amount for WXPL/LITH:", wxplBribeAmountForWxplLith);
 
-        (bool notifyLithSuccessWxplLith, ) = wxplLithExternalBribe.call(
-            abi.encodeWithSignature(
-                "notifyRewardAmount(address,uint256)",
-                address(lithos),
-                lithBribeAmountForWxplLith
-            )
+        (bool notifyLithSuccessWxplLith,) = wxplLithExternalBribe.call(
+            abi.encodeWithSignature("notifyRewardAmount(address,uint256)", address(lithos), lithBribeAmountForWxplLith)
         );
-        require(
-            notifyLithSuccessWxplLith,
-            "Failed to notify LITH reward amount for WXPL/LITH"
-        );
-        console.log(
-            "Notified LITH bribe amount for WXPL/LITH:",
-            lithBribeAmountForWxplWeth
-        );
+        require(notifyLithSuccessWxplLith, "Failed to notify LITH reward amount for WXPL/LITH");
+        console.log("Notified LITH bribe amount for WXPL/LITH:", lithBribeAmountForWxplWeth);
 
-        (bool notifyUsdtSuccess, ) = wxplLithExternalBribe.call(
-            abi.encodeWithSignature(
-                "notifyRewardAmount(address,uint256)",
-                address(USDT),
-                usdtBribeAmountForWxplLith
-            )
+        (bool notifyUsdtSuccess,) = wxplLithExternalBribe.call(
+            abi.encodeWithSignature("notifyRewardAmount(address,uint256)", address(USDT), usdtBribeAmountForWxplLith)
         );
-        require(
-            notifyUsdtSuccess,
-            "Failed to notify USDT reward amount for WXPL/LITH"
-        );
-        console.log(
-            "Notified USDT bribe amount for WXPL/LITH:",
-            usdtBribeAmountForWxplLith
-        );
+        require(notifyUsdtSuccess, "Failed to notify USDT reward amount for WXPL/LITH");
+        console.log("Notified USDT bribe amount for WXPL/LITH:", usdtBribeAmountForWxplLith);
 
         // No bribes to WXPL/USDT gauge
 
@@ -1010,21 +944,11 @@ contract E2ETest is Test {
         uint256 lithBribeAmountForUsdtUsde = 1_000e18; // 1000 LITH
         lithos.approve(usdtUsdeExternalBribe, lithBribeAmountForUsdtUsde);
         console.log("Approved LITH for bribing:", lithBribeAmountForUsdtUsde);
-        (bool notifyLithSuccessUsdtUsde, ) = usdtUsdeExternalBribe.call(
-            abi.encodeWithSignature(
-                "notifyRewardAmount(address,uint256)",
-                address(lithos),
-                lithBribeAmountForUsdtUsde
-            )
+        (bool notifyLithSuccessUsdtUsde,) = usdtUsdeExternalBribe.call(
+            abi.encodeWithSignature("notifyRewardAmount(address,uint256)", address(lithos), lithBribeAmountForUsdtUsde)
         );
-        require(
-            notifyLithSuccessUsdtUsde,
-            "Failed to notify LITH reward amount for USDT/USDe"
-        );
-        console.log(
-            "Notified LITH bribe amount for USDT/USDe:",
-            lithBribeAmountForUsdtUsde
-        );
+        require(notifyLithSuccessUsdtUsde, "Failed to notify LITH reward amount for USDT/USDe");
+        console.log("Notified LITH bribe amount for USDT/USDe:", lithBribeAmountForUsdtUsde);
 
         vm.stopPrank();
     }
@@ -1054,33 +978,29 @@ contract E2ETest is Test {
 
         // Stake LP tokens in gauges
         if (wxplWethLPBalance > 0) {
-            (bool depositSuccess, ) = wxplWethGaugeAddress.call(
-                abi.encodeWithSignature("deposit(uint256)", wxplWethLPBalance)
-            );
+            (bool depositSuccess,) =
+                wxplWethGaugeAddress.call(abi.encodeWithSignature("deposit(uint256)", wxplWethLPBalance));
             require(depositSuccess, "Failed to stake WXPL/WETH LP tokens");
             console.log("Staked WXPL/WETH LP tokens:", wxplWethLPBalance);
         }
 
         if (wxplLithLPBalance > 0) {
-            (bool depositSuccess, ) = wxplLithGaugeAddress.call(
-                abi.encodeWithSignature("deposit(uint256)", wxplLithLPBalance)
-            );
+            (bool depositSuccess,) =
+                wxplLithGaugeAddress.call(abi.encodeWithSignature("deposit(uint256)", wxplLithLPBalance));
             require(depositSuccess, "Failed to stake WXPL/LITH LP tokens");
             console.log("Staked WXPL/LITH LP tokens:", wxplLithLPBalance);
         }
 
         if (wxplUsdtLPBalance > 0) {
-            (bool depositSuccess, ) = wxplUsdtGaugeAddress.call(
-                abi.encodeWithSignature("deposit(uint256)", wxplUsdtLPBalance)
-            );
+            (bool depositSuccess,) =
+                wxplUsdtGaugeAddress.call(abi.encodeWithSignature("deposit(uint256)", wxplUsdtLPBalance));
             require(depositSuccess, "Failed to stake WXPL/USDT LP tokens");
             console.log("Staked WXPL/USDT LP tokens:", wxplUsdtLPBalance);
         }
 
         if (usdtUsdeLPBalance > 0) {
-            (bool depositSuccess, ) = usdtUsdeGaugeAddress.call(
-                abi.encodeWithSignature("deposit(uint256)", usdtUsdeLPBalance)
-            );
+            (bool depositSuccess,) =
+                usdtUsdeGaugeAddress.call(abi.encodeWithSignature("deposit(uint256)", usdtUsdeLPBalance));
             require(depositSuccess, "Failed to stake USDT/USDe LP tokens");
             console.log("Staked USDT/USDe LP tokens:", usdtUsdeLPBalance);
         }
@@ -1117,19 +1037,9 @@ contract E2ETest is Test {
 
         console.log("Voted with NFT", voterTokenId, "across multiple pools:");
         console.log("- WXPL/WETH:", weights[0], "% (has LITH bribes)");
-        console.log(
-            "- WXPL/LITH:",
-            weights[1],
-            "% (has WXPL, LITH, USDT bribes)"
-        );
-        console.log(
-            "- WXPL/USDT:",
-            weights[2],
-            "% (NO bribes - testing edge case)"
-        );
-        console.log(
-            "- USDT/USDe: 0% (has LITH bribes but no votes - testing edge case)"
-        );
+        console.log("- WXPL/LITH:", weights[1], "% (has WXPL, LITH, USDT bribes)");
+        console.log("- WXPL/USDT:", weights[2], "% (NO bribes - testing edge case)");
+        console.log("- USDT/USDe: 0% (has LITH bribes but no votes - testing edge case)");
 
         console.log("Voting completed successfully!");
 
@@ -1140,28 +1050,20 @@ contract E2ETest is Test {
     function step_FastForwardToPreEpochDistribution() internal {
         console.log("\n=== Fast Forward to Oct 15, 2025 ===");
         console.log("Moving to Oct 15 to distribute fees BEFORE epoch flip");
-        console.log(
-            "This ensures fees are scheduled for Oct 16 (same as voting balance)"
-        );
+        console.log("This ensures fees are scheduled for Oct 16 (same as voting balance)");
 
         // Oct 15, 2025 00:00:00 UTC
         vm.warp(1760486400);
         console.log("Time set to Oct 15, 2025");
         console.log("Current timestamp:", block.timestamp);
-        console.log(
-            "Active period still:",
-            minterUpgradeable.active_period(),
-            "(Oct 9)"
-        );
+        console.log("Active period still:", minterUpgradeable.active_period(), "(Oct 9)");
     }
 
     // Distribute fees before epoch flip
     function step_DistributeFeesBeforeFlip() internal {
         console.log("\n=== Distribute Fees Before Epoch Flip ===");
         console.log("Distributing fees while still in Oct 9-16 epoch");
-        console.log(
-            "This schedules internal bribe rewards at Oct 16 (matching voting balance)"
-        );
+        console.log("This schedules internal bribe rewards at Oct 16 (matching voting balance)");
 
         vm.startPrank(DEPLOYER);
 
@@ -1190,9 +1092,7 @@ contract E2ETest is Test {
 
             voter.distributeFees(finalGauges);
             console.log("Fees distributed to", activeCount, "active gauges");
-            console.log(
-                "Swap fees now scheduled for Oct 16 (same as voting balance!)"
-            );
+            console.log("Swap fees now scheduled for Oct 16 (same as voting balance!)");
         }
 
         vm.stopPrank();
@@ -1211,9 +1111,7 @@ contract E2ETest is Test {
     // Epoch flip and emissions distribution
     function step_EpochFlipAndEmissions() internal {
         console.log("\n=== Epoch Flip and Emissions Distribution ===");
-        console.log(
-            "Note: Fees already distributed on Oct 15, only emissions now"
-        );
+        console.log("Note: Fees already distributed on Oct 15, only emissions now");
 
         vm.startPrank(DEPLOYER);
 
@@ -1231,11 +1129,7 @@ contract E2ETest is Test {
 
             console.log("Before distribution:");
             console.log("- Weekly emissions:", weeklyBefore / 1e18, "LITHOS");
-            console.log(
-                "- Circulating supply:",
-                circulatingBefore / 1e18,
-                "LITHOS"
-            );
+            console.log("- Circulating supply:", circulatingBefore / 1e18, "LITHOS");
             console.log("- Active period:", activePeriodBefore);
 
             // Distribute emissions to all gauges (this calls update_period internally)
@@ -1250,19 +1144,12 @@ contract E2ETest is Test {
 
             console.log("After distribution:");
             console.log("- Weekly emissions:", weeklyAfter / 1e18, "LITHOS");
-            console.log(
-                "- Circulating supply:",
-                circulatingAfter / 1e18,
-                "LITHOS"
-            );
+            console.log("- Circulating supply:", circulatingAfter / 1e18, "LITHOS");
             console.log("- Active period:", activePeriodAfter);
             console.log("- Next period:", activePeriodAfter + 604800);
         } else {
             console.log("Not time for new emission period yet.");
-            console.log(
-                "Next period starts at:",
-                minterUpgradeable.active_period() + 604800
-            );
+            console.log("Next period starts at:", minterUpgradeable.active_period() + 604800);
         }
 
         console.log("Epoch flip and emissions completed successfully!");
@@ -1274,9 +1161,7 @@ contract E2ETest is Test {
     function step_ClaimAllRewards() internal {
         console.log("\n=== Claim All Rewards Types ===");
         console.log("Testing reward claiming across two epochs:");
-        console.log(
-            "- Oct 16: Gauge emissions claimable (based on Oct 9 votes)"
-        );
+        console.log("- Oct 16: Gauge emissions claimable (based on Oct 9 votes)");
         console.log("- Oct 23: External AND internal bribes claimable");
         console.log("");
 
@@ -1299,36 +1184,26 @@ contract E2ETest is Test {
         // Record LP's LITH balance before claiming
         uint256 lpLithBalanceStart = lithos.balanceOf(LP);
         uint256 lpLithBefore = lpLithBalanceStart;
-        console.log(
-            "LP's LITH balance before claiming:",
-            lpLithBefore / 1e18,
-            "LITH\n"
-        );
+        console.log("LP's LITH balance before claiming:", lpLithBefore / 1e18, "LITH\n");
 
         // Claim from WXPL/WETH gauge (should get ~25% of emissions)
         console.log("--- WXPL/WETH Gauge (25% of votes) ---");
         if (wxplWethGauge != address(0)) {
-            (bool earnedSuccess, bytes memory earnedData) = wxplWethGauge.call(
-                abi.encodeWithSignature("earned(address)", LP)
-            );
+            (bool earnedSuccess, bytes memory earnedData) =
+                wxplWethGauge.call(abi.encodeWithSignature("earned(address)", LP));
 
             if (earnedSuccess && earnedData.length > 0) {
                 uint256 pending = abi.decode(earnedData, (uint256));
                 console.log("Pending emissions:", pending / 1e18, "LITH");
 
-                (bool claimSuccess, ) = wxplWethGauge.call(
-                    abi.encodeWithSignature("getReward()")
-                );
+                (bool claimSuccess,) = wxplWethGauge.call(abi.encodeWithSignature("getReward()"));
 
                 if (claimSuccess) {
                     uint256 newBalance = lithos.balanceOf(LP);
                     uint256 claimed = newBalance - lpLithBefore;
                     console.log("Claimed:", claimed / 1e18, "LITH");
                     // Assert that emissions were actually claimed for WXPL/WETH (25% vote share)
-                    require(
-                        claimed > 0,
-                        "WXPL/WETH gauge should have distributed emissions"
-                    );
+                    require(claimed > 0, "WXPL/WETH gauge should have distributed emissions");
                     lpLithBefore = newBalance;
                 }
             } else {
@@ -1339,27 +1214,21 @@ contract E2ETest is Test {
         // Claim from WXPL/LITH gauge (should get ~50% of emissions)
         console.log("\n--- WXPL/LITH Gauge (50% of votes) ---");
         if (wxplLithGauge != address(0)) {
-            (bool earnedSuccess, bytes memory earnedData) = wxplLithGauge.call(
-                abi.encodeWithSignature("earned(address)", LP)
-            );
+            (bool earnedSuccess, bytes memory earnedData) =
+                wxplLithGauge.call(abi.encodeWithSignature("earned(address)", LP));
 
             if (earnedSuccess && earnedData.length > 0) {
                 uint256 pending = abi.decode(earnedData, (uint256));
                 console.log("Pending emissions:", pending / 1e18, "LITH");
 
-                (bool claimSuccess, ) = wxplLithGauge.call(
-                    abi.encodeWithSignature("getReward()")
-                );
+                (bool claimSuccess,) = wxplLithGauge.call(abi.encodeWithSignature("getReward()"));
 
                 if (claimSuccess) {
                     uint256 newBalance = lithos.balanceOf(LP);
                     uint256 claimed = newBalance - lpLithBefore;
                     console.log("Claimed:", claimed / 1e18, "LITH");
                     // Assert that emissions were actually claimed for WXPL/LITH (50% vote share - should be largest)
-                    require(
-                        claimed > 0,
-                        "WXPL/LITH gauge should have distributed emissions"
-                    );
+                    require(claimed > 0, "WXPL/LITH gauge should have distributed emissions");
                     lpLithBefore = newBalance;
                 }
             } else {
@@ -1370,27 +1239,21 @@ contract E2ETest is Test {
         // Claim from WXPL/USDT gauge (should get ~25% of emissions, but NO bribes)
         console.log("\n--- WXPL/USDT Gauge (25% of votes, NO bribes) ---");
         if (wxplUsdtGauge != address(0)) {
-            (bool earnedSuccess, bytes memory earnedData) = wxplUsdtGauge.call(
-                abi.encodeWithSignature("earned(address)", LP)
-            );
+            (bool earnedSuccess, bytes memory earnedData) =
+                wxplUsdtGauge.call(abi.encodeWithSignature("earned(address)", LP));
 
             if (earnedSuccess && earnedData.length > 0) {
                 uint256 pending = abi.decode(earnedData, (uint256));
                 console.log("Pending emissions:", pending / 1e18, "LITH");
 
-                (bool claimSuccess, ) = wxplUsdtGauge.call(
-                    abi.encodeWithSignature("getReward()")
-                );
+                (bool claimSuccess,) = wxplUsdtGauge.call(abi.encodeWithSignature("getReward()"));
 
                 if (claimSuccess) {
                     uint256 newBalance = lithos.balanceOf(LP);
                     uint256 claimed = newBalance - lpLithBefore;
                     console.log("Claimed:", claimed / 1e18, "LITH");
                     // Assert that emissions were actually claimed for WXPL/USDT (25% vote share, no bribes)
-                    require(
-                        claimed > 0,
-                        "WXPL/USDT gauge should have distributed emissions despite no bribes"
-                    );
+                    require(claimed > 0, "WXPL/USDT gauge should have distributed emissions despite no bribes");
                     lpLithBefore = newBalance;
                 }
             } else {
@@ -1401,22 +1264,14 @@ contract E2ETest is Test {
         // Check USDT/USDe gauge (should have 0 emissions - no votes)
         console.log("\n--- USDT/USDe Gauge (0% of votes - edge case) ---");
         if (usdtUsdeGauge != address(0)) {
-            (bool earnedSuccess, bytes memory earnedData) = usdtUsdeGauge.call(
-                abi.encodeWithSignature("earned(address)", LP)
-            );
+            (bool earnedSuccess, bytes memory earnedData) =
+                usdtUsdeGauge.call(abi.encodeWithSignature("earned(address)", LP));
 
             if (earnedSuccess && earnedData.length > 0) {
                 uint256 pending = abi.decode(earnedData, (uint256));
-                console.log(
-                    "Pending emissions:",
-                    pending / 1e18,
-                    "LITH (should be 0)"
-                );
+                console.log("Pending emissions:", pending / 1e18, "LITH (should be 0)");
                 // Assert that this gauge gets 0 emissions (edge case - has bribes but no votes)
-                require(
-                    pending == 0,
-                    "USDT/USDe gauge should have 0 emissions (no votes)"
-                );
+                require(pending == 0, "USDT/USDe gauge should have 0 emissions (no votes)");
             } else {
                 console.log("No emissions (expected - gauge got 0 votes)");
             }
@@ -1424,16 +1279,9 @@ contract E2ETest is Test {
 
         uint256 totalLPEmissions = lithos.balanceOf(LP) - lpLithBalanceStart;
         console.log("\n=== Phase A Summary ===");
-        console.log(
-            "Total gauge emissions claimed by LP:",
-            totalLPEmissions / 1e18,
-            "LITH"
-        );
+        console.log("Total gauge emissions claimed by LP:", totalLPEmissions / 1e18, "LITH");
         // Assert that LP received total emissions > 0 (staked in 3 gauges with votes)
-        require(
-            totalLPEmissions > 0,
-            "LP should have received gauge emissions for staked positions"
-        );
+        require(totalLPEmissions > 0, "LP should have received gauge emissions for staked positions");
         console.log("Bribes NOT claimable yet (still in current epoch)");
 
         vm.stopPrank();
@@ -1452,10 +1300,7 @@ contract E2ETest is Test {
         bool canUpdate = minterUpgradeable.check();
         if (canUpdate) {
             voter.distributeAll();
-            console.log(
-                "Epoch flipped, active_period updated to:",
-                minterUpgradeable.active_period()
-            );
+            console.log("Epoch flipped, active_period updated to:", minterUpgradeable.active_period());
         } else {
             console.log("Warning: Could not trigger epoch flip");
         }
@@ -1489,22 +1334,14 @@ contract E2ETest is Test {
             address[] memory rewardTokens = new address[](1);
             rewardTokens[0] = address(lithos); // Only LITH bribes for this gauge
 
-            (bool claimSuccess, ) = wxplWethExtBribe.call(
-                abi.encodeWithSignature(
-                    "getReward(uint256,address[])",
-                    tokenId,
-                    rewardTokens
-                )
-            );
+            (bool claimSuccess,) =
+                wxplWethExtBribe.call(abi.encodeWithSignature("getReward(uint256,address[])", tokenId, rewardTokens));
 
             if (claimSuccess) {
                 uint256 lithClaimed = lithos.balanceOf(VOTER) - voterLithBefore;
                 console.log("Claimed LITH bribes:", lithClaimed / 1e18);
                 // Assert that LITH bribes were received (25% of total LITH bribes)
-                require(
-                    lithClaimed > 0,
-                    "VOTER should receive LITH bribes from WXPL/WETH gauge"
-                );
+                require(lithClaimed > 0, "VOTER should receive LITH bribes from WXPL/WETH gauge");
                 voterLithBefore = lithos.balanceOf(VOTER);
             } else {
                 console.log("No bribes to claim or not yet claimable");
@@ -1520,38 +1357,22 @@ contract E2ETest is Test {
             rewardTokens[1] = address(lithos);
             rewardTokens[2] = USDT;
 
-            (bool claimSuccess, ) = wxplLithExtBribe.call(
-                abi.encodeWithSignature(
-                    "getReward(uint256,address[])",
-                    tokenId,
-                    rewardTokens
-                )
-            );
+            (bool claimSuccess,) =
+                wxplLithExtBribe.call(abi.encodeWithSignature("getReward(uint256,address[])", tokenId, rewardTokens));
 
             if (claimSuccess) {
-                uint256 wxplClaimed = ERC20(WXPL).balanceOf(VOTER) -
-                    voterWxplBefore;
+                uint256 wxplClaimed = ERC20(WXPL).balanceOf(VOTER) - voterWxplBefore;
                 uint256 lithClaimed = lithos.balanceOf(VOTER) - voterLithBefore;
-                uint256 usdtBribesClaimed = ERC20(USDT).balanceOf(VOTER) -
-                    voterUsdtBefore;
+                uint256 usdtBribesClaimed = ERC20(USDT).balanceOf(VOTER) - voterUsdtBefore;
 
                 console.log("Claimed WXPL bribes:", wxplClaimed / 1e18);
                 console.log("Claimed LITH bribes:", lithClaimed / 1e18);
                 console.log("Claimed USDT bribes:", usdtBribesClaimed / 1e6);
 
                 // Assert all three bribe tokens were received (50% vote share - highest)
-                require(
-                    wxplClaimed > 0,
-                    "VOTER should receive WXPL bribes from WXPL/LITH gauge"
-                );
-                require(
-                    lithClaimed > 0,
-                    "VOTER should receive LITH bribes from WXPL/LITH gauge"
-                );
-                require(
-                    usdtBribesClaimed > 0,
-                    "VOTER should receive USDT bribes from WXPL/LITH gauge"
-                );
+                require(wxplClaimed > 0, "VOTER should receive WXPL bribes from WXPL/LITH gauge");
+                require(lithClaimed > 0, "VOTER should receive LITH bribes from WXPL/LITH gauge");
+                require(usdtBribesClaimed > 0, "VOTER should receive USDT bribes from WXPL/LITH gauge");
 
                 voterWxplBefore = ERC20(WXPL).balanceOf(VOTER);
                 voterLithBefore = lithos.balanceOf(VOTER);
@@ -1562,9 +1383,7 @@ contract E2ETest is Test {
         }
 
         // Check WXPL/USDT external bribe (25% of votes, but NO bribes)
-        console.log(
-            "\n--- WXPL/USDT External Bribes (25% vote share, NO bribes) ---"
-        );
+        console.log("\n--- WXPL/USDT External Bribes (25% vote share, NO bribes) ---");
         address wxplUsdtExtBribe = voter.external_bribes(wxplUsdtGauge);
         if (wxplUsdtExtBribe != address(0)) {
             address[] memory rewardTokens = new address[](2);
@@ -1575,51 +1394,31 @@ contract E2ETest is Test {
             uint256 wxplBefore = ERC20(WXPL).balanceOf(VOTER);
             uint256 usdtBefore = ERC20(USDT).balanceOf(VOTER);
 
-            (bool claimSuccess, ) = wxplUsdtExtBribe.call(
-                abi.encodeWithSignature(
-                    "getReward(uint256,address[])",
-                    tokenId,
-                    rewardTokens
-                )
-            );
+            (bool claimSuccess,) =
+                wxplUsdtExtBribe.call(abi.encodeWithSignature("getReward(uint256,address[])", tokenId, rewardTokens));
 
             // Assert no bribes were received (edge case - gauge had no bribes)
-            require(
-                ERC20(WXPL).balanceOf(VOTER) == wxplBefore,
-                "WXPL/USDT should have no WXPL bribes"
-            );
-            require(
-                ERC20(USDT).balanceOf(VOTER) == usdtBefore,
-                "WXPL/USDT should have no USDT bribes"
-            );
+            require(ERC20(WXPL).balanceOf(VOTER) == wxplBefore, "WXPL/USDT should have no WXPL bribes");
+            require(ERC20(USDT).balanceOf(VOTER) == usdtBefore, "WXPL/USDT should have no USDT bribes");
             console.log("No bribes expected (gauge had no bribes) - verified!");
         }
 
         // Check USDT/USDe (0 votes, but has bribes - should be unclaimable)
-        console.log(
-            "\n--- USDT/USDe External Bribes (0% vote share - edge case) ---"
-        );
+        console.log("\n--- USDT/USDe External Bribes (0% vote share - edge case) ---");
         address usdtUsdeExtBribe = voter.external_bribes(usdtUsdeGauge);
         console.log("Gauge has LITH bribes but got 0 votes");
-        console.log(
-            "Bribes remain unclaimed (VOTER didn't vote for this gauge)"
-        );
+        console.log("Bribes remain unclaimed (VOTER didn't vote for this gauge)");
 
         console.log("\n=== Phase B Summary ===");
-        uint256 totalWxplBribes = ERC20(WXPL).balanceOf(VOTER) -
-            voterWxplBalanceStart;
-        uint256 totalLithBribes = lithos.balanceOf(VOTER) -
-            voterLithBalanceStart;
-        uint256 totalUsdtBribes = ERC20(USDT).balanceOf(VOTER) -
-            voterUsdtBalanceStart;
+        uint256 totalWxplBribes = ERC20(WXPL).balanceOf(VOTER) - voterWxplBalanceStart;
+        uint256 totalLithBribes = lithos.balanceOf(VOTER) - voterLithBalanceStart;
+        uint256 totalUsdtBribes = ERC20(USDT).balanceOf(VOTER) - voterUsdtBalanceStart;
 
         console.log("Total external bribes claimed by VOTER:");
         console.log("- WXPL:", totalWxplBribes / 1e18);
         console.log("- LITH:", totalLithBribes / 1e18);
         console.log("- USDT:", totalUsdtBribes / 1e6);
-        console.log(
-            "\nNow claiming internal bribes (swap fees) - should work since we distributed fees on Oct 15"
-        );
+        console.log("\nNow claiming internal bribes (swap fees) - should work since we distributed fees on Oct 15");
 
         // Assert that VOTER received external bribes for their votes
         require(totalWxplBribes > 0, "VOTER should have received WXPL bribes");
@@ -1630,13 +1429,9 @@ contract E2ETest is Test {
         console.log("\n=== PHASE C: Internal Bribes/Swap Fees (Oct 23) ===");
         console.log("Internal bribes should now be claimable because:");
         console.log("- Voted on Oct 9 -> balance recorded at Oct 16");
-        console.log(
-            "- Fees distributed Oct 15 (BEFORE epoch flip) -> rewards at Oct 16"
-        );
+        console.log("- Fees distributed Oct 15 (BEFORE epoch flip) -> rewards at Oct 16");
         console.log("- Balance and rewards timestamps now match at Oct 16");
-        console.log(
-            "- On Oct 23, active_period > Oct 16, so can claim Oct 16 rewards\n"
-        );
+        console.log("- On Oct 23, active_period > Oct 16, so can claim Oct 16 rewards\n");
 
         // Record VOTER's balances before claiming internal bribes
         uint256 voterUsdtBeforeFees = ERC20(USDT).balanceOf(VOTER);
@@ -1668,30 +1463,18 @@ contract E2ETest is Test {
             feeTokens[0] = USDT;
             feeTokens[1] = WETH;
 
-            (bool claimSuccess, ) = wxplWethIntBribe.call(
-                abi.encodeWithSignature(
-                    "getReward(uint256,address[])",
-                    tokenId,
-                    feeTokens
-                )
-            );
+            (bool claimSuccess,) =
+                wxplWethIntBribe.call(abi.encodeWithSignature("getReward(uint256,address[])", tokenId, feeTokens));
 
             if (claimSuccess) {
-                uint256 usdtFees = ERC20(USDT).balanceOf(VOTER) -
-                    voterUsdtBeforeFees;
-                uint256 wethFees = ERC20(WETH).balanceOf(VOTER) -
-                    voterWethBeforeFees;
+                uint256 usdtFees = ERC20(USDT).balanceOf(VOTER) - voterUsdtBeforeFees;
+                uint256 wethFees = ERC20(WETH).balanceOf(VOTER) - voterWethBeforeFees;
                 console.log("- USDT fees claimed:", usdtFees / 1e6);
                 console.log("- WETH fees claimed:", wethFees / 1e18);
 
                 // Should successfully claim fees now that timestamps match
-                require(
-                    usdtFees > 0 || wethFees > 0,
-                    "WXPL/WETH should have swap fees from earlier step"
-                );
-                console.log(
-                    "  Successfully claimed internal bribes! Timestamps aligned."
-                );
+                require(usdtFees > 0 || wethFees > 0, "WXPL/WETH should have swap fees from earlier step");
+                console.log("  Successfully claimed internal bribes! Timestamps aligned.");
 
                 voterUsdtBeforeFees = ERC20(USDT).balanceOf(VOTER);
                 voterWethBeforeFees = ERC20(WETH).balanceOf(VOTER);
@@ -1708,19 +1491,12 @@ contract E2ETest is Test {
             feeTokens[0] = USDT;
             feeTokens[1] = USDe;
 
-            (bool claimSuccess, ) = usdtUsdeIntBribe.call(
-                abi.encodeWithSignature(
-                    "getReward(uint256,address[])",
-                    tokenId,
-                    feeTokens
-                )
-            );
+            (bool claimSuccess,) =
+                usdtUsdeIntBribe.call(abi.encodeWithSignature("getReward(uint256,address[])", tokenId, feeTokens));
 
             if (claimSuccess) {
-                uint256 usdtFees = ERC20(USDT).balanceOf(VOTER) -
-                    voterUsdtBeforeFees;
-                uint256 usdeFees = ERC20(USDe).balanceOf(VOTER) -
-                    voterUsdeBeforeFees;
+                uint256 usdtFees = ERC20(USDT).balanceOf(VOTER) - voterUsdtBeforeFees;
+                uint256 usdeFees = ERC20(USDe).balanceOf(VOTER) - voterUsdeBeforeFees;
                 console.log("- USDT fees claimed:", usdtFees / 1e6);
                 console.log("- USDe fees claimed:", usdeFees / 1e18);
 
@@ -1741,20 +1517,14 @@ contract E2ETest is Test {
         console.log("Internal bribes successfully claimed!");
         console.log("- Key insight: Distribute fees BEFORE epoch flip");
         console.log("- This ensures balance and reward timestamps align");
-        console.log(
-            "- Single vote is sufficient for both external and internal bribes"
-        );
+        console.log("- Single vote is sufficient for both external and internal bribes");
 
         vm.stopPrank();
 
         // ========== PHASE D: LP_UNSTAKED Trading Fees (Continuous) ==========
         console.log("\n=== PHASE D: Unstaked LP Trading Fees (Oct 23) ===");
-        console.log(
-            "LP_UNSTAKED continues earning trading fees throughout all epochs"
-        );
-        console.log(
-            "They don't need to wait for epoch flips - fees accrue continuously\n"
-        );
+        console.log("LP_UNSTAKED continues earning trading fees throughout all epochs");
+        console.log("They don't need to wait for epoch flips - fees accrue continuously\n");
 
         vm.startPrank(LP_UNSTAKED);
 
@@ -1767,15 +1537,13 @@ contract E2ETest is Test {
         uint256 unstakedUsdeBefore = ERC20(USDe).balanceOf(LP_UNSTAKED);
 
         // Claim from WXPL/WETH (this finalizes fees via _updateFor)
-        (bool success, ) = wxplWethPair.call(
-            abi.encodeWithSignature("claimFees()")
-        );
+        (bool success,) = wxplWethPair.call(abi.encodeWithSignature("claimFees()"));
         if (success) {
             console.log("Claimed fees from WXPL/WETH pair");
         }
 
         // Claim from USDT/USDe
-        (success, ) = usdtUsdePair.call(abi.encodeWithSignature("claimFees()"));
+        (success,) = usdtUsdePair.call(abi.encodeWithSignature("claimFees()"));
         if (success) {
             console.log("Claimed fees from USDT/USDe pair");
         }
@@ -1791,25 +1559,13 @@ contract E2ETest is Test {
 
         console.log("\nAdditional fees claimed by LP_UNSTAKED:");
         if (usdtFeesClaimed > 0) {
-            console.log(
-                "  USDT: %s.%s",
-                usdtFeesClaimed / 1e6,
-                usdtFeesClaimed % 1e6
-            );
+            console.log("  USDT: %s.%s", usdtFeesClaimed / 1e6, usdtFeesClaimed % 1e6);
         }
         if (wethClaimed > 0) {
-            console.log(
-                "  WETH: %s.%s",
-                wethClaimed / 1e18,
-                (wethClaimed % 1e18) / 1e12
-            );
+            console.log("  WETH: %s.%s", wethClaimed / 1e18, (wethClaimed % 1e18) / 1e12);
         }
         if (usdeClaimed > 0) {
-            console.log(
-                "  USDe: %s.%s",
-                usdeClaimed / 1e18,
-                (usdeClaimed % 1e18) / 1e12
-            );
+            console.log("  USDe: %s.%s", usdeClaimed / 1e18, (usdeClaimed % 1e18) / 1e12);
         }
         if (usdtFeesClaimed == 0 && wethClaimed == 0 && usdeClaimed == 0) {
             console.log("  None (fees already claimed in prior step)");
@@ -1832,9 +1588,7 @@ contract E2ETest is Test {
         console.log("- Received LITH tokens as rewards on Oct 16");
         console.log("- Forfeited trading fees to voters");
 
-        console.log(
-            "\nLP_UNSTAKED wallet (liquidity provider who didn't stake):"
-        );
+        console.log("\nLP_UNSTAKED wallet (liquidity provider who didn't stake):");
         console.log("- Kept LP tokens unstaked");
         console.log("- Earned trading fees continuously from swaps");
         console.log("- Could claim fees anytime without epoch restrictions");
@@ -1842,25 +1596,17 @@ contract E2ETest is Test {
 
         console.log("\nVOTER wallet (veNFT holder):");
         console.log("- Voted with veNFT across multiple gauges");
-        console.log(
-            "- Earned external bribes based on vote share (claimable Oct 23)"
-        );
-        console.log(
-            "- Earned internal bribes (swap fees) based on vote share (claimable Oct 30)"
-        );
+        console.log("- Earned external bribes based on vote share (claimable Oct 23)");
+        console.log("- Earned internal bribes (swap fees) based on vote share (claimable Oct 30)");
         console.log("- Received WXPL, LITH, and USDT as rewards");
 
         console.log("\nEdge cases tested:");
         console.log("- WXPL/USDT: Had votes but no bribes, no swap volume");
         console.log("- USDT/USDe: Had bribes and swaps but no votes");
-        console.log(
-            "- Internal bribes: Must distribute fees before epoch flip for proper timing"
-        );
+        console.log("- Internal bribes: Must distribute fees before epoch flip for proper timing");
 
         console.log("\nComplete Timeline:");
-        console.log(
-            "- Oct 9: Vote (balance at Oct 16), external bribes, swaps"
-        );
+        console.log("- Oct 9: Vote (balance at Oct 16), external bribes, swaps");
         console.log("- Oct 15: Distribute fees (rewards scheduled at Oct 16)");
         console.log("- Oct 16: Epoch flip, emissions claimable");
         console.log("- Oct 23: External AND internal bribes claimable");
@@ -1882,68 +1628,40 @@ contract E2ETest is Test {
         console.log("\n=== Transfer Control to Timelock ===");
 
         vm.startPrank(DEPLOYER);
-        TimelockController timelock = TimelockController(
-            payable(ve33.timelock)
-        );
-        PermissionsRegistry permissionsRegistry = PermissionsRegistry(
-            ve33.permissionsRegistry
-        );
+        TimelockController timelock = TimelockController(payable(ve33.timelock));
+        PermissionsRegistry permissionsRegistry = PermissionsRegistry(ve33.permissionsRegistry);
 
         // Skip ProxyAdmin transfer if not captured (OZ v5 creates internal ProxyAdmins per proxy)
         if (ve33.proxyAdmin == address(0)) {
-            console.log(
-                "Skipping ProxyAdmin ownership transfer (handled per-proxy in OZ v5)"
-            );
-            console.log(
-                "Only transferring PermissionsRegistry governance to TimelockController"
-            );
+            console.log("Skipping ProxyAdmin ownership transfer (handled per-proxy in OZ v5)");
+            console.log("Only transferring PermissionsRegistry governance to TimelockController");
         } else {
-            console.log(
-                "Transferring governance from deployer to TimelockController"
-            );
+            console.log("Transferring governance from deployer to TimelockController");
 
             ProxyAdmin proxyAdmin = ProxyAdmin(ve33.proxyAdmin);
 
             // Verify deployer has control before transfer
-            assertEq(
-                proxyAdmin.owner(),
-                DEPLOYER,
-                "ProxyAdmin should be owned by deployer"
-            );
+            assertEq(proxyAdmin.owner(), DEPLOYER, "ProxyAdmin should be owned by deployer");
 
             // Transfer ProxyAdmin ownership to Timelock
             console.log("1. Transferring ProxyAdmin ownership to Timelock...");
             proxyAdmin.transferOwnership(address(timelock));
-            assertEq(
-                proxyAdmin.owner(),
-                address(timelock),
-                "ProxyAdmin should be owned by Timelock"
-            );
+            assertEq(proxyAdmin.owner(), address(timelock), "ProxyAdmin should be owned by Timelock");
         }
 
         // Verify deployer has roles
-        assertTrue(
-            permissionsRegistry.hasRole("GOVERNANCE", DEPLOYER),
-            "Deployer should have GOVERNANCE role"
-        );
-        assertTrue(
-            permissionsRegistry.hasRole("VOTER_ADMIN", DEPLOYER),
-            "Deployer should have VOTER_ADMIN role"
-        );
+        assertTrue(permissionsRegistry.hasRole("GOVERNANCE", DEPLOYER), "Deployer should have GOVERNANCE role");
+        assertTrue(permissionsRegistry.hasRole("VOTER_ADMIN", DEPLOYER), "Deployer should have VOTER_ADMIN role");
 
         // Grant roles to Timelock
         console.log("2. Granting GOVERNANCE role to Timelock...");
         permissionsRegistry.setRoleFor(address(timelock), "GOVERNANCE");
-        assertTrue(
-            permissionsRegistry.hasRole("GOVERNANCE", address(timelock)),
-            "Timelock should have GOVERNANCE role"
-        );
+        assertTrue(permissionsRegistry.hasRole("GOVERNANCE", address(timelock)), "Timelock should have GOVERNANCE role");
 
         console.log("3. Granting VOTER_ADMIN role to Timelock...");
         permissionsRegistry.setRoleFor(address(timelock), "VOTER_ADMIN");
         assertTrue(
-            permissionsRegistry.hasRole("VOTER_ADMIN", address(timelock)),
-            "Timelock should have VOTER_ADMIN role"
+            permissionsRegistry.hasRole("VOTER_ADMIN", address(timelock)), "Timelock should have VOTER_ADMIN role"
         );
 
         // Revoke deployer roles
@@ -1951,14 +1669,8 @@ contract E2ETest is Test {
         permissionsRegistry.removeRoleFrom(DEPLOYER, "GOVERNANCE");
         permissionsRegistry.removeRoleFrom(DEPLOYER, "VOTER_ADMIN");
 
-        assertFalse(
-            permissionsRegistry.hasRole("GOVERNANCE", DEPLOYER),
-            "Deployer should not have GOVERNANCE role"
-        );
-        assertFalse(
-            permissionsRegistry.hasRole("VOTER_ADMIN", DEPLOYER),
-            "Deployer should not have VOTER_ADMIN role"
-        );
+        assertFalse(permissionsRegistry.hasRole("GOVERNANCE", DEPLOYER), "Deployer should not have GOVERNANCE role");
+        assertFalse(permissionsRegistry.hasRole("VOTER_ADMIN", DEPLOYER), "Deployer should not have VOTER_ADMIN role");
 
         console.log("\n=== Control Transfer Complete ===");
         console.log("- ProxyAdmin ownership -> Timelock");
@@ -1975,16 +1687,11 @@ contract E2ETest is Test {
         console.log("\n=== Renounce Timelock Admin Role ===");
         console.log("Final decentralization - IRREVERSIBLE");
 
-        TimelockController timelock = TimelockController(
-            payable(ve33.timelock)
-        );
+        TimelockController timelock = TimelockController(payable(ve33.timelock));
 
         // Verify deployer has TIMELOCK_ADMIN_ROLE
         bytes32 adminRole = bytes32(0); // DEFAULT_ADMIN_ROLE
-        assertTrue(
-            timelock.hasRole(adminRole, DEPLOYER),
-            "Deployer should have TIMELOCK_ADMIN_ROLE before renounce"
-        );
+        assertTrue(timelock.hasRole(adminRole, DEPLOYER), "Deployer should have TIMELOCK_ADMIN_ROLE before renounce");
 
         // Renounce admin role
         vm.startPrank(DEPLOYER);
@@ -1993,8 +1700,7 @@ contract E2ETest is Test {
 
         // Verify renunciation
         assertFalse(
-            timelock.hasRole(adminRole, DEPLOYER),
-            "Deployer should NOT have TIMELOCK_ADMIN_ROLE after renounce"
+            timelock.hasRole(adminRole, DEPLOYER), "Deployer should NOT have TIMELOCK_ADMIN_ROLE after renounce"
         );
 
         console.log("\n=== Full Decentralization Complete ===");
@@ -2008,9 +1714,7 @@ contract E2ETest is Test {
         console.log("\n=== Phase E & F Summary ===");
         console.log("Oct 30: Governance transferred to timelock");
         console.log("Oct 30: Admin role renounced - full decentralization");
-        console.log(
-            "All future governance actions require 48-hour timelock process"
-        );
+        console.log("All future governance actions require 48-hour timelock process");
     }
 
     function logResults() internal view {
@@ -2018,11 +1722,7 @@ contract E2ETest is Test {
         console.log(
             "Timeline completed: Oct 3 (ve33 contracts deploy) -> Oct 9 (activate) -> Oct 12 (vote) -> Oct 16 (emissions)"
         );
-        console.log(
-            "Current timestamp:",
-            block.timestamp,
-            "(Oct 16, 2025 after emissions)"
-        );
+        console.log("Current timestamp:", block.timestamp, "(Oct 16, 2025 after emissions)");
         console.log("");
         console.log("=== DEX Contracts (Already deployed on mainnet) ===");
         console.log("- PairFactory:", address(pairFactory));
@@ -2030,9 +1730,7 @@ contract E2ETest is Test {
         console.log("- TradeHelper:", address(tradeHelper));
         console.log("- GlobalRouter:", address(globalRouter));
         console.log("");
-        console.log(
-            "=== Voting & Governance (Deployed Oct 3, Activated Oct 9) ==="
-        );
+        console.log("=== Voting & Governance (Deployed Oct 3, Activated Oct 9) ===");
         console.log("- Lithos:", ve33.lithos);
         console.log("- VotingEscrow:", ve33.votingEscrow);
         console.log("- PermissionsRegistry:", ve33.permissionsRegistry);
@@ -2060,21 +1758,10 @@ contract E2ETest is Test {
         console.log("");
         console.log("=== Emissions & Governance ===");
         if (address(minterUpgradeable) != address(0)) {
-            console.log(
-                "- Weekly emissions:",
-                minterUpgradeable.weekly() / 1e18,
-                "LITHOS"
-            );
-            console.log(
-                "- Circulating supply:",
-                minterUpgradeable.circulating_supply() / 1e18,
-                "LITHOS"
-            );
+            console.log("- Weekly emissions:", minterUpgradeable.weekly() / 1e18, "LITHOS");
+            console.log("- Circulating supply:", minterUpgradeable.circulating_supply() / 1e18, "LITHOS");
             console.log("- Active period:", minterUpgradeable.active_period());
-            console.log(
-                "- Next period:",
-                minterUpgradeable.active_period() + 604800
-            );
+            console.log("- Next period:", minterUpgradeable.active_period() + 604800);
         }
 
         if (address(votingEscrow) != address(0)) {
@@ -2109,34 +1796,20 @@ contract E2ETest is Test {
 
         console.log("   Trading Fees Earned:");
         if (netUSDT > 0) {
-            console.log(
-                "   - USDT: +%s.%s",
-                uint256(netUSDT) / 1e6,
-                uint256(netUSDT) % 1e6
-            );
+            console.log("   - USDT: +%s.%s", uint256(netUSDT) / 1e6, uint256(netUSDT) % 1e6);
         }
         if (netWETH > 0) {
-            console.log(
-                "   - WETH: +%s.%s",
-                uint256(netWETH) / 1e18,
-                (uint256(netWETH) % 1e18) / 1e12
-            );
+            console.log("   - WETH: +%s.%s", uint256(netWETH) / 1e18, (uint256(netWETH) % 1e18) / 1e12);
         }
         if (netUSDe > 0) {
-            console.log(
-                "   - USDe: +%s.%s",
-                uint256(netUSDe) / 1e18,
-                (uint256(netUSDe) % 1e18) / 1e12
-            );
+            console.log("   - USDe: +%s.%s", uint256(netUSDe) / 1e18, (uint256(netUSDe) % 1e18) / 1e12);
         }
         console.log("");
         console.log("   How LP_UNSTAKED Earned These Fees:");
         console.log("   - Provided liquidity to WXPL/WETH and USDT/USDe");
         console.log("   - Kept LP tokens in wallet (did NOT stake in gauges)");
         console.log("   - Swaps generated 0.18%% trading fees");
-        console.log(
-            "   - LP_UNSTAKED owns ~50%% of LP tokens, earns ~50%% of fees"
-        );
+        console.log("   - LP_UNSTAKED owns ~50%% of LP tokens, earns ~50%% of fees");
         console.log("   - Claimed fees directly from pair contracts");
         console.log("");
         console.log("   - LITH Emissions: 0 (not staked in gauges)");
@@ -2146,9 +1819,7 @@ contract E2ETest is Test {
         // LP Summary
         console.log("2. LP (Staked Liquidity Provider)");
         console.log("   -------------------------------");
-        console.log(
-            "   Strategy: Provided liquidity, staked LP tokens in gauges"
-        );
+        console.log("   Strategy: Provided liquidity, staked LP tokens in gauges");
         console.log("");
         console.log("   Timeline:");
         console.log("   - Oct 1: Added liquidity to all pairs");
@@ -2156,26 +1827,15 @@ contract E2ETest is Test {
         console.log("   - Oct 16: Claimed LITH emissions");
         console.log("");
         console.log("   Rewards Earned:");
-        console.log(
-            "   - LITH Emissions: %s LITH",
-            lithos.balanceOf(LP) / 1e18
-        );
+        console.log("   - LITH Emissions: %s LITH", lithos.balanceOf(LP) / 1e18);
         console.log("");
         console.log("   How LP Earned Emissions:");
-        console.log(
-            "   - Staked LP tokens in 4 gauges (WXPL/WETH, WXPL/LITH, WXPL/USDT, USDT/USDe)"
-        );
-        console.log(
-            "   - VOTER voted for 3 of these gauges (25%%, 50%%, 25%% split)"
-        );
+        console.log("   - Staked LP tokens in 4 gauges (WXPL/WETH, WXPL/LITH, WXPL/USDT, USDT/USDe)");
+        console.log("   - VOTER voted for 3 of these gauges (25%%, 50%%, 25%% split)");
         console.log("   - LP receives emissions proportional to:");
         console.log("     * Their share of staked LP in each gauge (~100%%)");
-        console.log(
-            "     * The gauge's share of total votes (25%% + 50%% + 25%% = 100%%)"
-        );
-        console.log(
-            "   - Result: LP earns from all voted gauges where they staked"
-        );
+        console.log("     * The gauge's share of total votes (25%% + 50%% + 25%% = 100%%)");
+        console.log("   - Result: LP earns from all voted gauges where they staked");
         console.log("");
         console.log("   - Trading Fees: 0 (forfeited to voters when staked)");
         console.log("   - Bribes: 0 (not voting, only providing liquidity)");
@@ -2194,9 +1854,7 @@ contract E2ETest is Test {
         console.log("");
         console.log("   Timeline:");
         console.log("   - Oct 9: Created 1M LITH lock (4 weeks)");
-        console.log(
-            "   - Oct 9: Voted across gauges (25%% WXPL/WETH, 50%% WXPL/LITH, 25%% WXPL/USDT)"
-        );
+        console.log("   - Oct 9: Voted across gauges (25%% WXPL/WETH, 50%% WXPL/LITH, 25%% WXPL/USDT)");
         console.log("   - Oct 23: Claimed external bribes");
         console.log("   - Oct 23: Claimed internal bribes (trading fees)");
         console.log("");
@@ -2208,12 +1866,8 @@ contract E2ETest is Test {
         if (voterLith > 1_000_000e18) {
             uint256 lithBribes = (voterLith - 1_000_000e18) / 1e18;
             console.log("   - LITH: %s", lithBribes);
-            console.log(
-                "     Source: 1000 from WXPL/WETH + 1000 from WXPL/LITH"
-            );
-            console.log(
-                "     VOTER is only voter, gets 100%% of bribes from pools voted for"
-            );
+            console.log("     Source: 1000 from WXPL/WETH + 1000 from WXPL/LITH");
+            console.log("     VOTER is only voter, gets 100%% of bribes from pools voted for");
         }
         if (voterWxpl > 0) {
             console.log("   - WXPL: %s", voterWxpl / 1e18);
@@ -2223,53 +1877,29 @@ contract E2ETest is Test {
         if (voterUsdt > 0) {
             console.log("   - USDT: %s.%s", voterUsdt / 1e6, voterUsdt % 1e6);
             console.log("     Breakdown:");
-            console.log(
-                "       External: ~1000 USDT (bribe on WXPL/LITH gauge)"
-            );
-            console.log(
-                "       Internal: ~0.77 USDT (swap fees from WXPL/WETH + USDT/USDe)"
-            );
-            console.log(
-                "     Note: VOTER gets 100%% of fees from pools they voted for"
-            );
+            console.log("       External: ~1000 USDT (bribe on WXPL/LITH gauge)");
+            console.log("       Internal: ~0.77 USDT (swap fees from WXPL/WETH + USDT/USDe)");
+            console.log("     Note: VOTER gets 100%% of fees from pools they voted for");
         }
         console.log("");
 
         console.log("   Internal Bribes (trading fees from gauges):");
         if (voterWeth > 0) {
-            console.log(
-                "   - WETH: %s.%s",
-                voterWeth / 1e18,
-                (voterWeth % 1e18) / 1e12
-            );
-            console.log(
-                "     Source: ~0.79 WETH total swap fees from WXPL/WETH pair"
-            );
-            console.log(
-                "     VOTER voted 25%% for WXPL/WETH but is only voter"
-            );
+            console.log("   - WETH: %s.%s", voterWeth / 1e18, (voterWeth % 1e18) / 1e12);
+            console.log("     Source: ~0.79 WETH total swap fees from WXPL/WETH pair");
+            console.log("     VOTER voted 25%% for WXPL/WETH but is only voter");
             console.log("     Gets 100%% of fees collected by that gauge");
         }
         if (voterUsde > 0) {
-            console.log(
-                "   - USDe: %s.%s",
-                voterUsde / 1e18,
-                (voterUsde % 1e18) / 1e12
-            );
+            console.log("   - USDe: %s.%s", voterUsde / 1e18, (voterUsde % 1e18) / 1e12);
             console.log("     Source: Swap fees from USDT/USDe pair (if any)");
         }
         console.log("");
 
         console.log("   Key Insight:");
-        console.log(
-            "   - VOTER is the ONLY voter, so gets 100%% of all bribes/fees"
-        );
-        console.log(
-            "   - From pools they voted for (WXPL/WETH, WXPL/LITH, WXPL/USDT)"
-        );
-        console.log(
-            "   - Pools with 0%% votes (USDT/USDe) = 0 rewards for VOTER"
-        );
+        console.log("   - VOTER is the ONLY voter, so gets 100%% of all bribes/fees");
+        console.log("   - From pools they voted for (WXPL/WETH, WXPL/LITH, WXPL/USDT)");
+        console.log("   - Pools with 0%% votes (USDT/USDe) = 0 rewards for VOTER");
         console.log("");
         console.log("========================================");
     }

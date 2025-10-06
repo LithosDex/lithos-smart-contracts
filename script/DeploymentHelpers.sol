@@ -46,10 +46,10 @@ library DeploymentHelpers {
     /// @param deployer Address of the deployer (gets initial roles)
     /// @param initialMintRecipient Address to receive initial 50M LITH mint
     /// @return contracts Struct containing all deployed contract addresses
-    function deployVe33System(
-        address deployer,
-        address initialMintRecipient
-    ) internal returns (Ve33Contracts memory contracts) {
+    function deployVe33System(address deployer, address initialMintRecipient)
+        internal
+        returns (Ve33Contracts memory contracts)
+    {
         // 1. Deploy TimelockController (48 hour delay for governance actions)
         address[] memory proposers = new address[](1);
 
@@ -80,21 +80,16 @@ library DeploymentHelpers {
         VeArtProxyUpgradeable veArtImpl = new VeArtProxyUpgradeable();
         contracts.veArtProxyImpl = address(veArtImpl);
 
-        bytes memory veArtInitData = abi.encodeWithSelector(
-            VeArtProxyUpgradeable.initialize.selector
-        );
+        bytes memory veArtInitData = abi.encodeWithSelector(VeArtProxyUpgradeable.initialize.selector);
         TransparentUpgradeableProxy veArtProxy = new TransparentUpgradeableProxy(
-                address(veArtImpl),
-                deployer, // initialOwner of the ProxyAdmin created internally
-                veArtInitData
-            );
+            address(veArtImpl),
+            deployer, // initialOwner of the ProxyAdmin created internally
+            veArtInitData
+        );
         contracts.veArtProxy = address(veArtProxy);
 
         // 5. Deploy VotingEscrow (not upgradeable)
-        VotingEscrow votingEscrow = new VotingEscrow(
-            address(lithos),
-            contracts.veArtProxy
-        );
+        VotingEscrow votingEscrow = new VotingEscrow(address(lithos), contracts.veArtProxy);
         contracts.votingEscrow = address(votingEscrow);
 
         // 6. Deploy Gauge System (not upgradeable)
@@ -110,9 +105,7 @@ library DeploymentHelpers {
         VoterV3 voter = new VoterV3();
         contracts.voter = address(voter);
 
-        RewardsDistributor rewardsDistributor = new RewardsDistributor(
-            contracts.votingEscrow
-        );
+        RewardsDistributor rewardsDistributor = new RewardsDistributor(contracts.votingEscrow);
         contracts.rewardsDistributor = address(rewardsDistributor);
 
         // 7. Deploy Minter with TransparentUpgradeableProxy
@@ -121,16 +114,13 @@ library DeploymentHelpers {
         contracts.minterImpl = address(minterImpl);
 
         bytes memory minterInitData = abi.encodeWithSelector(
-            MinterUpgradeable.initialize.selector,
-            contracts.voter,
-            contracts.votingEscrow,
-            contracts.rewardsDistributor
+            MinterUpgradeable.initialize.selector, contracts.voter, contracts.votingEscrow, contracts.rewardsDistributor
         );
         TransparentUpgradeableProxy minterProxy = new TransparentUpgradeableProxy(
-                address(minterImpl),
-                deployer, // initialOwner of the ProxyAdmin created internally
-                minterInitData
-            );
+            address(minterImpl),
+            deployer, // initialOwner of the ProxyAdmin created internally
+            minterInitData
+        );
         contracts.minter = address(minterProxy);
 
         // NOTE: In OZ v5, each proxy creates its own internal ProxyAdmin
@@ -153,45 +143,30 @@ library DeploymentHelpers {
         address[] memory whitelistTokens
     ) internal {
         // Initialize contracts that weren't initialized during proxy deployment
-        GaugeFactoryV2(contracts.gaugeFactory).initialize(
-            contracts.permissionsRegistry
-        );
+        GaugeFactoryV2(contracts.gaugeFactory).initialize(contracts.permissionsRegistry);
         BribeFactoryV3(contracts.bribeFactory).initialize( // need to check with rahul on bribefactory Initialisation
-                deployer,
-                contracts.permissionsRegistry
-            );
+        deployer, contracts.permissionsRegistry);
 
         // Initialize Voter // contract initilaisation not system.
         VoterV3(contracts.voter).initialize(
-            contracts.votingEscrow,
-            pairFactory,
-            contracts.gaugeFactory,
-            contracts.bribeFactory
+            contracts.votingEscrow, pairFactory, contracts.gaugeFactory, contracts.bribeFactory
         );
 
         // Setup initial roles BEFORE calling _init (required for authorization)
-        PermissionsRegistry registry = PermissionsRegistry(
-            contracts.permissionsRegistry
-        );
+        PermissionsRegistry registry = PermissionsRegistry(contracts.permissionsRegistry);
         registry.setRoleFor(deployer, "GOVERNANCE");
         registry.setRoleFor(deployer, "VOTER_ADMIN");
 
         // Initialize Voter with whitelist tokens and permissions
         // NOTE: _init will set permissionRegistry = _permissionsRegistry
-        VoterV3(contracts.voter)._init(
-            whitelistTokens,
-            contracts.permissionsRegistry,
-            contracts.minter
-        );
+        VoterV3(contracts.voter)._init(whitelistTokens, contracts.permissionsRegistry, contracts.minter);
 
         // Set up cross-references
         VotingEscrow(contracts.votingEscrow).setVoter(contracts.voter);
         BribeFactoryV3(contracts.bribeFactory).setVoter(contracts.voter);
 
         // Set Minter as depositor for RewardsDistributor
-        RewardsDistributor(contracts.rewardsDistributor).setDepositor(
-            contracts.minter
-        );
+        RewardsDistributor(contracts.rewardsDistributor).setDepositor(contracts.minter);
 
         // Note: Minter and VeArtProxy already initialized via proxy deployment
     }
@@ -213,11 +188,7 @@ library DeploymentHelpers {
     /// @param proxyAdmin Address of ProxyAdmin contract
     /// @param proxy Address of proxy to upgrade
     /// @param newImplementation Address of new implementation
-    function upgradeContract(
-        address proxyAdmin,
-        address proxy,
-        address newImplementation
-    ) internal {
+    function upgradeContract(address proxyAdmin, address proxy, address newImplementation) internal {
         ProxyAdmin(proxyAdmin).upgradeAndCall(
             ITransparentUpgradeableProxy(proxy),
             newImplementation,
@@ -230,16 +201,9 @@ library DeploymentHelpers {
     /// @param proxy Address of proxy to upgrade
     /// @param newImplementation Address of new implementation
     /// @param data Initialization call data
-    function upgradeContractAndCall(
-        address proxyAdmin,
-        address proxy,
-        address newImplementation,
-        bytes memory data
-    ) internal {
-        ProxyAdmin(proxyAdmin).upgradeAndCall(
-            ITransparentUpgradeableProxy(proxy),
-            newImplementation,
-            data
-        );
+    function upgradeContractAndCall(address proxyAdmin, address proxy, address newImplementation, bytes memory data)
+        internal
+    {
+        ProxyAdmin(proxyAdmin).upgradeAndCall(ITransparentUpgradeableProxy(proxy), newImplementation, data);
     }
 }

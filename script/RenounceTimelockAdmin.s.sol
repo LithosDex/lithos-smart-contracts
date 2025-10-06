@@ -14,15 +14,8 @@ contract RenounceTimelockAdminScript is Script {
         address deployer = vm.addr(deployerKey);
 
         // Load timelock address from state
-        string memory statePath = string.concat(
-            "deployments/",
-            env,
-            "/state.json"
-        );
-        require(
-            vm.exists(statePath),
-            "State file not found. Deploy contracts first."
-        );
+        string memory statePath = string.concat("deployments/", env, "/state.json");
+        require(vm.exists(statePath), "State file not found. Deploy contracts first.");
 
         string memory json = vm.readFile(statePath);
         address timelockAddr = vm.parseJsonAddress(json, ".Timelock");
