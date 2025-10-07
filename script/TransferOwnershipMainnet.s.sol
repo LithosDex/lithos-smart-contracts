@@ -63,11 +63,11 @@ contract TransferOwnershipMainnetScript is Script {
         address deployer = vm.addr(deployerKey);
 
         MultisigConfig memory cfg = MultisigConfig({
-            governance: _envAddressOr("GOVERNANCE_MULTISIG", DEFAULT_GOVERNANCE_MULTISIG),
-            operations: _envAddressOr("OPERATIONS_MULTISIG", DEFAULT_OPERATIONS_MULTISIG),
-            emergency: _envAddressOr("EMERGENCY_COUNCIL", DEFAULT_EMERGENCY_COUNCIL),
-            treasury: _envAddressOr("TREASURY_MULTISIG", DEFAULT_TREASURY_MULTISIG),
-            foundation: _envAddressOr("FOUNDATION_ADDRESS", DEFAULT_FOUNDATION),
+            governance: DEFAULT_GOVERNANCE_MULTISIG,
+            operations: DEFAULT_OPERATIONS_MULTISIG,
+            emergency: DEFAULT_EMERGENCY_COUNCIL,
+            treasury: DEFAULT_TREASURY_MULTISIG,
+            foundation: DEFAULT_FOUNDATION,
             timelock: address(0),
             deployer: deployer
         });
@@ -337,9 +337,5 @@ contract TransferOwnershipMainnetScript is Script {
 
     function _envStringOr(string memory key, string memory fallbackValue) internal view returns (string memory) {
         return vm.envExists(key) ? vm.envString(key) : fallbackValue;
-    }
-
-    function _envAddressOr(string memory key, address fallbackValue) internal view returns (address) {
-        return vm.envExists(key) ? vm.envAddress(key) : fallbackValue;
     }
 }
