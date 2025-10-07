@@ -15,7 +15,9 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 
 ### Mainnet (Plasma)
 
-- **PairFactory**: [0x71a870D1c935C2146b87644DF3B5316e8756aE18](https://plasmascan.to/address/0x71a870D1c935C2146b87644DF3B5316e8756aE18)
+#### Core Contracts
+
+- **PairFactoryUpgradeable**: [0x71a870D1c935C2146b87644DF3B5316e8756aE18](https://plasmascan.to/address/0x71a870D1c935C2146b87644DF3B5316e8756aE18)
 - **RouterV2** (Main): [0xD70962bd7C6B3567a8c893b55a8aBC1E151759f3](https://plasmascan.to/address/0xD70962bd7C6B3567a8c893b55a8aBC1E151759f3)
 - **GlobalRouter**: [0xC7E4BCC695a9788fd0f952250cA058273BE7F6A3](https://plasmascan.to/address/0xC7E4BCC695a9788fd0f952250cA058273BE7F6A3)
 - **TradeHelper**: [0xf2e70f25a712B2FEE0B76d5728a620707AF5D42c](https://plasmascan.to/address/0xf2e70f25a712B2FEE0B76d5728a620707AF5D42c)
@@ -62,33 +64,22 @@ A decentralized exchange (DEX) built on Plasma testnet featuring both stable and
 7. **xUSD/tcUSDT0** (Stable)
    - Pair: [0x0d6f93edff269656dfac82e8992afa9e719b137e](https://plasmascan.to/address/0x0d6f93edff269656dfac82e8992afa9e719b137e)
 
-#### ve(3,3) Governance (Deploying Oct 3-9, 2025)
+#### ve(3,3) Governance
 
-**Deployment Schedule:**
+The ve(3,3) system is live on Plasma mainnet. Key governance contracts:
 
-- **Oct 3**: Core contracts deployed (inactive)
-- **Oct 9**: System activated with initial LITH supply
-- **Oct 12**: LITH airdrop and voting begins
-- **Oct 16**: First emissions distributed
-
-**Contracts (Pending Oct 3 Deployment):**
-
-- **Lithos Token**: [Pending]
-- **VotingEscrow**: [Pending]
-- **VoterV3**: [Pending]
-- **MinterUpgradeable** (proxy): [Pending]
-- **VeArtProxyUpgradeable** (proxy): [Pending]
-- **GaugeFactoryV2**: [Pending]
-- **BribeFactoryV3**: [Pending]
-- **RewardsDistributor**: [Pending]
-- **PermissionsRegistry**: [Pending]
-- **ProxyAdmin**: [Pending]
-- **TimelockController**: [Pending]
-
-**Initial Gauges (Created Oct 9):**
-
-- LITH/WXPL: [Pending]
-- [Additional gauges TBD]
+- **Lithos Token (LITH)**: [0xB8f92504e33B194A57af64AF982796243d599f47](https://plasmascan.to/address/0xB8f92504e33B194A57af64AF982796243d599f47)
+- **VotingEscrow**: [0x80f2eE51FEBF9A56b74f95c6db2df4E239a9FF9c](https://plasmascan.to/address/0x80f2eE51FEBF9A56b74f95c6db2df4E239a9FF9c)
+- **Voter**: [0xAfc98B2373F250313E7e0832FDD250fDe7C8c188](https://plasmascan.to/address/0xAfc98B2373F250313E7e0832FDD250fDe7C8c188)
+- **GaugeFactory**: [0x68A67496ADF74AC87C11206a980f59461E247CfB](https://plasmascan.to/address/0x68A67496ADF74AC87C11206a980f59461E247CfB)
+- **BribeFactory**: [0xCa92281cfEa8F4Cb39037b14c40de0399ca4FB54](https://plasmascan.to/address/0xCa92281cfEa8F4Cb39037b14c40de0399ca4FB54)
+- **PermissionsRegistry**: [0xE74e6F21777fd27DE78cF7eD2BD98CAab7EF1f1C](https://plasmascan.to/address/0xE74e6F21777fd27DE78cF7eD2BD98CAab7EF1f1C)
+- **RewardsDistributor**: [0x939684315D094702685aD0f004bce9bFD230959F](https://plasmascan.to/address/0x939684315D094702685aD0f004bce9bFD230959F)
+- **Minter** (proxy): [0x22C3c778153Dc4d9376140aE403c5f22aC2eb107](https://plasmascan.to/address/0x22C3c778153Dc4d9376140aE403c5f22aC2eb107)
+- **Minter Implementation**: [0xBcCA0C406EBD1ae4E54E3D639e597db55E23Df4f](https://plasmascan.to/address/0xBcCA0C406EBD1ae4E54E3D639e597db55E23Df4f)
+- **VeArtProxy** (proxy): [0x014C737867b57C8f52c34eA557B65550B51a109F](https://plasmascan.to/address/0x014C737867b57C8f52c34eA557B65550B51a109F)
+- **VeArtProxy Implementation**: [0x2e4d5414B91CbAbCCc216ba518210936f0f7461d](https://plasmascan.to/address/0x2e4d5414B91CbAbCCc216ba518210936f0f7461d)
+- **Timelock**: [0x9f7d46cE1EA22859814e51E9D3Fe07a665f21794](https://plasmascan.to/address/0x9f7d46cE1EA22859814e51E9D3Fe07a665f21794)
 
 ### Testnet (Plasma)
 
