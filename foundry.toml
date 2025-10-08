@@ -11,7 +11,7 @@ via_ir = true
 
 # Gas settings for Plasma network
 gas_price = 2_000_000_000  # 2 gwei
-gas_limit = 6_000_000
+gas_limit = 90_000_000
 legacy = true
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
