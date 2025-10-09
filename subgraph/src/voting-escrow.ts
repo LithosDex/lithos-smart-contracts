@@ -81,7 +81,12 @@ export function handleDeposit(event: DepositEvent): void {
   deposit.save();
 
   // Update veNFT with event data
-  veNFT.value = event.params.value;
+  if (event.params.deposit_type == 1 || event.params.deposit_type == 2) {
+    // Add value for create_lock and increase_amount
+    veNFT.value = veNFT.value.plus(event.params.value);
+  }
+  // For increase_unlock_time (type 3), don't change value
+  
   veNFT.lockEnd = event.params.locktime;
   veNFT.lockDuration = event.params.locktime.minus(event.block.timestamp);
 
