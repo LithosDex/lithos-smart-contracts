@@ -28,9 +28,9 @@ The DEX infrastructure is already deployed on mainnet. These scripts handle the 
 **Oct 3:** Deploy all contracts (Phase 1)
 - Contracts deployed but minter inactive
 - `active_period` set to Oct 16
+- Mint 50M LITHOS to deployer
 
 **Oct 9:** Activate minter (Phase 2)
-- Mint 50M LITHOS to deployer
 - Set `active_period` to Oct 9
 - Transfer LITHOS to Minter for emissions
 
