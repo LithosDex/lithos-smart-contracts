@@ -124,7 +124,7 @@ dataSources:
     name: VoterV3
     network: plasma-mainnet
     source:
-      address: "0x5C1f4391ad20475D76f4738d3faAF3B170A06919"
+      address: "0xafc98b2373f250313e7e0832fdd250fde7c8c188"
       abi: VoterV3
       startBlock: 2755104
     mapping:
