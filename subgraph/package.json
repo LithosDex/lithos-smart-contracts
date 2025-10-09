@@ -28,8 +28,8 @@
   "author": "Plasma DEX Team",
   "license": "MIT",
   "dependencies": {
-    "@graphprotocol/graph-cli": "0.56.0",
-    "@graphprotocol/graph-ts": "0.30.0"
+    "@graphprotocol/graph-cli": "0.97.1",
+    "@graphprotocol/graph-ts": "0.38.1"
   },
   "devDependencies": {
     "matchstick-as": "0.5.0"

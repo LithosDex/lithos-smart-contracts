@@ -18,8 +18,8 @@ export function handlePairCreated(event: PairCreated): void {
     factory.txCount = ZERO_BI;
 
     // Seed with current mainnet configuration
-    factory.stableFee = BigInt.fromI32(4); // 0.04%
-    factory.volatileFee = BigInt.fromI32(18); // 0.18%
+    factory.stableFee = BigInt.fromI32(5); // 0.04%
+    factory.volatileFee = BigInt.fromI32(25); // 0.18%
     factory.stakingNFTFee = BigInt.fromI32(0); // staking disabled
     factory.maxReferralFee = BigInt.fromI32(1200); // 12%
 

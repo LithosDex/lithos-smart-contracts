@@ -1,4 +1,4 @@
-type Factory @entity {
+type Factory @entity(immutable: false) {
   # Factory address
   id: ID!
 
@@ -39,7 +39,7 @@ type Factory @entity {
   pairs: [Pair!]! @derivedFrom(field: "factory")
 }
 
-type Token @entity {
+type Token @entity(immutable: false) {
   # Token address
   id: ID!
 
@@ -66,7 +66,7 @@ type Token @entity {
   tokenDayData: [TokenDayData!]! @derivedFrom(field: "token")
 }
 
-type Pair @entity {
+type Pair @entity(immutable: false) {
   # Pair address
   id: ID!
 
@@ -142,7 +142,7 @@ type Pair @entity {
   observations: [Observation!]! @derivedFrom(field: "pair")
 }
 
-type User @entity {
+type User @entity(immutable: false) {
   # User address
   id: ID!
 
@@ -166,7 +166,7 @@ type User @entity {
   veDelegations: [VeDelegation!]! @derivedFrom(field: "delegator")
 }
 
-type LiquidityPosition @entity {
+type LiquidityPosition @entity(immutable: false) {
   # User address + Pair address
   id: ID!
 
@@ -188,7 +188,7 @@ type LiquidityPosition @entity {
   claimable1: BigDecimal!
 }
 
-type LiquidityPositionSnapshot @entity {
+type LiquidityPositionSnapshot @entity(immutable: false) {
   # Position ID + timestamp
   id: ID!
 
@@ -213,7 +213,7 @@ type LiquidityPositionSnapshot @entity {
   liquidityTokenBalance: BigDecimal!
 }
 
-type Transaction @entity {
+type Transaction @entity(immutable: false) {
   # Transaction hash
   id: ID!
 
@@ -231,7 +231,7 @@ type Transaction @entity {
   swaps: [Swap!]! @derivedFrom(field: "transaction")
 }
 
-type Mint @entity {
+type Mint @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
 
@@ -263,7 +263,7 @@ type Mint @entity {
   logIndex: BigInt
 }
 
-type Burn @entity {
+type Burn @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
 
@@ -295,7 +295,7 @@ type Burn @entity {
   logIndex: BigInt
 }
 
-type Swap @entity {
+type Swap @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
 
@@ -329,7 +329,7 @@ type Swap @entity {
   logIndex: BigInt
 }
 
-type RouterSwap @entity {
+type RouterSwap @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
 
@@ -357,7 +357,7 @@ type RouterSwap @entity {
   logIndex: BigInt
 }
 
-type Observation @entity {
+type Observation @entity(immutable: false) {
   # Pair address + timestamp
   id: ID!
 
@@ -375,7 +375,7 @@ type Observation @entity {
   blockNumber: BigInt!
 }
 
-type Bundle @entity {
+type Bundle @entity(immutable: false) {
   # Always "1"
   id: ID!
 
@@ -384,7 +384,7 @@ type Bundle @entity {
 }
 
 # Hourly data
-type PairHourData @entity {
+type PairHourData @entity(immutable: false) {
   # Pair address + hour timestamp
   id: ID!
 
@@ -410,7 +410,7 @@ type PairHourData @entity {
   hourlyTxns: BigInt!
 }
 
-type PairDayData @entity {
+type PairDayData @entity(immutable: false) {
   # Pair address + day timestamp
   id: ID!
 
@@ -443,7 +443,7 @@ type PairDayData @entity {
   dailyTxns: BigInt!
 }
 
-type TokenDayData @entity {
+type TokenDayData @entity(immutable: false) {
   # Token address + day timestamp
   id: ID!
 
@@ -470,7 +470,7 @@ type TokenDayData @entity {
   priceUSD: BigDecimal!
 }
 
-type PlasmaSwapDayData @entity {
+type PlasmaSwapDayData @entity(immutable: false) {
   # Day timestamp
   id: ID!
 
@@ -494,7 +494,7 @@ type PlasmaSwapDayData @entity {
 
 # ===== VOTING ESCROW ENTITIES =====
 
-type VotingEscrow @entity {
+type VotingEscrow @entity(immutable: false) {
   # VotingEscrow contract address
   id: ID!
 
@@ -514,7 +514,7 @@ type VotingEscrow @entity {
   veNFTs: [VeNFT!]! @derivedFrom(field: "votingEscrow")
 }
 
-type VeNFT @entity {
+type VeNFT @entity(immutable: false) {
   # Token ID as string
   id: ID!
 
@@ -553,7 +553,7 @@ type VeNFT @entity {
   transfers: [VeTransfer!]! @derivedFrom(field: "veNFT")
 }
 
-type VeDeposit @entity {
+type VeDeposit @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
 
@@ -583,7 +583,7 @@ type VeDeposit @entity {
   depositType: Int!
 }
 
-type VeWithdraw @entity {
+type VeWithdraw @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
 
@@ -607,7 +607,7 @@ type VeWithdraw @entity {
   value: BigInt!
 }
 
-type VeTransfer @entity {
+type VeTransfer @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
 
@@ -628,7 +628,7 @@ type VeTransfer @entity {
   veNFT: VeNFT!
 }
 
-type VeDelegation @entity {
+type VeDelegation @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
 
@@ -647,7 +647,7 @@ type VeDelegation @entity {
 
 # ===== MINTER ENTITIES =====
 
-type Minter @entity {
+type Minter @entity(immutable: false) {
   # Minter contract address
   id: ID!
   
@@ -678,7 +678,7 @@ type Minter @entity {
   mintEvents: [MintEvent!]! @derivedFrom(field: "minter")
 }
 
-type MintEvent @entity {
+type MintEvent @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
   
@@ -706,7 +706,7 @@ type MintEvent @entity {
 
 # ===== BRIBE FACTORY ENTITIES =====
 
-type BribeFactory @entity {
+type BribeFactory @entity(immutable: false) {
   # BribeFactory contract address
   id: ID!
   
@@ -730,7 +730,7 @@ type BribeFactory @entity {
 
 # ===== VOTER ENTITIES =====
 
-type Voter @entity {
+type Voter @entity(immutable: false) {
   # VoterV3 contract address
   id: ID!
   
@@ -753,7 +753,7 @@ type Voter @entity {
   gauges: [Gauge!]! @derivedFrom(field: "voter")
 }
 
-type GaugeCreatedEvent @entity {
+type GaugeCreatedEvent @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
   
@@ -780,7 +780,7 @@ type GaugeCreatedEvent @entity {
 
 # ===== BRIBES ENTITIES =====
 
-type Bribe @entity {
+type Bribe @entity(immutable: false) {
   # Bribe contract address
   id: ID!
   
@@ -823,7 +823,7 @@ type Bribe @entity {
   rewardPayments: [BribeRewardPaid!]! @derivedFrom(field: "bribe")
 }
 
-type BribeRewardToken @entity {
+type BribeRewardToken @entity(immutable: false) {
   # Bribe address + token address
   id: ID!
   
@@ -846,7 +846,7 @@ type BribeRewardToken @entity {
   rewardAdditions: [BribeRewardAdded!]! @derivedFrom(field: "rewardToken")
 }
 
-type BribeRewardAdded @entity {
+type BribeRewardAdded @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
   
@@ -876,7 +876,7 @@ type BribeRewardAdded @entity {
   epoch: BigInt!
 }
 
-type BribeStake @entity {
+type BribeStake @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
   
@@ -900,7 +900,7 @@ type BribeStake @entity {
   epoch: BigInt!
 }
 
-type BribeWithdraw @entity {
+type BribeWithdraw @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
   
@@ -924,7 +924,7 @@ type BribeWithdraw @entity {
   epoch: BigInt!
 }
 
-type BribeRewardPaid @entity {
+type BribeRewardPaid @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
   
@@ -950,7 +950,7 @@ type BribeRewardPaid @entity {
 
 # ===== GAUGE ENTITIES =====
 
-type Gauge @entity {
+type Gauge @entity(immutable: false) {
   # Gauge contract address
   id: ID!
   
@@ -1002,7 +1002,7 @@ type Gauge @entity {
   feeClaims: [GaugeFeeClaim!]! @derivedFrom(field: "gauge")
 }
 
-type GaugePosition @entity {
+type GaugePosition @entity(immutable: false) {
   # Gauge address + User address
   id: ID!
   
@@ -1026,7 +1026,7 @@ type GaugePosition @entity {
   lastHarvestTime: BigInt!
 }
 
-type GaugeDeposit @entity {
+type GaugeDeposit @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
   
@@ -1047,7 +1047,7 @@ type GaugeDeposit @entity {
   amount: BigInt!
 }
 
-type GaugeWithdraw @entity {
+type GaugeWithdraw @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
   
@@ -1071,7 +1071,7 @@ type GaugeWithdraw @entity {
   isEmergency: Boolean!
 }
 
-type GaugeRewardAdded @entity {
+type GaugeRewardAdded @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
   
@@ -1095,7 +1095,7 @@ type GaugeRewardAdded @entity {
   periodFinish: BigInt!
 }
 
-type GaugeHarvest @entity {
+type GaugeHarvest @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
   
@@ -1116,7 +1116,7 @@ type GaugeHarvest @entity {
   reward: BigInt!
 }
 
-type GaugeFeeClaim @entity {
+type GaugeFeeClaim @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
   
@@ -1138,7 +1138,7 @@ type GaugeFeeClaim @entity {
   claimed1: BigInt! # Token1 fees
 }
 
-type GaugeEmergencyEvent @entity {
+type GaugeEmergencyEvent @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
   
