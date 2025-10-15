@@ -63,7 +63,7 @@ dataSources:
     name: VotingEscrow
     network: plasma-mainnet
     source:
-      address: "0x80f2eE51FEBF9A56b74f95c6db2df4E239a9FF9c"
+      address: "0x2Eff716Caa7F9EB441861340998B0952AF056686"
       abi: VotingEscrow
       startBlock: 2755104
     mapping:
@@ -111,7 +111,7 @@ dataSources:
     name: MinterUpgradeable
     network: plasma-mainnet
     source:
-      address: "0x22C3c778153Dc4d9376140aE403c5f22aC2eb107"
+      address: "0x3bE9e60902D5840306d3Eb45A29015B7EC3d10a6"
       abi: MinterUpgradeable
       startBlock: 2755104
     mapping:
@@ -137,7 +137,7 @@ dataSources:
     name: VoterV3
     network: plasma-mainnet
     source:
-      address: "0xafc98b2373f250313e7e0832fdd250fde7c8c188"
+      address: "0x2AF460a511849A7aA37Ac964074475b0E6249c69"
       abi: VoterV3
       startBlock: 2755104
     mapping:
