@@ -81,8 +81,8 @@ export function handleDeposit(event: DepositEvent): void {
   deposit.save();
 
   // Update veNFT with event data
-  if (event.params.deposit_type == 1 || event.params.deposit_type == 2) {
-    // Add value for create_lock and increase_amount
+  if (event.params.value.gt(BI_ZERO)) {
+    // Add value for deposits carrying additional token amount
     veNFT.value = veNFT.value.plus(event.params.value);
   }
   // For increase_unlock_time (type 3), don't change value
@@ -90,7 +90,6 @@ export function handleDeposit(event: DepositEvent): void {
   veNFT.lockEnd = event.params.locktime;
   veNFT.lockDuration = event.params.locktime.minus(event.block.timestamp);
 
-  veNFT.owner = user.id;
   veNFT.updatedAt = event.block.timestamp;
   if (veNFT.createdAt.equals(BI_ZERO)) {
     veNFT.createdAt = event.block.timestamp;
@@ -98,10 +97,13 @@ export function handleDeposit(event: DepositEvent): void {
   }
   veNFT.save();
 
-  // Update user stats
-  user.veNFTCount = user.veNFTCount.plus(BI_ONE);
-  user.totalLocked = user.totalLocked.plus(convertTokenToDecimal(event.params.value, BI_18));
-  user.save();
+  // Update owner stats with locked amount
+  if (event.params.value.gt(BI_ZERO) && veNFT.owner != ZERO_ADDRESS) {
+    let ownerAddress = Address.fromString(veNFT.owner);
+    let ownerUser = createUser(ownerAddress);
+    ownerUser.totalLocked = ownerUser.totalLocked.plus(convertTokenToDecimal(event.params.value, BI_18));
+    ownerUser.save();
+  }
 
   // Update voting escrow stats
   votingEscrow.totalLocked = votingEscrow.totalLocked.plus(event.params.value);
@@ -137,10 +139,6 @@ export function handleWithdraw(event: WithdrawEvent): void {
     veNFT.save();
   }
 
-  // Update user stats
-  user.totalLocked = user.totalLocked.minus(convertTokenToDecimal(event.params.value, BI_18));
-  user.save();
-
   // Update voting escrow stats
   votingEscrow.totalLocked = votingEscrow.totalLocked.minus(event.params.value);
   votingEscrow.save();
@@ -155,46 +153,47 @@ export function handleSupply(event: SupplyEvent): void {
 
 // Handle NFT Transfer events
 export function handleTransfer(event: TransferEvent): void {
-  let veNFT = VeNFT.load(event.params.tokenId.toString());
-  
-  if (veNFT) {
-    let fromUser = event.params.from.toHexString() != ZERO_ADDRESS ? createUser(event.params.from) : null;
-    let toUser = event.params.to.toHexString() != ZERO_ADDRESS ? createUser(event.params.to) : null;
+  let veNFT = getOrCreateVeNFT(event.params.tokenId, event.address);
 
-    // Create transfer entity
-    let transfer = new VeTransfer(
-      event.transaction.hash.toHexString() + "-" + event.logIndex.toString()
-    );
-    transfer.transaction = event.transaction.hash;
-    transfer.timestamp = event.block.timestamp;
-    transfer.blockNumber = event.block.number;
-    transfer.fromUser = fromUser ? fromUser.id : null;
-    transfer.toUser = toUser ? toUser.id : null;
-    transfer.fromAddress = fromUser ? fromUser.id : ZERO_ADDRESS;
-    transfer.toAddress = toUser ? toUser.id : ZERO_ADDRESS;
-    transfer.veNFT = veNFT.id;
-    transfer.save();
+  let fromUser = event.params.from.toHexString() != ZERO_ADDRESS ? createUser(event.params.from) : null;
+  let toUser = event.params.to.toHexString() != ZERO_ADDRESS ? createUser(event.params.to) : null;
+  let lockedValueDecimal = convertTokenToDecimal(veNFT.value, BI_18);
 
-    // Update veNFT owner
-    // Ensure we have a valid user entity for the owner
-    if (toUser) {
-      veNFT.owner = toUser.id;
-    } else {
-      let defaultUser = createUser(Address.fromString(ZERO_ADDRESS));
-      veNFT.owner = defaultUser.id;
-    }
-    veNFT.updatedAt = event.block.timestamp;
-    veNFT.save();
+  // Create transfer entity
+  let transfer = new VeTransfer(
+    event.transaction.hash.toHexString() + "-" + event.logIndex.toString()
+  );
+  transfer.transaction = event.transaction.hash;
+  transfer.timestamp = event.block.timestamp;
+  transfer.blockNumber = event.block.number;
+  transfer.fromUser = fromUser ? fromUser.id : null;
+  transfer.toUser = toUser ? toUser.id : null;
+  transfer.fromAddress = fromUser ? fromUser.id : ZERO_ADDRESS;
+  transfer.toAddress = toUser ? toUser.id : ZERO_ADDRESS;
+  transfer.veNFT = veNFT.id;
+  transfer.save();
 
-    // Update user counts
-    if (fromUser && fromUser.id != ZERO_ADDRESS) {
-      fromUser.veNFTCount = fromUser.veNFTCount.minus(BI_ONE);
-      fromUser.save();
-    }
-    if (toUser && toUser.id != ZERO_ADDRESS) {
-      toUser.veNFTCount = toUser.veNFTCount.plus(BI_ONE);
-      toUser.save();
-    }
+  // Update veNFT owner
+  // Ensure we have a valid user entity for the owner
+  if (toUser) {
+    veNFT.owner = toUser.id;
+  } else {
+    let defaultUser = createUser(Address.fromString(ZERO_ADDRESS));
+    veNFT.owner = defaultUser.id;
+  }
+  veNFT.updatedAt = event.block.timestamp;
+  veNFT.save();
+
+  // Update user counts
+  if (fromUser && fromUser.id != ZERO_ADDRESS) {
+    fromUser.veNFTCount = fromUser.veNFTCount.minus(BI_ONE);
+    fromUser.totalLocked = fromUser.totalLocked.minus(lockedValueDecimal);
+    fromUser.save();
+  }
+  if (toUser && toUser.id != ZERO_ADDRESS) {
+    toUser.veNFTCount = toUser.veNFTCount.plus(BI_ONE);
+    toUser.totalLocked = toUser.totalLocked.plus(lockedValueDecimal);
+    toUser.save();
   }
 }
 
