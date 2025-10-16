@@ -13,7 +13,9 @@
     "ts:price-impact": "tsx ts/priceImpactTest.ts",
     "ts:check": "tsc --noEmit",
     "ts:liquidity": "tsx ts/liquidityPlanner.ts",
-    "ts:add-liquidity-sim": "tsx ts/addLiquiditySim.ts"
+    "ts:add-liquidity-sim": "tsx ts/addLiquiditySim.ts",
+    "calc:votes": "tsx scripts/calcLithVotes.ts",
+    "calc:apr": "tsx scripts/calcGaugeApr.ts"
   },
   "repository": {
     "type": "git",
