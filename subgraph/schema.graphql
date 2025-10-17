@@ -861,6 +861,9 @@ type Bribe @entity(immutable: false) {
   
   # All reward payment events
   rewardPayments: [BribeRewardPaid!]! @derivedFrom(field: "bribe")
+  
+  # Epoch-level reward aggregates
+  epochRewards: [BribeEpochReward!]! @derivedFrom(field: "bribe")
 }
 
 type BribeRewardToken @entity(immutable: false) {
@@ -884,6 +887,9 @@ type BribeRewardToken @entity(immutable: false) {
   
   # All reward additions for this token
   rewardAdditions: [BribeRewardAdded!]! @derivedFrom(field: "rewardToken")
+  
+  # Epoch-level reward aggregates for this token
+  epochRewards: [BribeEpochReward!]! @derivedFrom(field: "rewardToken")
 }
 
 type BribeRewardAdded @entity(immutable: false) {
@@ -986,6 +992,29 @@ type BribeRewardPaid @entity(immutable: false) {
   
   # Reward amount
   reward: BigInt!
+}
+
+type BribeEpochReward @entity(immutable: false) {
+  # Bribe address + reward token address + epoch
+  id: ID!
+  
+  # Bribe contract
+  bribe: Bribe!
+  
+  # Reward token entity
+  rewardToken: BribeRewardToken!
+  
+  # Epoch info
+  epoch: BigInt!
+  epochStart: BigInt!
+  epochEnd: BigInt!
+  
+  # Aggregate reward amount for the epoch
+  reward: BigInt!
+  
+  # Last update info
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
 }
 
 # ===== GAUGE ENTITIES =====

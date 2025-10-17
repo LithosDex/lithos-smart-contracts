@@ -16,6 +16,7 @@ import {
   BribeStake,
   BribeWithdraw,
   BribeRewardPaid,
+  BribeEpochReward,
   Token
 } from "../generated/schema";
 
@@ -102,7 +103,8 @@ function getOrCreateBribeRewardToken(bribeAddress: Address, tokenAddress: Addres
 export function handleRewardAdded(event: RewardAddedEvent): void {
   let bribe = getOrCreateBribe(event.address);
   let rewardToken = getOrCreateBribeRewardToken(event.address, event.params.rewardToken);
-  
+  let epochStart = getEpoch(event.params.startTimestamp);
+
   // Create reward added event
   let rewardAdded = new BribeRewardAdded(
     event.transaction.hash.toHexString() + "-" + event.logIndex.toString()
@@ -115,8 +117,27 @@ export function handleRewardAdded(event: RewardAddedEvent): void {
   rewardAdded.rewardTokenAddress = event.params.rewardToken;
   rewardAdded.reward = event.params.reward;
   rewardAdded.startTimestamp = event.params.startTimestamp;
-  rewardAdded.epoch = getEpoch(event.params.startTimestamp);
+  rewardAdded.epoch = epochStart;
   rewardAdded.save();
+  
+  // Aggregate rewards per epoch
+  let epochRewardId = rewardToken.id.concat("-").concat(epochStart.toString());
+  let epochReward = BribeEpochReward.load(epochRewardId);
+  if (epochReward === null) {
+    epochReward = new BribeEpochReward(epochRewardId);
+    epochReward.bribe = bribe.id;
+    epochReward.rewardToken = rewardToken.id;
+    epochReward.epoch = epochStart;
+    epochReward.epochStart = epochStart;
+    epochReward.epochEnd = epochStart.plus(WEEK);
+    epochReward.reward = BI_ZERO;
+    epochReward.updatedAtTimestamp = event.block.timestamp;
+    epochReward.updatedAtBlockNumber = event.block.number;
+  }
+  epochReward.reward = epochReward.reward.plus(event.params.reward);
+  epochReward.updatedAtTimestamp = event.block.timestamp;
+  epochReward.updatedAtBlockNumber = event.block.number;
+  epochReward.save();
   
   // Update reward token totals
   rewardToken.totalRewards = rewardToken.totalRewards.plus(event.params.reward);
