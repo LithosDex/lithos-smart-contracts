@@ -130,6 +130,9 @@ type Pair @entity(immutable: false) {
   lastUpdateTimestamp: BigInt!
   lastUpdateBlockNumber: BigInt!
 
+  # Gauge associated with this pair (if any)
+  gauge: Gauge
+
   # Derived fields
   mints: [Mint!]! @derivedFrom(field: "pair")
   burns: [Burn!]! @derivedFrom(field: "pair")
@@ -965,7 +968,9 @@ type Gauge @entity(immutable: false) {
   stakingToken: Token! # LP token or other stakeable token
   votingEscrow: Bytes! # VE contract address
   distribution: Bytes! # VoterV3 contract address
-  
+  # Pair this gauge is associated with (if staking LP tokens)
+  pair: Pair
+
   # Bribe contracts
   internalBribe: Bribe! # Internal bribe (receives fees)
   externalBribe: Bribe! # External bribe (receives incentives)

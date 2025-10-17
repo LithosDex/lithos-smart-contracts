@@ -9,7 +9,8 @@ import {
   GaugeCreatedEvent as GaugeCreatedEventEntity,
   BribeFactory,
   Bribe,
-  Gauge
+  Gauge,
+  Pair
 } from "../generated/schema";
 
 import { BI_ZERO, BI_ONE, createUser, getOrCreateToken } from "./helpers";
@@ -148,6 +149,14 @@ export function handleGaugeCreated(event: GaugeCreatedEvent): void {
   gauge.stakingToken = poolToken.id;
   gauge.internalBribe = internalBribe.id;
   gauge.externalBribe = externalBribe.id;
+
+  let pairEntity = Pair.load(event.params.pool.toHexString());
+  if (pairEntity !== null) {
+    pairEntity.gauge = gauge.id;
+    pairEntity.save();
+    gauge.pair = pairEntity.id;
+  }
+
   gauge.save();
   
   // Create GaugeCreatedEvent entity
