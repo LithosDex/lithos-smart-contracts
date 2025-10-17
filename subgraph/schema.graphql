@@ -140,6 +140,7 @@ type Pair @entity(immutable: false) {
   liquidityPositions: [LiquidityPosition!]! @derivedFrom(field: "pair")
   pairHourData: [PairHourData!]! @derivedFrom(field: "pair")
   pairDayData: [PairDayData!]! @derivedFrom(field: "pair")
+  pairEpochData: [PairEpochData!]! @derivedFrom(field: "pair")
 
   # Observations for TWAP
   observations: [Observation!]! @derivedFrom(field: "pair")
@@ -444,6 +445,42 @@ type PairDayData @entity(immutable: false) {
 
   # Transaction count
   dailyTxns: BigInt!
+}
+
+type PairEpochData @entity(immutable: false) {
+  # Pair address + epoch timestamp
+  id: ID!
+
+  # Epoch info (start timestamp truncated to week)
+  epoch: BigInt!
+  epochStart: BigInt!
+  epochEnd: BigInt!
+
+  # Pair reference
+  pair: Pair!
+
+  # Token references
+  token0: Token!
+  token1: Token!
+
+  # Fees attributed to LPs
+  feesToken0: BigDecimal!
+  feesToken1: BigDecimal!
+  feesUSD: BigDecimal!
+
+  # Referral fee share
+  referralFeesToken0: BigDecimal!
+  referralFeesToken1: BigDecimal!
+  referralFeesUSD: BigDecimal!
+
+  # Staking fee share
+  stakingFeesToken0: BigDecimal!
+  stakingFeesToken1: BigDecimal!
+  stakingFeesUSD: BigDecimal!
+
+  # Last update
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
 }
 
 type TokenDayData @entity(immutable: false) {

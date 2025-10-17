@@ -19,7 +19,7 @@ import {
   Token
 } from "../generated/schema";
 
-import { BI_ZERO, BI_ONE, createUser, getOrCreateToken } from "./helpers";
+import { BI_ZERO, BI_ONE, WEEK, createUser, getOrCreateToken, getEpoch } from "./helpers";
 
 // Initialize Bribe entity
 function getOrCreateBribe(address: Address): Bribe {
@@ -98,12 +98,6 @@ function getOrCreateBribeRewardToken(bribeAddress: Address, tokenAddress: Addres
   return rewardToken;
 }
 
-// Calculate epoch from timestamp (weekly epochs)
-function getEpoch(timestamp: BigInt): BigInt {
-  let WEEK = BigInt.fromI32(86400 * 7);
-  return timestamp.div(WEEK).times(WEEK);
-}
-
 // Handle RewardAdded events
 export function handleRewardAdded(event: RewardAddedEvent): void {
   let bribe = getOrCreateBribe(event.address);
@@ -152,7 +146,6 @@ export function handleStaked(event: StakedEvent): void {
     stake.epoch = nextEpochResult.value;
   } else {
     // Fallback calculation
-    let WEEK = BigInt.fromI32(86400 * 7);
     stake.epoch = getEpoch(event.block.timestamp).plus(WEEK);
   }
   
@@ -185,7 +178,6 @@ export function handleWithdrawn(event: WithdrawnEvent): void {
     withdraw.epoch = nextEpochResult.value;
   } else {
     // Fallback calculation
-    let WEEK = BigInt.fromI32(86400 * 7);
     withdraw.epoch = getEpoch(event.block.timestamp).plus(WEEK);
   }
   
