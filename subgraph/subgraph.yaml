@@ -151,6 +151,9 @@ dataSources:
         - Bribe
         - BribeFactory
         - Token
+        - GaugeEpochVote
+        - TokenGaugeEpochVote
+        - TokenEpochVoting
       abis:
         - name: VoterV3
           file: ./abis/VoterV3.json
@@ -160,6 +163,10 @@ dataSources:
         # Gauge creation events (also creates bribes)
         - event: GaugeCreated(indexed address,address,address,indexed address,indexed address)
           handler: handleGaugeCreated
+        - event: Voted(indexed address,uint256,uint256)
+          handler: handleVoted
+        - event: Abstained(uint256,uint256)
+          handler: handleAbstained
       file: ./src/voter.ts
 
 templates:
@@ -234,6 +241,8 @@ templates:
         - BribeStake
         - BribeWithdraw
         - BribeRewardPaid
+        - BribeEpochReward
+        - PairBribeEpochReward
         - User
         - Token
         - VeNFT

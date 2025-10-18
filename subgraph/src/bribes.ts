@@ -17,6 +17,8 @@ import {
   BribeWithdraw,
   BribeRewardPaid,
   BribeEpochReward,
+  Pair,
+  PairBribeEpochReward,
   Token
 } from "../generated/schema";
 
@@ -138,6 +140,43 @@ export function handleRewardAdded(event: RewardAddedEvent): void {
   epochReward.updatedAtTimestamp = event.block.timestamp;
   epochReward.updatedAtBlockNumber = event.block.number;
   epochReward.save();
+
+  // Track bribe rewards per pair/epoch (internal and external)
+  if (bribe.pair !== null) {
+    let pairId = bribe.pair as string;
+    let pair = Pair.load(pairId);
+    if (pair !== null) {
+      let rewardTokenId = rewardToken.token;
+      let internalEpochId = pairId
+        .concat("-")
+        .concat(epochStart.toString())
+        .concat("-")
+        .concat(rewardTokenId);
+      let internalEpoch = PairBribeEpochReward.load(internalEpochId);
+      if (internalEpoch === null) {
+        internalEpoch = new PairBribeEpochReward(internalEpochId);
+        internalEpoch.pair = pairId;
+        internalEpoch.bribe = bribe.id;
+        if (bribe.gauge !== null) {
+          internalEpoch.gauge = bribe.gauge as string;
+        }
+        internalEpoch.rewardToken = rewardTokenId;
+        internalEpoch.isInternal = bribe.type == "internal";
+        internalEpoch.epoch = epochStart;
+        internalEpoch.epochStart = epochStart;
+        internalEpoch.epochEnd = epochStart.plus(WEEK);
+        internalEpoch.reward = BI_ZERO;
+      }
+      if (bribe.gauge !== null) {
+        internalEpoch.gauge = bribe.gauge as string;
+      }
+      internalEpoch.isInternal = bribe.type == "internal";
+      internalEpoch.reward = internalEpoch.reward.plus(event.params.reward);
+      internalEpoch.updatedAtTimestamp = event.block.timestamp;
+      internalEpoch.updatedAtBlockNumber = event.block.number;
+      internalEpoch.save();
+    }
+  }
   
   // Update reward token totals
   rewardToken.totalRewards = rewardToken.totalRewards.plus(event.params.reward);
