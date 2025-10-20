@@ -17,12 +17,56 @@ import {
   BribeWithdraw,
   BribeRewardPaid,
   BribeEpochReward,
+  BribeEpochStake,
+  BribeEpochVeStake,
   Pair,
   PairBribeEpochReward,
   Token
 } from "../generated/schema";
 
 import { BI_ZERO, BI_ONE, WEEK, createUser, getOrCreateToken, getEpoch } from "./helpers";
+
+function getOrCreateEpochStake(
+  bribe: Bribe,
+  epoch: BigInt,
+  timestamp: BigInt,
+  blockNumber: BigInt
+): BribeEpochStake {
+  let id = bribe.id.concat("-").concat(epoch.toString());
+  let epochStake = BribeEpochStake.load(id);
+  if (epochStake === null) {
+    epochStake = new BribeEpochStake(id);
+    epochStake.bribe = bribe.id;
+    epochStake.epoch = epoch;
+    epochStake.totalWeight = BI_ZERO;
+  }
+  epochStake.updatedAtTimestamp = timestamp;
+  epochStake.updatedAtBlockNumber = blockNumber;
+  return epochStake;
+}
+
+function getOrCreateEpochVeStake(
+  bribe: Bribe,
+  epochStake: BribeEpochStake,
+  veNFT: string,
+  epoch: BigInt,
+  timestamp: BigInt,
+  blockNumber: BigInt
+): BribeEpochVeStake {
+  let id = epochStake.id.concat("-").concat(veNFT);
+  let veStake = BribeEpochVeStake.load(id);
+  if (veStake === null) {
+    veStake = new BribeEpochVeStake(id);
+    veStake.epochStake = epochStake.id;
+    veStake.bribe = bribe.id;
+    veStake.veNFT = veNFT;
+    veStake.epoch = epoch;
+    veStake.weight = BI_ZERO;
+  }
+  veStake.updatedAtTimestamp = timestamp;
+  veStake.updatedAtBlockNumber = blockNumber;
+  return veStake;
+}
 
 // Initialize Bribe entity
 function getOrCreateBribe(address: Address): Bribe {
@@ -208,6 +252,28 @@ export function handleStaked(event: StakedEvent): void {
     // Fallback calculation
     stake.epoch = getEpoch(event.block.timestamp).plus(WEEK);
   }
+
+  let epochStake = getOrCreateEpochStake(
+    bribe,
+    stake.epoch,
+    event.block.timestamp,
+    event.block.number
+  );
+  epochStake.totalWeight = epochStake.totalWeight.plus(event.params.amount);
+  epochStake.save();
+
+  let veStake = getOrCreateEpochVeStake(
+    bribe,
+    epochStake,
+    stake.veNFT,
+    stake.epoch,
+    event.block.timestamp,
+    event.block.number
+  );
+  veStake.weight = veStake.weight.plus(event.params.amount);
+  veStake.save();
+
+  stake.epochStake = epochStake.id;
   
   stake.save();
   
@@ -245,7 +311,36 @@ export function handleWithdrawn(event: WithdrawnEvent): void {
   
   // Update bribe total voting power
   bribe.totalVotingPower = bribe.totalVotingPower.minus(event.params.amount);
+  if (bribe.totalVotingPower.lt(BI_ZERO)) {
+    bribe.totalVotingPower = BI_ZERO;
+  }
   bribe.save();
+
+  let epochStake = getOrCreateEpochStake(
+    bribe,
+    withdraw.epoch,
+    event.block.timestamp,
+    event.block.number
+  );
+  epochStake.totalWeight = epochStake.totalWeight.minus(event.params.amount);
+  if (epochStake.totalWeight.lt(BI_ZERO)) {
+    epochStake.totalWeight = BI_ZERO;
+  }
+  epochStake.save();
+
+  let veStake = getOrCreateEpochVeStake(
+    bribe,
+    epochStake,
+    event.params.tokenId.toString(),
+    withdraw.epoch,
+    event.block.timestamp,
+    event.block.number
+  );
+  veStake.weight = veStake.weight.minus(event.params.amount);
+  if (veStake.weight.lt(BI_ZERO)) {
+    veStake.weight = BI_ZERO;
+  }
+  veStake.save();
 }
 
 // Handle RewardPaid events

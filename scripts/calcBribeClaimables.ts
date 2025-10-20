@@ -6,7 +6,7 @@ import { ethers } from 'ethers';
 import BribesAbi from '../subgraph/abis/Bribes.json';
 import ERC20Abi from '../subgraph/abis/ERC20.json';
 
-const ENDPOINT = 'https://api.goldsky.com/api/public/project_cmfuu39qbys1j01009omjbmts/subgraphs/lithos-subgraph-mainnet/v1.0.4/gn';
+const ENDPOINT = 'https://api.goldsky.com/api/public/project_cmfuu39qbys1j01009omjbmts/subgraphs/lithos-subgraph-mainnet/v1.0.6/gn';
 const RPC_URL = process.env.RPC_URL || 'https://plasma-mainnet.g.alchemy.com/v2/HBBqcp1MCr0wy49fuWDka';
 const VE_ID = '70';
 

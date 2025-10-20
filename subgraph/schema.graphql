@@ -865,10 +865,11 @@ type Bribe @entity(immutable: false) {
   
   # All reward payment events
   rewardPayments: [BribeRewardPaid!]! @derivedFrom(field: "bribe")
-  
+
   # Epoch-level reward aggregates
   epochRewards: [BribeEpochReward!]! @derivedFrom(field: "bribe")
-  
+  epochStakeTotals: [BribeEpochStake!]! @derivedFrom(field: "bribe")
+
   # Epoch-level vote aggregates
   epochVotes: [GaugeEpochVote!]! @derivedFrom(field: "bribe")
   pairEpochRewards: [PairBribeEpochReward!]! @derivedFrom(field: "bribe")
@@ -933,7 +934,7 @@ type BribeRewardAdded @entity(immutable: false) {
 type BribeStake @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
   
@@ -943,15 +944,43 @@ type BribeStake @entity(immutable: false) {
   
   # Bribe contract
   bribe: Bribe!
-  
+
   # veNFT that was staked
   veNFT: VeNFT!
-  
+
+  # Aggregate stake record for this bribe/epoch
+  epochStake: BribeEpochStake
+
   # Voting power amount
   amount: BigInt!
-  
+
   # Epoch this stake applies to
   epoch: BigInt!
+}
+
+type BribeEpochStake @entity(immutable: false) {
+  # Bribe address + epoch
+  id: ID!
+
+  bribe: Bribe!
+  epoch: BigInt!
+  totalWeight: BigInt!
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
+  veStakes: [BribeEpochVeStake!]! @derivedFrom(field: "epochStake")
+}
+
+type BribeEpochVeStake @entity(immutable: false) {
+  # Bribe + epoch + veNFT
+  id: ID!
+
+  epochStake: BribeEpochStake!
+  bribe: Bribe!
+  veNFT: VeNFT!
+  epoch: BigInt!
+  weight: BigInt!
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
 }
 
 type BribeWithdraw @entity(immutable: false) {

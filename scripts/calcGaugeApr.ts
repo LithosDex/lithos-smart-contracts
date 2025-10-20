@@ -26,7 +26,7 @@ type GaugeResp = {
   };
 };
 
-const ENDPOINT = 'https://api.goldsky.com/api/public/project_cmfuu39qbys1j01009omjbmts/subgraphs/lithos-subgraph-mainnet/v1.0.4/gn';
+const ENDPOINT = 'https://api.goldsky.com/api/public/project_cmfuu39qbys1j01009omjbmts/subgraphs/lithos-subgraph-mainnet/v1.0.6/gn';
 const PAIR_ID = '0x7dab98cc51835beae6dee43bbda84cdb96896fb5'; // WXPL/LITH
 const LITH_ADDRESS = '0xabb48792a3161e81b47ca084c0b7a22a50324a44';
 
