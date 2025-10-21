@@ -203,6 +203,15 @@ contract SetupLegacyGaugesScript is Script {
                 label: "WXPL/trillions (volatile)"
             })
         );
+        pairConfigs.push(
+            PairConfig({
+                pool: vm.parseAddress(
+                    "0xB1F2724482D8DcCbDCc5480A70622F93d0A66ae8"
+                ),
+                gaugeType: 0,
+                label: "xAUT0/USDT0 (volatile)"
+            })
+        );
     }
 
     function _initTokens() internal {
@@ -242,5 +251,8 @@ contract SetupLegacyGaugesScript is Script {
         tokensToWhitelist.push(
             vm.parseAddress("0x92A01AB7317AC318B39B00EB6704BA56F0245D7A")
         ); // trillions
+        tokensToWhitelist.push(
+            vm.parseAddress("0x1B64B9025EEBb9A6239575DF9EA4B9AC46D4D193")
+        ); // XAUt0
     }
 }

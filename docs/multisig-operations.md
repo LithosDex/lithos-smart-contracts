@@ -87,6 +87,78 @@ Remove roles with `removeRoleFrom(address,string)` (`0x70f536b8`) following the 
   ```
 Prerequisite: `pendingFeeManager` must already be set to the governance multisig via `setFeeManager`.
 
+### Whitelist XAUt0 & Create xAUT0/USDT0 Gauge
+- **Multisig**: Governance (4/6) — `0x21F1c2F66d30e22DaC1e2D509228407ccEff4dBC`
+- **Purpose**: Lists the XAUt0 collateral token so its pool can emit incentives, then deploys a new gauge for the `xAUT0/USDT0` volatile pair (`PairFactoryUpgradeable` id `49`).
+
+**Pre-flight checks**
+- Confirm the token is not yet whitelisted:
+  ```
+  cast call 0x2AF460a511849A7aA37Ac964074475b0E6249c69 "isWhitelisted(address)(bool)" 0x1B64B9025EEBb9A6239575DF9EA4B9AC46D4D193 --rpc-url <RPC_URL>
+  ```
+- Confirm no gauge exists yet for the pool:
+  ```
+  cast call 0x2AF460a511849A7aA37Ac964074475b0E6249c69 "gauges(address)(address)" 0xB1F2724482D8DcCbDCc5480A70622F93d0A66ae8 --rpc-url <RPC_URL>
+  ```
+
+**Transaction 1 — Whitelist XAUt0**
+- **To**: `Voter` (`0x2AF460a511849A7aA37Ac964074475b0E6249c69`)
+- **Function**: `whitelist(address[])`
+- **Selector**: `0xbd8aa780`
+- **Call data**:
+  ```
+  0xbd8aa780000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000010000000000000000000000001b64b9025eebb9a6239575df9ea4b9ac46d4d193
+  ```
+- **ABI fragment**:
+  ```json
+  [{
+    "inputs": [
+      { "internalType": "address[]", "name": "_token", "type": "address[]" }
+    ],
+    "name": "whitelist",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }]
+  ```
+
+**Transaction 2 — Create Gauge**
+- Queue only after Transaction 1 succeeds.
+- **To**: `Voter` (`0x2AF460a511849A7aA37Ac964074475b0E6249c69`)
+- **Function**: `createGauge(address,uint256)`
+- **Selector**: `0xdcd9e47a`
+- **Arguments**:
+  - `_pool`: `0xB1F2724482D8DcCbDCc5480A70622F93d0A66ae8`
+  - `_gaugeType`: `0` (legacy volatile/stable factory)
+- **Call data**:
+  ```
+  0xdcd9e47a000000000000000000000000b1f2724482d8dccbdcc5480a70622f93d0a66ae80000000000000000000000000000000000000000000000000000000000000000
+  ```
+- **ABI fragment**:
+  ```json
+  {
+    "inputs": [
+      { "internalType": "address", "name": "_pool", "type": "address" },
+      { "internalType": "uint256", "name": "_gaugeType", "type": "uint256" }
+    ],
+    "name": "createGauge",
+    "outputs": [
+      { "internalType": "address", "name": "_gauge", "type": "address" },
+      { "internalType": "address", "name": "_internal_bribe", "type": "address" },
+      { "internalType": "address", "name": "_external_bribe", "type": "address" }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+  ```
+- **Post-checks**:
+  - Verify `whitelist` status returns `true`.
+  - Fetch the new gauge address:
+    ```
+    cast call 0x2AF460a511849A7aA37Ac964074475b0E6249c69 "gauges(address)(address)" 0xB1F2724482D8DcCbDCc5480A70622F93d0A66ae8 --rpc-url <RPC_URL>
+    ```
+  - Record the emitted `GaugeCreated` event and add the address to your gauge registry.
+
 ---
 
 ## Operations Multisig (3/4)
@@ -265,4 +337,3 @@ Document the reward token list alongside the transaction so reviewers can verify
 - Expand each section with standard operating procedures (SOPs) as new responsibilities are delegated.
 - Keep this file in sync with address rotations (`TransferOwnershipMainnet.s.sol`) and any updates to multisig compositions.
 - When adding new operations, prefer including: purpose, prerequisites, calldata example, gas considerations, and post-checks.
-
