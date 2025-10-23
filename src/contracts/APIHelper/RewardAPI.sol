@@ -12,6 +12,7 @@ import "../interfaces/IPair.sol";
 import "../interfaces/IPairFactory.sol";
 import "../interfaces/IVoter.sol";
 import "../interfaces/IVotingEscrow.sol";
+import "../interfaces/IRewardsDistributor.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -20,6 +21,7 @@ contract RewardAPI is Initializable {
     IVoter public voter;
     address public underlyingToken;
     address public owner;
+    IRewardsDistributor public rewardsDistributor;
 
     constructor() {}
 
@@ -28,6 +30,12 @@ contract RewardAPI is Initializable {
         voter = IVoter(_voter);
         pairFactory = _resolvePairFactory(_voter);
         underlyingToken = IVotingEscrow(voter.ve()).token();
+    }
+
+    function setRewardsDistributor(address _rewardsDistributor) external {
+        require(msg.sender == owner, "not owner");
+        require(_rewardsDistributor != address(0), "zeroAddr");
+        rewardsDistributor = IRewardsDistributor(_rewardsDistributor);
     }
 
     struct Bribes {
@@ -39,6 +47,18 @@ contract RewardAPI is Initializable {
 
     struct Rewards {
         Bribes[] bribes;
+    }
+
+    struct UserRewards {
+        uint256 tokenId;
+        uint256 rebaseReward;
+        Bribes[] internalBribes;
+        Bribes[] externalBribes;
+    }
+
+    struct AllUserRewards {
+        UserRewards[] veNFTRewards;
+        uint256 totalVeNFTs;
     }
 
     /// @notice Get the rewards available the next epoch.
@@ -171,6 +191,213 @@ contract RewardAPI is Initializable {
         // update variable depending on voter
         pairFactory = _resolvePairFactory(_voter);
         underlyingToken = IVotingEscrow(voter.ve()).token();
+    }
+
+    function getAllRewardsForVeNFTHolders(
+        address _user
+    ) external view returns (AllUserRewards memory allRewards) {
+        IVotingEscrow ve = IVotingEscrow(voter.ve());
+        uint256 userBalance = ve.balanceOf(_user);
+
+        if (userBalance == 0) {
+            allRewards.totalVeNFTs = 0;
+            allRewards.veNFTRewards = new UserRewards[](0);
+            return allRewards;
+        }
+
+        allRewards.totalVeNFTs = userBalance;
+        allRewards.veNFTRewards = new UserRewards[](userBalance);
+
+        for (uint256 i = 0; i < userBalance; i++) {
+            uint256 tokenId = ve.tokenOfOwnerByIndex(_user, i);
+
+            UserRewards memory userReward;
+            userReward.tokenId = tokenId;
+
+            userReward.rebaseReward = rewardsDistributor.claimable(tokenId);
+
+            // Get all bribes from all pools in the system
+            (
+                Bribes memory allInternalBribes,
+                Bribes memory allExternalBribes
+            ) = _getAllBribesForToken(tokenId);
+
+            // Create arrays with single aggregated result
+            userReward.internalBribes = new Bribes[](1);
+            userReward.externalBribes = new Bribes[](1);
+            userReward.internalBribes[0] = allInternalBribes;
+            userReward.externalBribes[0] = allExternalBribes;
+
+            allRewards.veNFTRewards[i] = userReward;
+        }
+
+        return allRewards;
+    }
+
+    function _getAllBribesForToken(
+        uint256 tokenId
+    )
+        internal
+        view
+        returns (
+            Bribes memory allInternalBribes,
+            Bribes memory allExternalBribes
+        )
+    {
+        uint256 totalPairs = pairFactory.allPairsLength();
+        uint256 maxPairs = totalPairs > 50 ? 50 : totalPairs; // Limit to first 50 pairs for gas efficiency
+
+        // Dynamic arrays to collect all rewards
+        address[] memory internalTokens = new address[](100); // Reduced size
+        uint256[] memory internalAmounts = new uint256[](100);
+        string[] memory internalSymbols = new string[](100);
+        uint256[] memory internalDecimals = new uint256[](100);
+        uint256 internalCount = 0;
+
+        address[] memory externalTokens = new address[](100);
+        uint256[] memory externalAmounts = new uint256[](100);
+        string[] memory externalSymbols = new string[](100);
+        uint256[] memory externalDecimals = new uint256[](100);
+        uint256 externalCount = 0;
+
+        // Iterate through limited pairs
+        for (uint256 i = 0; i < maxPairs; i++) {
+            address pair = pairFactory.allPairs(i);
+            address gauge = voter.gauges(pair);
+
+            if (gauge == address(0)) continue;
+
+            // Check internal bribes
+            address internalBribe = voter.internal_bribes(gauge);
+            if (internalBribe != address(0)) {
+                internalCount = _collectBribeRewards(
+                    tokenId,
+                    internalBribe,
+                    internalTokens,
+                    internalAmounts,
+                    internalSymbols,
+                    internalDecimals,
+                    internalCount
+                );
+            }
+
+            // Check external bribes
+            address externalBribe = voter.external_bribes(gauge);
+            if (externalBribe != address(0)) {
+                externalCount = _collectBribeRewards(
+                    tokenId,
+                    externalBribe,
+                    externalTokens,
+                    externalAmounts,
+                    externalSymbols,
+                    externalDecimals,
+                    externalCount
+                );
+            }
+        }
+
+        // Create final arrays with exact size
+        allInternalBribes.tokens = new address[](internalCount);
+        allInternalBribes.amounts = new uint256[](internalCount);
+        allInternalBribes.symbols = new string[](internalCount);
+        allInternalBribes.decimals = new uint256[](internalCount);
+
+        allExternalBribes.tokens = new address[](externalCount);
+        allExternalBribes.amounts = new uint256[](externalCount);
+        allExternalBribes.symbols = new string[](externalCount);
+        allExternalBribes.decimals = new uint256[](externalCount);
+
+        // Copy data to final arrays
+        for (uint256 i = 0; i < internalCount; i++) {
+            allInternalBribes.tokens[i] = internalTokens[i];
+            allInternalBribes.amounts[i] = internalAmounts[i];
+            allInternalBribes.symbols[i] = internalSymbols[i];
+            allInternalBribes.decimals[i] = internalDecimals[i];
+        }
+
+        for (uint256 i = 0; i < externalCount; i++) {
+            allExternalBribes.tokens[i] = externalTokens[i];
+            allExternalBribes.amounts[i] = externalAmounts[i];
+            allExternalBribes.symbols[i] = externalSymbols[i];
+            allExternalBribes.decimals[i] = externalDecimals[i];
+        }
+    }
+
+    function _collectBribeRewards(
+        uint256 tokenId,
+        address bribe,
+        address[] memory tokens,
+        uint256[] memory amounts,
+        string[] memory symbols,
+        uint256[] memory decimals,
+        uint256 currentCount
+    ) internal view returns (uint256 newCount) {
+        uint256 rewardTokensLength = IBribeAPI(bribe).rewardsListLength();
+        newCount = currentCount;
+
+        for (uint256 i = 0; i < rewardTokensLength; i++) {
+            address token = IBribeAPI(bribe).rewardTokens(i);
+            uint256 earned = IBribeAPI(bribe).earned(tokenId, token);
+
+            if (earned > 0) {
+                // Check if token already exists (aggregate amounts)
+                bool found = false;
+                for (uint256 j = 0; j < newCount; j++) {
+                    if (tokens[j] == token) {
+                        amounts[j] += earned;
+                        found = true;
+                        break;
+                    }
+                }
+
+                // If new token, add it
+                if (!found && newCount < tokens.length) {
+                    tokens[newCount] = token;
+                    amounts[newCount] = earned;
+                    symbols[newCount] = IERC20(token).symbol();
+                    decimals[newCount] = IERC20(token).decimals();
+                    newCount++;
+                }
+            }
+        }
+    }
+
+    function _getClaimableBribes(
+        uint256 tokenId,
+        address _bribe
+    ) internal view returns (Bribes memory _rewards) {
+        if (_bribe == address(0)) {
+            return _rewards;
+        }
+
+        uint totTokens = IBribeAPI(_bribe).rewardsListLength();
+        if (totTokens == 0) {
+            return _rewards;
+        }
+
+        uint[] memory _amounts = new uint[](totTokens);
+        address[] memory _tokens = new address[](totTokens);
+        string[] memory _symbol = new string[](totTokens);
+        uint[] memory _decimals = new uint[](totTokens);
+
+        for (uint i = 0; i < totTokens; i++) {
+            address _token = IBribeAPI(_bribe).rewardTokens(i);
+            _tokens[i] = _token;
+            _amounts[i] = IBribeAPI(_bribe).earned(tokenId, _token);
+
+            if (_amounts[i] > 0) {
+                _symbol[i] = IERC20(_token).symbol();
+                _decimals[i] = IERC20(_token).decimals();
+            } else {
+                _symbol[i] = "";
+                _decimals[i] = 0;
+            }
+        }
+
+        _rewards.tokens = _tokens;
+        _rewards.amounts = _amounts;
+        _rewards.symbols = _symbol;
+        _rewards.decimals = _decimals;
     }
 
     function _resolvePairFactory(
