@@ -3,6 +3,7 @@ pragma solidity 0.8.29;
 
 import {Script, console2} from "forge-std/Script.sol";
 import {VoterV3} from "../src/contracts/VoterV3.sol";
+import {IGauge} from "../src/contracts/interfaces/IGauge.sol";
 
 contract DistributeGaugeFeesScript is Script {
     mapping(string => address) public deployed;
@@ -51,8 +52,23 @@ contract DistributeGaugeFeesScript is Script {
 
         vm.startBroadcast(deployerKey);
 
-        console2.log("Distributing fees for", activeGaugeCount, "gauges...");
-        voter.distributeFees(activeGauges);
+        console2.log("Distributing fees for", activeGaugeCount, "gauges (per-gauge try/catch)...");
+
+        for (uint256 i = 0; i < activeGauges.length; i++) {
+            address gauge = activeGauges[i];
+            // Use try/catch so a single bad gauge (e.g., fee-on-transfer shortfall) doesn't revert the whole batch
+            try IGauge(gauge).claimFees() returns (uint256 claimed0, uint256 claimed1) {
+                console2.log("  OK Gauge claim:", gauge);
+                console2.log("    claimed0:", claimed0);
+                console2.log("    claimed1:", claimed1);
+            } catch Error(string memory reason) {
+                console2.log("  FAIL Gauge claim (Error):", gauge);
+                console2.log(reason);
+            } catch (bytes memory lowLevelData) {
+                console2.log("  FAIL Gauge claim (Low-level):", gauge);
+                console2.logBytes(lowLevelData);
+            }
+        }
 
         vm.stopBroadcast();
 

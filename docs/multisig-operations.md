@@ -226,6 +226,48 @@ Follow-up knobs (all restricted to `team`):
   ```
 Only call `withdrawERC20` in emergencies when the distributor must be drained; document the token and amount out-of-band.
 
+### Reduce Weekly Emissions to 50% (temporary)
+- **Multisig**: Operations (3/4) — must already be the active `Minter.team`.
+- **Purpose**: Cut the next epoch’s target emissions in half by setting `EMISSION` to `500` (50% of prior `weekly` value). Tail emissions still apply.
+
+**Pre-flight checks**
+1. Confirm the caller controls the `team` role:
+   ```
+   cast call 0x3bE9e60902D5840306d3Eb45A29015B7EC3d10a6 "team()(address)" --rpc-url <RPC_URL>
+   ```
+2. Record the current emission knob for later restoration:
+   ```
+   cast call 0x3bE9e60902D5840306d3Eb45A29015B7EC3d10a6 "EMISSION()(uint256)" --rpc-url <RPC_URL>
+   ```
+   Baseline is `990` (99%).
+
+**Transaction — halve emissions**
+- **To**: `Minter` proxy (`0x3bE9e60902D5840306d3Eb45A29015B7EC3d10a6`)
+- **Function**: `setEmission(uint256)`
+- **Selector**: `0x1fc58d31`
+- **Arguments**: `_emission = 500`
+- **Call data**:
+  ```
+  cast calldata "setEmission(uint256)" 500
+  ```
+- **ABI fragment**:
+  ```json
+  [{
+    "inputs": [{ "internalType": "uint256", "name": "_emission", "type": "uint256" }],
+    "name": "setEmission",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }]
+  ```
+
+**Post-flight**
+- Verify the knob updated:
+  ```
+  cast call 0x3bE9e60902D5840306d3Eb45A29015B7EC3d10a6 "EMISSION()(uint256)" --rpc-url <RPC_URL>
+  ```
+- Remember to restore the prior value (e.g., `setEmission(990)`) once emissions should return to normal; queue that follow-up before the desired epoch rollover.
+
 ---
 
 ## Emergency Council (2/3)
@@ -314,6 +356,58 @@ Execution withdraws bribes/fees from all active gauges and calls `VotingEscrow.a
   }
   ```
 Weights are relative; the contract rescales them against the veNFT balance. Include only gauges that return `true` for `Voter.isAlive(gauge)`.
+- From (must be sender): `0x495a98fd059551385Fc9bAbBcFD88878Da3A1b78` (confirmed owner of veNFT `#70`)
+- To: `Voter` (`0x2AF460a511849A7aA37Ac964074475b0E6249c69`)
+- Function: `vote(uint256,address[],uint256[])`
+- Selector: `0x7ac09bf7`
+- TokenId: `70`
+
+- ABI fragment:
+  ```json
+  [{
+    "inputs": [
+      { "internalType": "uint256", "name": "_tokenId", "type": "uint256" },
+      { "internalType": "address[]", "name": "_poolVote", "type": "address[]" },
+      { "internalType": "uint256[]", "name": "_weights", "type": "uint256[]" }
+    ],
+    "name": "vote",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }]
+  ```
+
+- Pools and weights (addresses are LP tokens; Voter resolves gauges):
+  - `XPL/USDT (V)` → `WXPL/USDT0 (volatile)` `0xa0926801a2abc718822a60d8fa1bc2a51fa09f1e` → `1400000`
+  - `XPL/USDT (S)` → `WXPL/USDT0 (stable)`   `0x8a07ca51227b3d2588341d8927b4bacf37dbf28f` → `5000`
+  - `USDT/USDe` → `USDe/USDT0 (stable)`       `0x01b968c1b663c3921da5be3c99ee3c9b89a40b54` → `700000`
+  - `WETH/weETH (V)`                          `0x7483ed877a1423f34dc5e46cf463ea4a0783d165` → `65000`
+  - `WETH/WXPL (V)`                           `0x15df11a0b0917956fea2b0d6382e5ba100b312df` → `5000`
+  - `WETH/USDT0 (V)`                          `0xf402c0c55285436e2d598c25faf906c62f2ea998` → `14000`
+  - `LITH/XPL (V)` → `LITH/WXPL (volatile)`   `0x7dab98cc51835beae6dee43bbda84cdb96896fb5` → `1300000`
+  - `FBOMB/USDT`                               `0xa82d9dfc3e92907aa4d092f18d89f1c0e129b8ac` → `300000`
+  - `MSUSD/USDT0 (S)`                         `0xaa1605fbd9c2cd3854337db654471a45b2276c12` → `250000`
+  - `XUSD/USDT` → `xUSD/tcUSDT0 (stable)`     `0x0d6f93edff269656dfac82e8992afa9e719b137e` → `40000`
+  - `EBUSD/USDT0 (S)`                          `0x4388dca346165fdc6cbc9e1e388779c66c026d27` → `85000`
+  - `XAUTO/USDT0 (V)` → `XAUt0/USDT0`         `0xb1f2724482d8dccbdcc5480a70622f93d0a66ae8` → `35000`
+  - `SPLUSD/PLUSD (S)`                        `0x55078defe265a66451fd9da109e7362a70b3fdac` → `175000`
+  - `PLUSD/USDT0 (S)`                         `0x7c735d31f0e77d430648c368b7b61196e13f9e23` → `70000`
+  - `TREVEE/PLUSD (V)`                        `0xc8319a16ae5ab41c2d715bd65045c9473b0ec4e0` → `250000`
+
+- Calldata (for the above 15 pools, in order):
+  ```
+  0x7ac09bf7000000000000000000000000000000000000000000000000000000000000004600000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000000f000000000000000000000000a0926801a2abc718822a60d8fa1bc2a51fa09f1e0000000000000000000000008a07ca51227b3d2588341d8927b4bacf37dbf28f00000000000000000000000001b968c1b663c3921da5be3c99ee3c9b89a40b540000000000000000000000007483ed877a1423f34dc5e46cf463ea4a0783d16500000000000000000000000015df11a0b0917956fea2b0d6382e5ba100b312df000000000000000000000000f402c0c55285436e2d598c25faf906c62f2ea9980000000000000000000000007dab98cc51835beae6dee43bbda84cdb96896fb5000000000000000000000000a82d9dfc3e92907aa4d092f18d89f1c0e129b8ac000000000000000000000000aa1605fbd9c2cd3854337db654471a45b2276c120000000000000000000000000d6f93edff269656dfac82e8992afa9e719b137e0000000000000000000000004388dca346165fdc6cbc9e1e388779c66c026d27000000000000000000000000b1f2724482d8dccbdcc5480a70622f93d0a66ae800000000000000000000000055078defe265a66451fd9da109e7362a70b3fdac0000000000000000000000007c735d31f0e77d430648c368b7b61196e13f9e23000000000000000000000000c8319a16ae5ab41c2d715bd65045c9473b0ec4e0000000000000000000000000000000000000000000000000000000000000000f0000000000000000000000000000000000000000000000000000000000155cc0000000000000000000000000000000000000000000000000000000000000138800000000000000000000000000000000000000000000000000000000000aae60000000000000000000000000000000000000000000000000000000000000fde8000000000000000000000000000000000000000000000000000000000000138800000000000000000000000000000000000000000000000000000000000036b0000000000000000000000000000000000000000000000000000000000013d62000000000000000000000000000000000000000000000000000000000000493e0000000000000000000000000000000000000000000000000000000000003d0900000000000000000000000000000000000000000000000000000000000009c400000000000000000000000000000000000000000000000000000000000014c0800000000000000000000000000000000000000000000000000000000000088b8000000000000000000000000000000000000000000000000000000000002ab980000000000000000000000000000000000000000000000000000000000011170000000000000000000000000000000000000000000000000000000000003d090
+  ```
+
+- Semantics
+  - VoterV3 only accepts relative `weights` and always allocates 100% of ve power across the provided pools proportionally.
+  - There is no entrypoint to cast exact absolute “vote amounts” below the ve balance. To use fewer absolute votes:
+    - Use the numbers as relative weights (they will be scaled to full ve power, preserving ratios), or
+    - Split veNFT `#70` into smaller veNFTs via `VotingEscrow.split(...)` and vote with a smaller tokenId (token IDs change), or
+    - Adjust the list to reflect proportions recognizing full usage per epoch.
+
+> Pre-flight: No need to call `reset(70)` separately; `vote` internally resets before applying new weights. Ensure you’re past any `VOTE_DELAY`.
+
 
 ### Claim Bribes or Fees (Optional)
 - **To**: `Voter`
@@ -329,6 +423,83 @@ Weights are relative; the contract rescales them against the veNFT balance. Incl
     70
   ```
 Document the reward token list alongside the transaction so reviewers can verify expectations.
+
+---
+
+## Split veNFT 70 Into 5M Voting Power Child
+
+- Purpose: Create a smaller veNFT with approximately 5,000,000 voting power (wei units, i.e., 5,000,000e18) while preserving the same unlock time, so you can vote only a subset of total power.
+
+Important behavior
+- Splitting burns the original NFT and mints new NFTs; tokenId `70` will be destroyed and replaced by two new token IDs owned by the same address.
+- Both children inherit the same `end` (unlock timestamp) and split the underlying locked amount proportionally to the `amounts` vector.
+- You must not be in a voted/attached state to split.
+
+Pre‑flight checks
+- Confirm veNFT is not voted/attached; if currently voted, reset first:
+  - To: `Voter` (`0x2AF460a511849A7aA37Ac964074475b0E6249c69`)
+  - Function: `reset(uint256)`
+- Calldata (for tokenId 70):
+  - `0x310bd74b0000000000000000000000000000000000000000000000000000000000000046`
+- ABI fragments:
+  - `reset(uint256)`
+    ```json
+    {
+      "inputs": [ { "internalType": "uint256", "name": "_tokenId", "type": "uint256" } ],
+      "name": "reset",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+    ```
+  - `locked(uint256)` (view)
+    ```json
+    {
+      "inputs": [ { "internalType": "uint256", "name": "_tokenId", "type": "uint256" } ],
+      "name": "locked",
+      "outputs": [
+        { "internalType": "int128", "name": "amount", "type": "int128" },
+        { "internalType": "uint256", "name": "end", "type": "uint256" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+    ```
+- Confirm the lock has not expired (end > now):
+  - `cast call <VotingEscrow> "locked(uint256)(int128,uint256)" 70`
+
+Transaction — Split into [5,000,000e18 , remainder]
+- To: `VotingEscrow` (`0x2Eff716Caa7F9EB441861340998B0952AF056686`)
+- Function: `split(uint256[] amounts, uint256 tokenId)`
+- Parameters chosen using current `balanceOfNFT(70)` to target ~5,000,000e18 voting power child:
+  - `amounts`: `[5000000000000000000000000, 14020714651509386091945330]`
+  - `tokenId`: `70`
+- Calldata:
+  - `0x56afe7440000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000004600000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000422ca8b0a00a4250000000000000000000000000000000000000000000000000b990076d8f9dac53fdd72`
+- ABI fragment:
+  ```json
+  [{
+    "inputs": [
+      { "internalType": "uint256[]", "name": "amounts", "type": "uint256[]" },
+      { "internalType": "uint256", "name": "_tokenId", "type": "uint256" }
+    ],
+    "name": "split",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }]
+  ```
+
+Post‑split
+- Record the two new token IDs from the transaction Transfer events.
+- The first minted ID corresponds to the first entry in `amounts` (the ~5M ve child); the second to the remainder.
+- To vote using the new ~5M veNFT, re‑encode the vote calldata with the new tokenId and the previously prepared 15‑pool list and weights:
+  - Example command: `cast calldata "vote(uint256,address[],uint256[])" <NEW_TOKEN_ID> [<LPs...>] [<weights...>]`
+  - Use the LP list and weights exactly as documented above; only the tokenId changes.
+
+Notes on precision
+- Voter power decays linearly with time for a fixed unlock; splitting by ratios preserves proportional voting power across children.
+- Minor rounding may occur due to integer division; the child’s voting power may differ by one or a few wei.
 
 ---
 
