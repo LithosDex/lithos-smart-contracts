@@ -8,51 +8,40 @@ interface IBribeAPI {
         uint256 lastUpdateTime;
     }
 
-    function rewardData(
-        address _token,
-        uint256 ts
-    ) external view returns (Reward memory _Reward);
+    function rewardData(address _token, uint256 ts) external view returns (Reward memory _Reward);
 
-    function _deposit(uint amount, uint tokenId) external;
+    function _deposit(uint256 amount, uint256 tokenId) external;
 
-    function _withdraw(uint amount, uint tokenId) external;
+    function _withdraw(uint256 amount, uint256 tokenId) external;
 
-    function getRewardForOwner(uint tokenId, address[] memory tokens) external;
+    function getRewardForOwner(uint256 tokenId, address[] memory tokens) external;
 
-    function notifyRewardAmount(address token, uint amount) external;
+    function notifyRewardAmount(address token, uint256 amount) external;
 
-    function left(address token) external view returns (uint);
+    function left(address token) external view returns (uint256);
 
-    function rewardsListLength() external view returns (uint);
+    function rewardsListLength() external view returns (uint256);
 
-    function supplyNumCheckpoints() external view returns (uint);
+    function supplyNumCheckpoints() external view returns (uint256);
 
     //function getEpochStart(uint timestamp) external pure returns (uint);
-    function getEpochStart() external pure returns (uint);
+    function getEpochStart() external pure returns (uint256);
 
-    function getNextEpochStart() external pure returns (uint);
+    function getNextEpochStart() external pure returns (uint256);
 
-    function getPriorSupplyIndex(uint timestamp) external view returns (uint);
+    function getPriorSupplyIndex(uint256 timestamp) external view returns (uint256);
 
-    function rewardTokens(uint index) external view returns (address);
+    function rewardTokens(uint256 index) external view returns (address);
 
-    function rewardsPerEpoch(
-        address token,
-        uint ts
-    ) external view returns (uint);
+    function rewardsPerEpoch(address token, uint256 ts) external view returns (uint256);
 
-    function supplyCheckpoints(
-        uint _index
-    ) external view returns (uint timestamp, uint supplyd);
+    function supplyCheckpoints(uint256 _index) external view returns (uint256 timestamp, uint256 supplyd);
 
-    function earned(uint tokenId, address token) external view returns (uint);
+    function earned(uint256 tokenId, address token) external view returns (uint256);
 
-    function firstBribeTimestamp() external view returns (uint);
+    function firstBribeTimestamp() external view returns (uint256);
 
     function totalSupplyAt(uint256 _timestamp) external view returns (uint256);
 
-    function balanceOfAt(
-        uint256 tokenId,
-        uint256 _timestamp
-    ) external view returns (uint256);
+    function balanceOfAt(uint256 tokenId, uint256 _timestamp) external view returns (uint256);
 }

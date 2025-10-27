@@ -4,10 +4,7 @@ pragma solidity 0.8.29;
 import {Script, console2} from "forge-std/Script.sol";
 
 interface IPermissionsRegistryLite {
-    function hasRole(
-        bytes calldata role,
-        address user
-    ) external view returns (bool);
+    function hasRole(bytes calldata role, address user) external view returns (bool);
 
     function setRoleFor(address user, string calldata role) external;
 }
@@ -29,17 +26,11 @@ contract GrantDeployerRolesScript is Script {
         uint256 callerKey = vm.envUint("PRIVATE_KEY");
         address caller = vm.addr(callerKey);
 
-        string memory statePath = string.concat(
-            "deployments/",
-            env,
-            "/state.json"
-        );
+        string memory statePath = string.concat("deployments/", env, "/state.json");
         require(vm.exists(statePath), "state file missing");
 
         _loadState(statePath);
-        IPermissionsRegistryLite registry = IPermissionsRegistryLite(
-            deployed["PermissionsRegistry"]
-        );
+        IPermissionsRegistryLite registry = IPermissionsRegistryLite(deployed["PermissionsRegistry"]);
         require(address(registry) != address(0), "registry missing");
 
         console2.log("=== Grant legacy roles to deployer ===");
@@ -58,11 +49,7 @@ contract GrantDeployerRolesScript is Script {
         vm.stopBroadcast();
     }
 
-    function _ensureRole(
-        IPermissionsRegistryLite registry,
-        bytes memory roleKey,
-        string memory roleName
-    ) internal {
+    function _ensureRole(IPermissionsRegistryLite registry, bytes memory roleKey, string memory roleName) internal {
         if (registry.hasRole(roleKey, DEPLOYER)) {
             console2.log(roleName, "already granted");
             return;
@@ -74,9 +61,6 @@ contract GrantDeployerRolesScript is Script {
 
     function _loadState(string memory path) internal {
         string memory json = vm.readFile(path);
-        deployed["PermissionsRegistry"] = vm.parseJsonAddress(
-            json,
-            ".PermissionsRegistry"
-        );
+        deployed["PermissionsRegistry"] = vm.parseJsonAddress(json, ".PermissionsRegistry");
     }
 }

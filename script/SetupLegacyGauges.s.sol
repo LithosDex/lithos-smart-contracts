@@ -10,10 +10,7 @@ interface IVoterLite {
 
     function gauges(address pool) external view returns (address);
 
-    function createGauge(
-        address pool,
-        uint256 gaugeType
-    )
+    function createGauge(address pool, uint256 gaugeType)
         external
         returns (address gauge, address internalBribe, address externalBribe);
 }
@@ -34,11 +31,7 @@ contract SetupLegacyGaugesScript is Script {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerKey);
 
-        string memory statePath = string.concat(
-            "deployments/",
-            env,
-            "/state.json"
-        );
+        string memory statePath = string.concat("deployments/", env, "/state.json");
         require(vm.exists(statePath), "state file missing");
         _loadState(statePath);
 
@@ -95,11 +88,7 @@ contract SetupLegacyGaugesScript is Script {
                 continue;
             }
 
-            (
-                address gauge,
-                address internalBribe,
-                address externalBribe
-            ) = voter.createGauge(cfg.pool, cfg.gaugeType);
+            (address gauge, address internalBribe, address externalBribe) = voter.createGauge(cfg.pool, cfg.gaugeType);
             console2.log("Created gauge for", cfg.label);
             console2.log("  Gauge:", gauge);
             console2.log("  Internal bribe:", internalBribe);
@@ -115,99 +104,77 @@ contract SetupLegacyGaugesScript is Script {
     function _initPairs() internal {
         pairConfigs.push(
             PairConfig({
-                pool: vm.parseAddress(
-                    "0xA0926801a2abC718822A60D8fA1Bc2A51fA09F1e"
-                ),
+                pool: vm.parseAddress("0xA0926801a2abC718822A60D8fA1Bc2A51fA09F1e"),
                 gaugeType: 0,
                 label: "WXPL/USDT0 (volatile)"
             })
         );
         pairConfigs.push(
             PairConfig({
-                pool: vm.parseAddress(
-                    "0x01B968C1b663C3921da5Be3c99EE3C9B89A40B54"
-                ),
+                pool: vm.parseAddress("0x01B968C1b663C3921da5Be3c99EE3C9B89A40B54"),
                 gaugeType: 0,
                 label: "USDe/USDT0 (stable)"
             })
         );
         pairConfigs.push(
             PairConfig({
-                pool: vm.parseAddress(
-                    "0x7483eD877A1423F34DC5E46cf463eA4A0783D165"
-                ),
+                pool: vm.parseAddress("0x7483eD877A1423F34DC5E46cf463eA4A0783D165"),
                 gaugeType: 0,
                 label: "WETH/weETH (volatile)"
             })
         );
         pairConfigs.push(
             PairConfig({
-                pool: vm.parseAddress(
-                    "0xaa1605FBd9C2CD3854337DB654471A45B2276c12"
-                ),
+                pool: vm.parseAddress("0xaa1605FBd9C2CD3854337DB654471A45B2276c12"),
                 gaugeType: 0,
                 label: "msUSD/USDT0 (stable)"
             })
         );
         pairConfigs.push(
             PairConfig({
-                pool: vm.parseAddress(
-                    "0x0d6F93EdFf269656dfac82E8992AFa9E719b137E"
-                ),
+                pool: vm.parseAddress("0x0d6F93EdFf269656dfac82E8992AFa9E719b137E"),
                 gaugeType: 0,
                 label: "xUSD/tcUSDT0 (stable)"
             })
         );
         pairConfigs.push(
             PairConfig({
-                pool: vm.parseAddress(
-                    "0x7C735D31f0E77D430648c368b7B61196E13F9e23"
-                ),
+                pool: vm.parseAddress("0x7C735D31f0E77D430648c368b7B61196E13F9e23"),
                 gaugeType: 0,
                 label: "USDT0/plUSD (stable)"
             })
         );
         pairConfigs.push(
             PairConfig({
-                pool: vm.parseAddress(
-                    "0x82862237F37E8495D88287d72A4C0073250487E0"
-                ),
+                pool: vm.parseAddress("0x82862237F37E8495D88287d72A4C0073250487E0"),
                 gaugeType: 0,
                 label: "WETH/weETH (stable)"
             })
         );
         pairConfigs.push(
             PairConfig({
-                pool: vm.parseAddress(
-                    "0x548064DF5e0C2d7F9076F75dE0a4C6C3d72A5aCC"
-                ),
+                pool: vm.parseAddress("0x548064DF5e0C2d7F9076F75dE0a4C6C3d72A5aCC"),
                 gaugeType: 0,
                 label: "USDai/USDT0 (stable)"
             })
         );
         pairConfigs.push(
             PairConfig({
-                pool: vm.parseAddress(
-                    "0x55078dEfe265a66451fD9Da109E7362A70b3fDaC"
-                ),
+                pool: vm.parseAddress("0x55078dEfe265a66451fD9Da109E7362A70b3fDaC"),
                 gaugeType: 0,
                 label: "splUSD/plUSD (stable)"
             })
         );
         pairConfigs.push(
             PairConfig({
-                pool: vm.parseAddress(
-                    "0x05F10BE187252B2858B9592714376787cE01Bb76"
-                ),
+                pool: vm.parseAddress("0x05F10BE187252B2858B9592714376787cE01Bb76"),
                 gaugeType: 0,
                 label: "WXPL/trillions (volatile)"
             })
         );
         pairConfigs.push(
             PairConfig({
-                pool: vm.parseAddress(
-                    "0xB1F2724482D8DcCbDCc5480A70622F93d0A66ae8"
-                ),
+                pool: vm.parseAddress("0xB1F2724482D8DcCbDCc5480A70622F93d0A66ae8"),
                 gaugeType: 0,
                 label: "xAUT0/USDT0 (volatile)"
             })
@@ -215,44 +182,18 @@ contract SetupLegacyGaugesScript is Script {
     }
 
     function _initTokens() internal {
-        tokensToWhitelist.push(
-            vm.parseAddress("0x6100E367285B01F48D07953803A2D8DCA5D19873")
-        ); // WXPL
-        tokensToWhitelist.push(
-            vm.parseAddress("0xB8CE59FC3717ADA4C02EADF9682A9E934F625EBB")
-        ); // USDT0
-        tokensToWhitelist.push(
-            vm.parseAddress("0x5D3A1FF2B6BAB83B63CD9AD0787074081A52EF34")
-        ); // USDe
-        tokensToWhitelist.push(
-            vm.parseAddress("0x9895D81BB462A195B4922ED7DE0E3ACD007C32CB")
-        ); // WETH
-        tokensToWhitelist.push(
-            vm.parseAddress("0xA3D68B74BF0528FDD07263C60D6488749044914B")
-        ); // weETH
-        tokensToWhitelist.push(
-            vm.parseAddress("0x29AD7FE4516909B9E498B5A65339E54791293234")
-        ); // msUSD
-        tokensToWhitelist.push(
-            vm.parseAddress("0x6EAF19B2FC24552925DB245F9FF613157A7DBB4C")
-        ); // xUSD
-        tokensToWhitelist.push(
-            vm.parseAddress("0xA9C251F8304B1B3FC2B9E8FCAE78D94EFF82AC66")
-        ); // tcUSDT0
-        tokensToWhitelist.push(
-            vm.parseAddress("0xF91C31299E998C5127BC5F11E4A657FC0CF358CD")
-        ); // plUSD
-        tokensToWhitelist.push(
-            vm.parseAddress("0x616185600989BF8339B58AC9E539D49536598343")
-        ); // splUSD
-        tokensToWhitelist.push(
-            vm.parseAddress("0x0A1A1A107E45B7CED86833863F482BC5F4ED82EF")
-        ); // USDai
-        tokensToWhitelist.push(
-            vm.parseAddress("0x92A01AB7317AC318B39B00EB6704BA56F0245D7A")
-        ); // trillions
-        tokensToWhitelist.push(
-            vm.parseAddress("0x1B64B9025EEBb9A6239575DF9EA4B9AC46D4D193")
-        ); // XAUt0
+        tokensToWhitelist.push(vm.parseAddress("0x6100E367285B01F48D07953803A2D8DCA5D19873")); // WXPL
+        tokensToWhitelist.push(vm.parseAddress("0xB8CE59FC3717ADA4C02EADF9682A9E934F625EBB")); // USDT0
+        tokensToWhitelist.push(vm.parseAddress("0x5D3A1FF2B6BAB83B63CD9AD0787074081A52EF34")); // USDe
+        tokensToWhitelist.push(vm.parseAddress("0x9895D81BB462A195B4922ED7DE0E3ACD007C32CB")); // WETH
+        tokensToWhitelist.push(vm.parseAddress("0xA3D68B74BF0528FDD07263C60D6488749044914B")); // weETH
+        tokensToWhitelist.push(vm.parseAddress("0x29AD7FE4516909B9E498B5A65339E54791293234")); // msUSD
+        tokensToWhitelist.push(vm.parseAddress("0x6EAF19B2FC24552925DB245F9FF613157A7DBB4C")); // xUSD
+        tokensToWhitelist.push(vm.parseAddress("0xA9C251F8304B1B3FC2B9E8FCAE78D94EFF82AC66")); // tcUSDT0
+        tokensToWhitelist.push(vm.parseAddress("0xF91C31299E998C5127BC5F11E4A657FC0CF358CD")); // plUSD
+        tokensToWhitelist.push(vm.parseAddress("0x616185600989BF8339B58AC9E539D49536598343")); // splUSD
+        tokensToWhitelist.push(vm.parseAddress("0x0A1A1A107E45B7CED86833863F482BC5F4ED82EF")); // USDai
+        tokensToWhitelist.push(vm.parseAddress("0x92A01AB7317AC318B39B00EB6704BA56F0245D7A")); // trillions
+        tokensToWhitelist.push(vm.parseAddress("0x1B64B9025EEBb9A6239575DF9EA4B9AC46D4D193")); // XAUt0
     }
 }
