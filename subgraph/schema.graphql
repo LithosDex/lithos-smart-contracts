@@ -470,6 +470,11 @@ type PairEpochData @entity(immutable: false) {
   feesToken1: BigDecimal!
   feesUSD: BigDecimal!
 
+  # Volume within this epoch
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  volumeUSD: BigDecimal!
+
   # Referral fee share
   referralFeesToken0: BigDecimal!
   referralFeesToken1: BigDecimal!
