@@ -40,9 +40,7 @@ contract APIHelperMainnetForkTest is Test {
 
         string memory json = vm.readFile("deployments/mainnet/state.json");
         address voterAddr = json.readAddress(".Voter");
-        address rewardsDistributorAddr = json.readAddress(
-            ".RewardsDistributor"
-        );
+        address rewardsDistributorAddr = json.readAddress(".RewardsDistributor");
 
         pairApi = new PairAPI();
         pairApi.initialize(voterAddr);
@@ -51,11 +49,7 @@ contract APIHelperMainnetForkTest is Test {
         rewardApi.initialize(voterAddr);
 
         venftApi = new veNFTAPI();
-        venftApi.initialize(
-            voterAddr,
-            rewardsDistributorAddr,
-            address(pairApi)
-        );
+        venftApi.initialize(voterAddr, rewardsDistributorAddr, address(pairApi));
 
         voter = IVoter(voterAddr);
         ve = IVotingEscrow(voter.ve());
@@ -66,16 +60,13 @@ contract APIHelperMainnetForkTest is Test {
     function testPairAPIGetPairMatchesCoreData() external {
         (address pairAddr, address gaugeAddr) = _findPairWithGauge(50);
         if (pairAddr == address(0)) {
-            vm.skip(
-                true,
-                "no pair with an active gauge found in search window"
-            );
+            vm.skip(true, "no pair with an active gauge found in search window");
         }
 
         address account = gaugeAddr;
         PairAPI.pairInfo memory info = pairApi.getPair(pairAddr, account);
         IPair pair = IPair(pairAddr);
-        (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();
+        (uint256 reserve0, uint256 reserve1,) = pair.getReserves();
 
         assertEq(info.pair_address, pairAddr, "pair address");
         assertEq(info.symbol, pair.symbol(), "pair symbol");
@@ -88,29 +79,13 @@ contract APIHelperMainnetForkTest is Test {
         address token1 = pair.token1();
 
         assertEq(info.token0, token0, "token0");
-        assertEq(
-            info.token0_decimals,
-            IERC20(token0).decimals(),
-            "token0 decimals"
-        );
-        assertEq(
-            _hashString(info.token0_symbol),
-            _hashString(IERC20(token0).symbol()),
-            "token0 symbol"
-        );
+        assertEq(info.token0_decimals, IERC20(token0).decimals(), "token0 decimals");
+        assertEq(_hashString(info.token0_symbol), _hashString(IERC20(token0).symbol()), "token0 symbol");
         assertEq(info.reserve0, reserve0, "reserve0");
 
         assertEq(info.token1, token1, "token1");
-        assertEq(
-            info.token1_decimals,
-            IERC20(token1).decimals(),
-            "token1 decimals"
-        );
-        assertEq(
-            _hashString(info.token1_symbol),
-            _hashString(IERC20(token1).symbol()),
-            "token1 symbol"
-        );
+        assertEq(info.token1_decimals, IERC20(token1).decimals(), "token1 decimals");
+        assertEq(_hashString(info.token1_symbol), _hashString(IERC20(token1).symbol()), "token1 symbol");
         assertEq(info.reserve1, reserve1, "reserve1");
 
         bool isPair = pairFactory.isPair(pairAddr);
@@ -125,51 +100,19 @@ contract APIHelperMainnetForkTest is Test {
         assertEq(info.claimable1, expectedClaimable1, "claimable1");
 
         assertEq(info.gauge, gaugeAddr, "gauge");
-        assertEq(
-            info.gauge_total_supply,
-            IGaugeAPI(gaugeAddr).totalSupply(),
-            "gauge total supply"
-        );
-        assertEq(
-            info.emissions,
-            IGaugeAPI(gaugeAddr).rewardRate(),
-            "reward rate"
-        );
+        assertEq(info.gauge_total_supply, IGaugeAPI(gaugeAddr).totalSupply(), "gauge total supply");
+        assertEq(info.emissions, IGaugeAPI(gaugeAddr).rewardRate(), "reward rate");
         assertEq(info.emissions_token, ve.token(), "reward token");
-        assertEq(
-            info.emissions_token_decimals,
-            IERC20(ve.token()).decimals(),
-            "reward token decimals"
-        );
+        assertEq(info.emissions_token_decimals, IERC20(ve.token()).decimals(), "reward token decimals");
 
         assertEq(info.fee, voter.internal_bribes(gaugeAddr), "fee address");
         assertEq(info.bribe, voter.external_bribes(gaugeAddr), "bribe address");
 
-        assertEq(
-            info.account_lp_balance,
-            IERC20(pairAddr).balanceOf(account),
-            "account lp balance"
-        );
-        assertEq(
-            info.account_token0_balance,
-            IERC20(token0).balanceOf(account),
-            "account token0 balance"
-        );
-        assertEq(
-            info.account_token1_balance,
-            IERC20(token1).balanceOf(account),
-            "account token1 balance"
-        );
-        assertEq(
-            info.account_gauge_balance,
-            IGaugeAPI(gaugeAddr).balanceOf(account),
-            "account gauge balance"
-        );
-        assertEq(
-            info.account_gauge_earned,
-            IGaugeAPI(gaugeAddr).earned(account),
-            "account earned balance"
-        );
+        assertEq(info.account_lp_balance, IERC20(pairAddr).balanceOf(account), "account lp balance");
+        assertEq(info.account_token0_balance, IERC20(token0).balanceOf(account), "account token0 balance");
+        assertEq(info.account_token1_balance, IERC20(token1).balanceOf(account), "account token1 balance");
+        assertEq(info.account_gauge_balance, IGaugeAPI(gaugeAddr).balanceOf(account), "account gauge balance");
+        assertEq(info.account_gauge_earned, IGaugeAPI(gaugeAddr).earned(account), "account earned balance");
     }
 
     function testPairAPIGetAllPairRespectsFactoryOrder() external {
@@ -179,11 +122,7 @@ contract APIHelperMainnetForkTest is Test {
             vm.skip(true, "pair factory empty on fork");
         }
 
-        PairAPI.pairInfo[] memory pairs = pairApi.getAllPair(
-            address(0),
-            sampleSize,
-            0
-        );
+        PairAPI.pairInfo[] memory pairs = pairApi.getAllPair(address(0), sampleSize, 0);
 
         for (uint256 i = 0; i < sampleSize; i++) {
             address expected = pairFactory.allPairs(i);
@@ -192,24 +131,12 @@ contract APIHelperMainnetForkTest is Test {
     }
 
     function testPairAPIGetPairBribeReflectsBribeContract() external {
-        (
-            address pairAddr,
-            address gaugeAddr,
-            address externalBribe,
-
-        ) = _findPairWithExternalBribe(100);
+        (address pairAddr, address gaugeAddr, address externalBribe,) = _findPairWithExternalBribe(100);
         if (pairAddr == address(0)) {
-            vm.skip(
-                true,
-                "pair with external bribe not found in search window"
-            );
+            vm.skip(true, "pair with external bribe not found in search window");
         }
 
-        PairAPI.pairBribeEpoch[] memory epochs = pairApi.getPairBribe(
-            1,
-            0,
-            pairAddr
-        );
+        PairAPI.pairBribeEpoch[] memory epochs = pairApi.getPairBribe(1, 0, pairAddr);
         assertEq(epochs.length, 1, "epoch length");
         assertEq(epochs[0].pair, pairAddr, "epoch pair");
 
@@ -218,141 +145,73 @@ contract APIHelperMainnetForkTest is Test {
 
         if (tokensLen > 0) {
             address rewardToken = IBribeAPI(externalBribe).rewardTokens(0);
-            assertEq(
-                epochs[0].bribes[0].token,
-                rewardToken,
-                "reward token address"
-            );
-            assertEq(
-                epochs[0].bribes[0].decimals,
-                IERC20(rewardToken).decimals(),
-                "reward token decimals"
-            );
+            assertEq(epochs[0].bribes[0].token, rewardToken, "reward token address");
+            assertEq(epochs[0].bribes[0].decimals, IERC20(rewardToken).decimals(), "reward token decimals");
         }
 
-        assertEq(
-            epochs[0].totalVotes,
-            IBribeAPI(externalBribe).totalSupplyAt(epochs[0].epochTimestamp),
-            "total votes"
-        );
+        assertEq(epochs[0].totalVotes, IBribeAPI(externalBribe).totalSupplyAt(epochs[0].epochTimestamp), "total votes");
         assertEq(epochs[0].bribes.length, tokensLen, "rewards length");
 
         // Sanity check that the API wires through the gauge address it derived earlier
-        assertEq(
-            pairApi.getPair(pairAddr, address(0)).gauge,
-            gaugeAddr,
-            "gauge resolved via getPair"
-        );
+        assertEq(pairApi.getPair(pairAddr, address(0)).gauge, gaugeAddr, "gauge resolved via getPair");
     }
 
     function testRewardAPIPairBribeMatchesUnderlyingBribe() external {
-        (
-            address pairAddr,
-            address gaugeAddr,
-            address externalBribe,
-            address internalBribe
-        ) = _findPairWithExternalBribe(100);
+        (address pairAddr, address gaugeAddr, address externalBribe, address internalBribe) =
+            _findPairWithExternalBribe(100);
         if (pairAddr == address(0)) {
-            vm.skip(
-                true,
-                "pair with external bribe not found in search window"
-            );
+            vm.skip(true, "pair with external bribe not found in search window");
         }
 
         RewardAPI.Bribes[] memory pairBribes = rewardApi.getPairBribe(pairAddr);
-        assertEq(
-            pairBribes.length,
-            2,
-            "expected external and internal bribe slots"
-        );
+        assertEq(pairBribes.length, 2, "expected external and internal bribe slots");
 
         uint256 externalLen = IBribeAPI(externalBribe).rewardsListLength();
-        assertEq(
-            pairBribes[0].tokens.length,
-            externalLen,
-            "external rewards length"
-        );
+        assertEq(pairBribes[0].tokens.length, externalLen, "external rewards length");
         if (externalLen > 0) {
             address rewardToken = pairBribes[0].tokens[0];
+            assertEq(pairBribes[0].decimals[0], IERC20(rewardToken).decimals(), "external decimals passthrough");
             assertEq(
-                pairBribes[0].decimals[0],
-                IERC20(rewardToken).decimals(),
-                "external decimals passthrough"
-            );
-            assertEq(
-                _hashString(pairBribes[0].symbols[0]),
-                _hashString(IERC20(rewardToken).symbol()),
-                "external symbol"
+                _hashString(pairBribes[0].symbols[0]), _hashString(IERC20(rewardToken).symbol()), "external symbol"
             );
         }
 
         if (internalBribe != address(0)) {
             uint256 internalLen = IBribeAPI(internalBribe).rewardsListLength();
-            assertEq(
-                pairBribes[1].tokens.length,
-                internalLen,
-                "internal rewards length"
-            );
+            assertEq(pairBribes[1].tokens.length, internalLen, "internal rewards length");
         } else {
-            assertEq(
-                pairBribes[1].tokens.length,
-                0,
-                "no internal bribe expected"
-            );
+            assertEq(pairBribes[1].tokens.length, 0, "no internal bribe expected");
         }
 
         assertEq(voter.gauges(pairAddr), gaugeAddr, "gauge expectation");
     }
 
-    function testRewardAPIExpectedClaimForNextEpochShapesAgainstBribe()
-        external
-    {
+    function testRewardAPIExpectedClaimForNextEpochShapesAgainstBribe() external {
         uint256 tokenId = _findExistingTokenId(50);
         if (tokenId == 0) {
             vm.skip(true, "no minted veNFT found within search window");
         }
 
-        (
-            address pairAddr,
-            ,
-            address externalBribe,
-
-        ) = _findPairWithExternalBribe(100);
+        (address pairAddr,, address externalBribe,) = _findPairWithExternalBribe(100);
         if (pairAddr == address(0)) {
-            vm.skip(
-                true,
-                "pair with external bribe not found in search window"
-            );
+            vm.skip(true, "pair with external bribe not found in search window");
         }
 
         address[] memory pairs = new address[](1);
         pairs[0] = pairAddr;
 
-        RewardAPI.Rewards[] memory rewards = rewardApi
-            .getExpectedClaimForNextEpoch(tokenId, pairs);
+        RewardAPI.Rewards[] memory rewards = rewardApi.getExpectedClaimForNextEpoch(tokenId, pairs);
         assertEq(rewards.length, 1, "rewards length");
         assertEq(rewards[0].bribes.length, 2, "bribe buckets");
 
         uint256 externalLen = IBribeAPI(externalBribe).rewardsListLength();
-        assertEq(
-            rewards[0].bribes[0].tokens.length,
-            externalLen,
-            "external reward length"
-        );
+        assertEq(rewards[0].bribes[0].tokens.length, externalLen, "external reward length");
         if (externalLen > 0) {
             address rewardToken = rewards[0].bribes[0].tokens[0];
             if (rewards[0].bribes[0].decimals[0] > 0) {
-                assertEq(
-                    rewards[0].bribes[0].decimals[0],
-                    IERC20(rewardToken).decimals(),
-                    "external reward decimals"
-                );
+                assertEq(rewards[0].bribes[0].decimals[0], IERC20(rewardToken).decimals(), "external reward decimals");
             } else {
-                assertEq(
-                    rewards[0].bribes[0].amounts[0],
-                    0,
-                    "no rewards expected without allocation"
-                );
+                assertEq(rewards[0].bribes[0].amounts[0], 0, "no rewards expected without allocation");
             }
         }
     }
@@ -376,47 +235,21 @@ contract APIHelperMainnetForkTest is Test {
         assertEq(venft.id, tokenId, "token id");
         assertEq(venft.account, owner, "owner");
         assertEq(venft.decimals, ve.decimals(), "ve decimals");
-        assertEq(
-            uint256(venft.amount),
-            uint256(uint128(lock.amount)),
-            "locked amount"
-        );
-        assertEq(
-            venft.voting_amount,
-            ve.balanceOfNFT(tokenId),
-            "voting balance"
-        );
-        assertEq(
-            venft.rebase_amount,
-            rewardsDistributor.claimable(tokenId),
-            "rebase claimable"
-        );
+        assertEq(uint256(venft.amount), uint256(uint128(lock.amount)), "locked amount");
+        assertEq(venft.voting_amount, ve.balanceOfNFT(tokenId), "voting balance");
+        assertEq(venft.rebase_amount, rewardsDistributor.claimable(tokenId), "rebase claimable");
         assertEq(venft.lockEnd, lock.end, "lock end");
-        assertEq(
-            venft.vote_ts,
-            voter.lastVoted(tokenId),
-            "last vote timestamp"
-        );
+        assertEq(venft.vote_ts, voter.lastVoted(tokenId), "last vote timestamp");
         assertEq(venft.token, ve.token(), "staking token");
-        assertEq(
-            _hashString(venft.tokenSymbol),
-            _hashString(IERC20(ve.token()).symbol()),
-            "token symbol"
-        );
-        assertEq(
-            venft.tokenDecimals,
-            IERC20(ve.token()).decimals(),
-            "token decimals"
-        );
+        assertEq(_hashString(venft.tokenSymbol), _hashString(IERC20(ve.token()).symbol()), "token symbol");
+        assertEq(venft.tokenDecimals, IERC20(ve.token()).decimals(), "token decimals");
         assertEq(venft.voted, ve.voted(tokenId), "voted flag");
         assertEq(venft.attachments, ve.attachments(tokenId), "attachments");
     }
 
     // --- helpers -------------------------------------------------------------
 
-    function _findPairWithGauge(
-        uint256 maxSearch
-    ) internal view returns (address pair, address gauge) {
+    function _findPairWithGauge(uint256 maxSearch) internal view returns (address pair, address gauge) {
         uint256 totalPairs = pairFactory.allPairsLength();
         uint256 upper = totalPairs < maxSearch ? totalPairs : maxSearch;
 
@@ -430,17 +263,10 @@ contract APIHelperMainnetForkTest is Test {
         return (address(0), address(0));
     }
 
-    function _findPairWithExternalBribe(
-        uint256 maxSearch
-    )
+    function _findPairWithExternalBribe(uint256 maxSearch)
         internal
         view
-        returns (
-            address pair,
-            address gauge,
-            address externalBribe,
-            address internalBribe
-        )
+        returns (address pair, address gauge, address externalBribe, address internalBribe)
     {
         uint256 totalPairs = pairFactory.allPairsLength();
         uint256 upper = totalPairs < maxSearch ? totalPairs : maxSearch;
@@ -459,12 +285,7 @@ contract APIHelperMainnetForkTest is Test {
 
             try IBribeAPI(ext).rewardsListLength() returns (uint256 len) {
                 if (len > 0) {
-                    return (
-                        currentPair,
-                        currentGauge,
-                        ext,
-                        voter.internal_bribes(currentGauge)
-                    );
+                    return (currentPair, currentGauge, ext, voter.internal_bribes(currentGauge));
                 }
             } catch {
                 continue;
@@ -474,9 +295,7 @@ contract APIHelperMainnetForkTest is Test {
         return (address(0), address(0), address(0), address(0));
     }
 
-    function _findExistingTokenId(
-        uint256 maxTokenId
-    ) internal view returns (uint256) {
+    function _findExistingTokenId(uint256 maxTokenId) internal view returns (uint256) {
         uint256 upper = maxTokenId;
         uint256 total = ve.totalSupply();
         if (total < upper) {

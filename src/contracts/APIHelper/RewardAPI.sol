@@ -33,8 +33,8 @@ contract RewardAPI is Initializable {
     struct Bribes {
         address[] tokens;
         string[] symbols;
-        uint[] decimals;
-        uint[] amounts;
+        uint256[] decimals;
+        uint256[] amounts;
     }
 
     struct Rewards {
@@ -42,12 +42,13 @@ contract RewardAPI is Initializable {
     }
 
     /// @notice Get the rewards available the next epoch.
-    function getExpectedClaimForNextEpoch(
-        uint tokenId,
-        address[] memory pairs
-    ) external view returns (Rewards[] memory) {
-        uint i;
-        uint len = pairs.length;
+    function getExpectedClaimForNextEpoch(uint256 tokenId, address[] memory pairs)
+        external
+        view
+        returns (Rewards[] memory)
+    {
+        uint256 i;
+        uint256 len = pairs.length;
         address _gauge;
         address _bribe;
 
@@ -71,19 +72,16 @@ contract RewardAPI is Initializable {
         return _rewards;
     }
 
-    function _getEpochRewards(
-        uint tokenId,
-        address _bribe
-    ) internal view returns (Bribes memory _rewards) {
-        uint totTokens = IBribeAPI(_bribe).rewardsListLength();
-        uint[] memory _amounts = new uint[](totTokens);
+    function _getEpochRewards(uint256 tokenId, address _bribe) internal view returns (Bribes memory _rewards) {
+        uint256 totTokens = IBribeAPI(_bribe).rewardsListLength();
+        uint256[] memory _amounts = new uint256[](totTokens);
         address[] memory _tokens = new address[](totTokens);
         string[] memory _symbol = new string[](totTokens);
-        uint[] memory _decimals = new uint[](totTokens);
-        uint ts = IBribeAPI(_bribe).getEpochStart();
-        uint i = 0;
-        uint _supply = IBribeAPI(_bribe).totalSupplyAt(ts);
-        uint _balance = IBribeAPI(_bribe).balanceOfAt(tokenId, ts);
+        uint256[] memory _decimals = new uint256[](totTokens);
+        uint256 ts = IBribeAPI(_bribe).getEpochStart();
+        uint256 i = 0;
+        uint256 _supply = IBribeAPI(_bribe).totalSupplyAt(ts);
+        uint256 _balance = IBribeAPI(_bribe).balanceOfAt(tokenId, ts);
         address _token;
         IBribeAPI.Reward memory _reward;
 
@@ -98,9 +96,7 @@ contract RewardAPI is Initializable {
                 _symbol[i] = IERC20(_token).symbol();
                 _decimals[i] = IERC20(_token).decimals();
                 _reward = IBribeAPI(_bribe).rewardData(_token, ts);
-                _amounts[i] =
-                    (((_reward.rewardsPerEpoch * 1e18) / _supply) * _balance) /
-                    1e18;
+                _amounts[i] = (((_reward.rewardsPerEpoch * 1e18) / _supply) * _balance) / 1e18;
             }
         }
 
@@ -111,9 +107,7 @@ contract RewardAPI is Initializable {
     }
 
     // read all the bribe available for a pair
-    function getPairBribe(
-        address pair
-    ) external view returns (Bribes[] memory) {
+    function getPairBribe(address pair) external view returns (Bribes[] memory) {
         address _gauge;
         address _bribe;
 
@@ -130,16 +124,14 @@ contract RewardAPI is Initializable {
         return _tempReward;
     }
 
-    function _getNextEpochRewards(
-        address _bribe
-    ) internal view returns (Bribes memory _rewards) {
-        uint totTokens = IBribeAPI(_bribe).rewardsListLength();
-        uint[] memory _amounts = new uint[](totTokens);
+    function _getNextEpochRewards(address _bribe) internal view returns (Bribes memory _rewards) {
+        uint256 totTokens = IBribeAPI(_bribe).rewardsListLength();
+        uint256[] memory _amounts = new uint256[](totTokens);
         address[] memory _tokens = new address[](totTokens);
         string[] memory _symbol = new string[](totTokens);
-        uint[] memory _decimals = new uint[](totTokens);
-        uint ts = IBribeAPI(_bribe).getNextEpochStart();
-        uint i = 0;
+        uint256[] memory _decimals = new uint256[](totTokens);
+        uint256 ts = IBribeAPI(_bribe).getNextEpochStart();
+        uint256 i = 0;
         address _token;
         IBribeAPI.Reward memory _reward;
 
@@ -173,12 +165,8 @@ contract RewardAPI is Initializable {
         underlyingToken = IVotingEscrow(voter.ve()).token();
     }
 
-    function _resolvePairFactory(
-        address _voter
-    ) internal view returns (IPairFactory) {
-        (bool ok, bytes memory data) = _voter.staticcall(
-            abi.encodeWithSignature("factory()")
-        );
+    function _resolvePairFactory(address _voter) internal view returns (IPairFactory) {
+        (bool ok, bytes memory data) = _voter.staticcall(abi.encodeWithSignature("factory()"));
         if (ok && data.length >= 32) {
             address factoryAddr = abi.decode(data, (address));
             if (factoryAddr != address(0)) {

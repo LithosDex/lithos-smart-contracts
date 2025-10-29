@@ -63,9 +63,7 @@ contract SeedLegacyBribesScript is Script {
         deposits.push(
             BribeDeposit({
                 bribe: 0x4Bd6b1b2988d997b31873DBdAf3bC76bDd35EA82,
-                token: vm.parseAddress(
-                    "0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb"
-                ), // USDT0
+                token: vm.parseAddress("0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb"), // USDT0
                 amount: 5_988_000_000, // raw 6 decimals
                 label: "msUSD/USDT0"
             })
@@ -75,9 +73,7 @@ contract SeedLegacyBribesScript is Script {
         deposits.push(
             BribeDeposit({
                 bribe: 0x7141aD2824e1767A3d25BB66842cA5A61D91D7AD,
-                token: vm.parseAddress(
-                    "0xf91c31299E998C5127Bc5F11e4a657FC0cF358CD"
-                ), // plUSD
+                token: vm.parseAddress("0xf91c31299E998C5127Bc5F11e4a657FC0cF358CD"), // plUSD
                 amount: 2_000_000_000_000_000_000_000, // 2000 plUSD (18d)
                 label: "splUSD/plUSD"
             })
@@ -87,9 +83,7 @@ contract SeedLegacyBribesScript is Script {
         deposits.push(
             BribeDeposit({
                 bribe: 0x1D638bBc91Ae1C86823A25956b55d57434e3E23C,
-                token: vm.parseAddress(
-                    "0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb"
-                ), // USDT0
+                token: vm.parseAddress("0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb"), // USDT0
                 amount: 1_000_000, // 1 USDT0 (6d)
                 label: "USDT0/plUSD (USDT0 leg)"
             })
@@ -97,9 +91,7 @@ contract SeedLegacyBribesScript is Script {
         deposits.push(
             BribeDeposit({
                 bribe: 0x1D638bBc91Ae1C86823A25956b55d57434e3E23C,
-                token: vm.parseAddress(
-                    "0xf91c31299E998C5127Bc5F11e4a657FC0cF358CD"
-                ), // plUSD
+                token: vm.parseAddress("0xf91c31299E998C5127Bc5F11e4a657FC0cF358CD"), // plUSD
                 amount: 1_000_000_000_000_000_000_000, // 1000 plUSD (18d)
                 label: "USDT0/plUSD (plUSD leg)"
             })

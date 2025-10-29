@@ -121,6 +121,11 @@ contract MinterUpgradeable is IMinter, Initializable, OwnableUpgradeable {
         REBASEMAX = _rebase;
     }
 
+    function setWeekly(uint256 _weekly) external {
+        require(msg.sender == team, "not team");
+        weekly = _weekly;
+    }
+
     // calculate circulating supply as total token supply - locked supply
     function circulating_supply() public view returns (uint256) {
         return _lithos.totalSupply() - _lithos.balanceOf(address(_ve));
