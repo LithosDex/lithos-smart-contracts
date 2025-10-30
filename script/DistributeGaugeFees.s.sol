@@ -101,8 +101,6 @@ contract DistributeGaugeFeesScript is Script {
     function _isSkipped(address gauge) internal pure returns (bool) {
         // sUSDe/ELITE gauge
         if (gauge == 0x69e4CeCE94cD707A0bb5DCeB450D4A3f121747Ee) return true;
-        // fBOMB/USDT0 gauge
-        if (gauge == 0xAAd712ae137c78D1A0869339d09b5254bC51db86) return true;
         return false;
     }
 }
