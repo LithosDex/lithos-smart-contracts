@@ -86,6 +86,11 @@ The ve(3,3) system is live on Plasma mainnet. Key governance contracts (synced t
 - **Algebra Factory**: [0x10253594A832f967994b44f33411940533302ACb](https://plasmascan.to/address/0x10253594A832f967994b44f33411940533302ACb)
 - **GaugeFactoryV2_CL**: [0x60072e4939985737AF4fD75403D7cfBCf4468d99](https://plasmascan.to/address/0x60072e4939985737AF4fD75403D7cfBCf4468d99)
 
+##### Hypervisors
+
+- **WXPL/USDT Hypervisor**: [0x19F4eBc0a1744b93A355C2320899276aE7F79Ee5](https://plasmascan.to/address/0x19F4eBc0a1744b93A355C2320899276aE7F79Ee5)
+- **WETH/USDT Hypervisor**: [0xca8759814695516C34168BBedd86290964D37adA](https://plasmascan.to/address/0xca8759814695516C34168BBedd86290964D37adA)
+
 ### Testnet (Plasma)
 
 #### Core DEX
