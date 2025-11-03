@@ -130,6 +130,9 @@ type Pair @entity(immutable: false) {
   lastUpdateTimestamp: BigInt!
   lastUpdateBlockNumber: BigInt!
 
+  # Gauge associated with this pair (if any)
+  gauge: Gauge
+
   # Derived fields
   mints: [Mint!]! @derivedFrom(field: "pair")
   burns: [Burn!]! @derivedFrom(field: "pair")
@@ -137,6 +140,9 @@ type Pair @entity(immutable: false) {
   liquidityPositions: [LiquidityPosition!]! @derivedFrom(field: "pair")
   pairHourData: [PairHourData!]! @derivedFrom(field: "pair")
   pairDayData: [PairDayData!]! @derivedFrom(field: "pair")
+  pairEpochData: [PairEpochData!]! @derivedFrom(field: "pair")
+  gaugeEpochVotes: [GaugeEpochVote!]! @derivedFrom(field: "pair")
+  bribeEpochRewards: [PairBribeEpochReward!]! @derivedFrom(field: "pair")
 
   # Observations for TWAP
   observations: [Observation!]! @derivedFrom(field: "pair")
@@ -441,6 +447,47 @@ type PairDayData @entity(immutable: false) {
 
   # Transaction count
   dailyTxns: BigInt!
+}
+
+type PairEpochData @entity(immutable: false) {
+  # Pair address + epoch timestamp
+  id: ID!
+
+  # Epoch info (start timestamp truncated to week)
+  epoch: BigInt!
+  epochStart: BigInt!
+  epochEnd: BigInt!
+
+  # Pair reference
+  pair: Pair!
+
+  # Token references
+  token0: Token!
+  token1: Token!
+
+  # Fees attributed to LPs
+  feesToken0: BigDecimal!
+  feesToken1: BigDecimal!
+  feesUSD: BigDecimal!
+
+  # Volume within this epoch
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  volumeUSD: BigDecimal!
+
+  # Referral fee share
+  referralFeesToken0: BigDecimal!
+  referralFeesToken1: BigDecimal!
+  referralFeesUSD: BigDecimal!
+
+  # Staking fee share
+  stakingFeesToken0: BigDecimal!
+  stakingFeesToken1: BigDecimal!
+  stakingFeesUSD: BigDecimal!
+
+  # Last update
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
 }
 
 type TokenDayData @entity(immutable: false) {
@@ -797,6 +844,8 @@ type Bribe @entity(immutable: false) {
   voter: Bytes!
   minter: Bytes!
   bribeFactory: Bytes!
+  gauge: Gauge
+  pair: Pair
   
   # Owner
   owner: User!
@@ -821,6 +870,14 @@ type Bribe @entity(immutable: false) {
   
   # All reward payment events
   rewardPayments: [BribeRewardPaid!]! @derivedFrom(field: "bribe")
+
+  # Epoch-level reward aggregates
+  epochRewards: [BribeEpochReward!]! @derivedFrom(field: "bribe")
+  epochStakeTotals: [BribeEpochStake!]! @derivedFrom(field: "bribe")
+
+  # Epoch-level vote aggregates
+  epochVotes: [GaugeEpochVote!]! @derivedFrom(field: "bribe")
+  pairEpochRewards: [PairBribeEpochReward!]! @derivedFrom(field: "bribe")
 }
 
 type BribeRewardToken @entity(immutable: false) {
@@ -844,6 +901,9 @@ type BribeRewardToken @entity(immutable: false) {
   
   # All reward additions for this token
   rewardAdditions: [BribeRewardAdded!]! @derivedFrom(field: "rewardToken")
+  
+  # Epoch-level reward aggregates for this token
+  epochRewards: [BribeEpochReward!]! @derivedFrom(field: "rewardToken")
 }
 
 type BribeRewardAdded @entity(immutable: false) {
@@ -879,7 +939,7 @@ type BribeRewardAdded @entity(immutable: false) {
 type BribeStake @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
   
@@ -889,15 +949,43 @@ type BribeStake @entity(immutable: false) {
   
   # Bribe contract
   bribe: Bribe!
-  
+
   # veNFT that was staked
   veNFT: VeNFT!
-  
+
+  # Aggregate stake record for this bribe/epoch
+  epochStake: BribeEpochStake
+
   # Voting power amount
   amount: BigInt!
-  
+
   # Epoch this stake applies to
   epoch: BigInt!
+}
+
+type BribeEpochStake @entity(immutable: false) {
+  # Bribe address + epoch
+  id: ID!
+
+  bribe: Bribe!
+  epoch: BigInt!
+  totalWeight: BigInt!
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
+  veStakes: [BribeEpochVeStake!]! @derivedFrom(field: "epochStake")
+}
+
+type BribeEpochVeStake @entity(immutable: false) {
+  # Bribe + epoch + veNFT
+  id: ID!
+
+  epochStake: BribeEpochStake!
+  bribe: Bribe!
+  veNFT: VeNFT!
+  epoch: BigInt!
+  weight: BigInt!
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
 }
 
 type BribeWithdraw @entity(immutable: false) {
@@ -948,6 +1036,102 @@ type BribeRewardPaid @entity(immutable: false) {
   reward: BigInt!
 }
 
+type BribeEpochReward @entity(immutable: false) {
+  # Bribe address + reward token address + epoch
+  id: ID!
+  
+  # Bribe contract
+  bribe: Bribe!
+  
+  # Reward token entity
+  rewardToken: BribeRewardToken!
+  
+  # Epoch info
+  epoch: BigInt!
+  epochStart: BigInt!
+  epochEnd: BigInt!
+  
+  # Aggregate reward amount for the epoch
+  reward: BigInt!
+  
+  # Last update info
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
+}
+
+type PairBribeEpochReward @entity(immutable: false) {
+  # Pair address + epoch + reward token
+  id: ID!
+
+  pair: Pair!
+  gauge: Gauge
+  bribe: Bribe!
+  rewardToken: Token!
+  isInternal: Boolean!
+
+  epoch: BigInt!
+  epochStart: BigInt!
+  epochEnd: BigInt!
+
+  reward: BigInt!
+
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
+}
+
+type GaugeEpochVote @entity(immutable: false) {
+  # Gauge address + epoch timestamp
+  id: ID!
+  
+  # Gauge/Bribe context
+  gauge: Gauge!
+  bribe: Bribe!
+  pair: Pair!
+  
+  # Epoch timing
+  epoch: BigInt!
+  epochStart: BigInt!
+  epochEnd: BigInt!
+  
+  # Total vote weight for this epoch
+  totalWeight: BigInt!
+  
+  # Last update metadata
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
+}
+
+type TokenGaugeEpochVote @entity(immutable: false) {
+  # tokenId + gauge + epoch
+  id: ID!
+  
+  tokenId: BigInt!
+  gauge: Gauge!
+  bribe: Bribe!
+  pair: Pair!
+  
+  epoch: BigInt!
+  epochStart: BigInt!
+  epochEnd: BigInt!
+  
+  weight: BigInt!
+  
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
+}
+
+type TokenEpochVoting @entity(immutable: false) {
+  # tokenId + epoch
+  id: ID!
+  
+  tokenId: BigInt!
+  epoch: BigInt!
+  pools: [String!]!
+  
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
+}
+
 # ===== GAUGE ENTITIES =====
 
 type Gauge @entity(immutable: false) {
@@ -965,7 +1149,9 @@ type Gauge @entity(immutable: false) {
   stakingToken: Token! # LP token or other stakeable token
   votingEscrow: Bytes! # VE contract address
   distribution: Bytes! # VoterV3 contract address
-  
+  # Pair this gauge is associated with (if staking LP tokens)
+  pair: Pair
+
   # Bribe contracts
   internalBribe: Bribe! # Internal bribe (receives fees)
   externalBribe: Bribe! # External bribe (receives incentives)
@@ -1000,6 +1186,8 @@ type Gauge @entity(immutable: false) {
   
   # All fee claims by this gauge
   feeClaims: [GaugeFeeClaim!]! @derivedFrom(field: "gauge")
+  epochVotes: [GaugeEpochVote!]! @derivedFrom(field: "gauge")
+  bribeEpochRewards: [PairBribeEpochReward!]! @derivedFrom(field: "gauge")
 }
 
 type GaugePosition @entity(immutable: false) {

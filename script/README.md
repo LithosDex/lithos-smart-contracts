@@ -73,17 +73,12 @@ Deploys ve(3,3) governance system with two-phase activation.
 export DEPLOY_ENV=mainnet
 export PRIVATE_KEY=0x...
 export RPC_URL=https://...
-export GAS_LIMIT=30000000
-export GAS_PRICE=1000000000
 ```
 
 #### Phase 1 - Oct 3 (Deploy)
 ```bash
 forge script script/DeployAndInitVe33.s.sol \
   --rpc-url "$RPC_URL" \
-  --gas-limit "$GAS_LIMIT" \
-  --gas-price "$GAS_PRICE" \
-  --legacy \
   --broadcast \
   --verify
 ```
@@ -106,9 +101,6 @@ forge script script/DeployAndInitVe33.s.sol \
 ACTIVATE_MINTER=true \
 forge script script/DeployAndInitVe33.s.sol \
   --rpc-url "$RPC_URL" \
-  --gas-limit "$GAS_LIMIT" \
-  --gas-price "$GAS_PRICE" \
-  --legacy \
   --broadcast
 ```
 
@@ -166,3 +158,41 @@ forge script script/RenounceTimelockAdmin.s.sol \
 **Upgradeability:**
 - MinterUpgradeable & VeArtProxyUpgradeable use TransparentProxy pattern
 - ProxyAdmin controls upgrades
+
+### 4. DeployAPIHelpers.s.sol
+Deploys the read-only API helper proxies (PairAPI, RewardAPI, veNFTAPI) against an existing deployment and optionally verifies them on Routescan.
+
+#### Prerequisites
+```bash
+export DEPLOY_ENV=mainnet          # defaults to mainnet if unset
+export PRIVATE_KEY=0x...           # deployer EOA (proxy admin)
+export RPC_URL=https://...         # Plasma RPC endpoint
+```
+
+#### Deployment
+```bash
+forge script script/DeployAPIHelpers.s.sol \
+  --rpc-url "$RPC_URL" \
+  --broadcast
+```
+
+By default the script refuses to redeploy if helper addresses already exist in `deployments/{env}/state.json`. Override with `REDEPLOY_API_HELPERS=true` if you intentionally need to replace them.
+
+The script writes both proxy and implementation addresses back into the state file under:
+- `PairAPI`, `PairAPIImpl`
+- `RewardAPI`, `RewardAPIImpl`
+- `VeNFTAPI`, `VeNFTAPIImpl`
+
+#### Verification (optional)
+To auto-submit verification requests to Routescan:
+```bash
+VERIFY_API_HELPERS=true \
+VERIFIER_URL='https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan' \
+ETHERSCAN_API_KEY='verifyContract' \
+forge script script/DeployAPIHelpers.s.sol \
+  --rpc-url "$RPC_URL" \
+  --broadcast \
+  --ffi
+```
+
+`VERIFIER_URL` defaults to the mainnet/testnet Routescan endpoints based on `DEPLOY_ENV`. Provide `ETHERSCAN_API_KEY` if you use a non-default key. Remember to run with `--ffi` so the script can spawn `forge verify-contract`.

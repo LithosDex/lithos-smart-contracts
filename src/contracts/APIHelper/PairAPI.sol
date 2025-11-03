@@ -18,7 +18,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 interface IHypervisor {
     function pool() external view returns (address);
 
-    function getTotalAmounts() external view returns (uint tot0, uint tot1);
+    function getTotalAmounts() external view returns (uint256 tot0, uint256 tot1);
 }
 
 interface IAlgebraFactory {
@@ -31,34 +31,34 @@ contract PairAPI is Initializable {
         address pair_address; // pair contract address
         string symbol; // pair symbol
         string name; // pair name
-        uint decimals; // pair decimals
+        uint256 decimals; // pair decimals
         bool stable; // pair pool type (stable = false, means it's a variable type of pool)
-        uint total_supply; // pair tokens supply
+        uint256 total_supply; // pair tokens supply
         // token pair info
         address token0; // pair 1st token address
         string token0_symbol; // pair 1st token symbol
-        uint token0_decimals; // pair 1st token decimals
-        uint reserve0; // pair 1st token reserves (nr. of tokens in the contract)
-        uint claimable0; // claimable 1st token from fees (for unstaked positions)
+        uint256 token0_decimals; // pair 1st token decimals
+        uint256 reserve0; // pair 1st token reserves (nr. of tokens in the contract)
+        uint256 claimable0; // claimable 1st token from fees (for unstaked positions)
         address token1; // pair 2nd token address
         string token1_symbol; // pair 2nd token symbol
-        uint token1_decimals; // pair 2nd token decimals
-        uint reserve1; // pair 2nd token reserves (nr. of tokens in the contract)
-        uint claimable1; // claimable 2nd token from fees (for unstaked positions)
+        uint256 token1_decimals; // pair 2nd token decimals
+        uint256 reserve1; // pair 2nd token reserves (nr. of tokens in the contract)
+        uint256 claimable1; // claimable 2nd token from fees (for unstaked positions)
         // pairs gauge
         address gauge; // pair gauge address
-        uint gauge_total_supply; // pair staked tokens (less/eq than/to pair total supply)
+        uint256 gauge_total_supply; // pair staked tokens (less/eq than/to pair total supply)
         address fee; // pair fees contract address
         address bribe; // pair bribes contract address
-        uint emissions; // pair emissions (per second)
+        uint256 emissions; // pair emissions (per second)
         address emissions_token; // pair emissions token address
-        uint emissions_token_decimals; // pair emissions token decimals
+        uint256 emissions_token_decimals; // pair emissions token decimals
         // User deposit
-        uint account_lp_balance; // account LP tokens balance
-        uint account_token0_balance; // account 1st token balance
-        uint account_token1_balance; // account 2nd token balance
-        uint account_gauge_balance; // account pair staked in gauge balance
-        uint account_gauge_earned; // account earned emissions for this pair
+        uint256 account_lp_balance; // account LP tokens balance
+        uint256 account_token0_balance; // account 1st token balance
+        uint256 account_token1_balance; // account 2nd token balance
+        uint256 account_gauge_balance; // account pair staked in gauge balance
+        uint256 account_gauge_earned; // account earned emissions for this pair
     }
 
     struct tokenBribe {
@@ -103,26 +103,24 @@ contract PairAPI is Initializable {
         _refreshPairFactories(_voter);
         underlyingToken = IVotingEscrow(voter.ve()).token();
 
-        algebraFactory = IAlgebraFactory(
-            address(0x306F06C147f064A010530292A1EB6737c3e378e4)
-        );
+        algebraFactory = IAlgebraFactory(address(0x306F06C147f064A010530292A1EB6737c3e378e4));
     }
 
     // valid only for sAMM and vAMM
-    function getAllPair(
-        address _user,
-        uint _amounts,
-        uint _offset
-    ) external view returns (pairInfo[] memory Pairs) {
+    function getAllPair(address _user, uint256 _amounts, uint256 _offset)
+        external
+        view
+        returns (pairInfo[] memory Pairs)
+    {
         require(_amounts <= MAX_PAIRS, "too many pair");
 
         Pairs = new pairInfo[](_amounts);
 
-        uint totalPairs = _totalPairsLength();
-        uint filled;
+        uint256 totalPairs = _totalPairsLength();
+        uint256 filled;
 
-        for (uint idx = 0; idx < _amounts; idx++) {
-            uint target = _offset + idx;
+        for (uint256 idx = 0; idx < _amounts; idx++) {
+            uint256 target = _offset + idx;
             if (target >= totalPairs) {
                 break;
             }
@@ -131,43 +129,37 @@ contract PairAPI is Initializable {
             filled = idx + 1;
         }
 
-        for (uint k = filled; k < _amounts; k++) {
+        for (uint256 k = filled; k < _amounts; k++) {
             delete Pairs[k];
         }
     }
 
-    function getPair(
-        address _pair,
-        address _account
-    ) external view returns (pairInfo memory _pairInfo) {
+    function getPair(address _pair, address _account) external view returns (pairInfo memory _pairInfo) {
         return _pairAddressToInfo(_pair, _account);
     }
 
-    function _pairAddressToInfo(
-        address _pair,
-        address _account
-    ) internal view returns (pairInfo memory _pairInfo) {
+    function _pairAddressToInfo(address _pair, address _account) internal view returns (pairInfo memory _pairInfo) {
         IPair ipair = IPair(_pair);
 
         address token_0 = ipair.token0();
         address token_1 = ipair.token1();
-        uint r0;
-        uint r1;
+        uint256 r0;
+        uint256 r1;
 
-        (bool isFactoryPair, ) = _locateFactoryForPair(_pair);
+        (bool isFactoryPair,) = _locateFactoryForPair(_pair);
 
         if (!isFactoryPair) {
             // hypervisor totalAmounts = algebra.pool + gamma.unused
             (r0, r1) = IHypervisor(_pair).getTotalAmounts();
         } else {
-            (r0, r1, ) = ipair.getReserves();
+            (r0, r1,) = ipair.getReserves();
         }
 
         IGaugeAPI _gauge = IGaugeAPI(voter.gauges(_pair));
-        uint accountGaugeLPAmount = 0;
-        uint earned = 0;
-        uint gaugeTotalSupply = 0;
-        uint emissions = 0;
+        uint256 accountGaugeLPAmount = 0;
+        uint256 earned = 0;
+        uint256 gaugeTotalSupply = 0;
+        uint256 emissions = 0;
 
         if (address(_gauge) != address(0)) {
             if (_account != address(0)) {
@@ -222,11 +214,11 @@ contract PairAPI is Initializable {
         _pairInfo.account_gauge_earned = earned;
     }
 
-    function getPairBribe(
-        uint _amounts,
-        uint _offset,
-        address _pair
-    ) external view returns (pairBribeEpoch[] memory _pairEpoch) {
+    function getPairBribe(uint256 _amounts, uint256 _offset, address _pair)
+        external
+        view
+        returns (pairBribeEpoch[] memory _pairEpoch)
+    {
         require(_amounts <= MAX_EPOCHS, "too many epochs");
 
         _pairEpoch = new pairBribeEpoch[](_amounts);
@@ -241,41 +233,35 @@ contract PairAPI is Initializable {
 
         // scan bribes
         // get latest balance and epoch start for bribes
-        uint _epochStartTimestamp = bribe.firstBribeTimestamp();
+        uint256 _epochStartTimestamp = bribe.firstBribeTimestamp();
 
         // if 0 then no bribe created so far
         if (_epochStartTimestamp == 0) {
             return _pairEpoch;
         }
 
-        uint _supply;
-        uint i = _offset;
+        uint256 _supply;
+        uint256 i = _offset;
 
         for (i; i < _offset + _amounts; i++) {
             _supply = bribe.totalSupplyAt(_epochStartTimestamp);
             _pairEpoch[i - _offset].epochTimestamp = _epochStartTimestamp;
             _pairEpoch[i - _offset].pair = _pair;
             _pairEpoch[i - _offset].totalVotes = _supply;
-            _pairEpoch[i - _offset].bribes = _bribe(
-                _epochStartTimestamp,
-                address(bribe)
-            );
+            _pairEpoch[i - _offset].bribes = _bribe(_epochStartTimestamp, address(bribe));
 
             _epochStartTimestamp += WEEK;
         }
     }
 
-    function _bribe(
-        uint _ts,
-        address _br
-    ) internal view returns (tokenBribe[] memory _tb) {
+    function _bribe(uint256 _ts, address _br) internal view returns (tokenBribe[] memory _tb) {
         IBribeAPI _wb = IBribeAPI(_br);
-        uint tokenLen = _wb.rewardsListLength();
+        uint256 tokenLen = _wb.rewardsListLength();
 
         _tb = new tokenBribe[](tokenLen);
 
-        uint k;
-        uint _rewPerEpoch;
+        uint256 k;
+        uint256 _rewPerEpoch;
         IERC20 _t;
         for (k = 0; k < tokenLen; k++) {
             _t = IERC20(_wb.rewardTokens(k));
@@ -315,10 +301,7 @@ contract PairAPI is Initializable {
         emit Voter(_oldVoter, _voter);
     }
 
-    function left(
-        address _pair,
-        address _token
-    ) external view returns (uint256 _rewPerEpoch) {
+    function left(address _pair, address _token) external view returns (uint256 _rewPerEpoch) {
         address _gauge = voter.gauges(_pair);
         IBribeAPI bribe = IBribeAPI(voter.internal_bribes(_gauge));
 
@@ -327,23 +310,15 @@ contract PairAPI is Initializable {
         _rewPerEpoch = _reward.rewardsPerEpoch;
     }
 
-    function pairFactoriesList()
-        external
-        view
-        returns (address[] memory factories)
-    {
+    function pairFactoriesList() external view returns (address[] memory factories) {
         factories = new address[](pairFactories.length);
-        for (uint i = 0; i < pairFactories.length; i++) {
+        for (uint256 i = 0; i < pairFactories.length; i++) {
             factories[i] = pairFactories[i];
         }
     }
 
-    function _resolvePairFactories(
-        address _voter
-    ) internal view returns (address[] memory) {
-        (bool ok, bytes memory data) = _voter.staticcall(
-            abi.encodeWithSignature("factory()")
-        );
+    function _resolvePairFactories(address _voter) internal view returns (address[] memory) {
+        (bool ok, bytes memory data) = _voter.staticcall(abi.encodeWithSignature("factory()"));
         if (ok && data.length >= 32) {
             address factoryAddr = abi.decode(data, (address));
             if (factoryAddr != address(0)) {
@@ -356,16 +331,16 @@ contract PairAPI is Initializable {
         (ok, data) = _voter.staticcall(abi.encodeWithSignature("factories()"));
         if (ok && data.length >= 32) {
             address[] memory factories = abi.decode(data, (address[]));
-            uint count;
-            for (uint i = 0; i < factories.length; i++) {
+            uint256 count;
+            for (uint256 i = 0; i < factories.length; i++) {
                 if (factories[i] != address(0)) {
                     count++;
                 }
             }
             if (count > 0) {
                 address[] memory sanitized = new address[](count);
-                uint idx;
-                for (uint i = 0; i < factories.length; i++) {
+                uint256 idx;
+                for (uint256 i = 0; i < factories.length; i++) {
                     if (factories[i] != address(0)) {
                         sanitized[idx++] = factories[i];
                     }
@@ -382,7 +357,7 @@ contract PairAPI is Initializable {
         require(factories.length > 0, "PairAPI: no factories");
 
         delete pairFactories;
-        for (uint i = 0; i < factories.length; i++) {
+        for (uint256 i = 0; i < factories.length; i++) {
             pairFactories.push(factories[i]);
         }
 
@@ -390,17 +365,15 @@ contract PairAPI is Initializable {
     }
 
     function _totalPairsLength() internal view returns (uint256 total) {
-        for (uint i = 0; i < pairFactories.length; i++) {
+        for (uint256 i = 0; i < pairFactories.length; i++) {
             total += IPairFactory(pairFactories[i]).allPairsLength();
         }
     }
 
-    function _pairAddressAtIndex(
-        uint256 index
-    ) internal view returns (address) {
-        for (uint i = 0; i < pairFactories.length; i++) {
+    function _pairAddressAtIndex(uint256 index) internal view returns (address) {
+        for (uint256 i = 0; i < pairFactories.length; i++) {
             IPairFactory factory = IPairFactory(pairFactories[i]);
-            uint len = factory.allPairsLength();
+            uint256 len = factory.allPairsLength();
             if (index < len) {
                 return factory.allPairs(index);
             }
@@ -409,10 +382,8 @@ contract PairAPI is Initializable {
         revert("PairAPI: pair index out of range");
     }
 
-    function _locateFactoryForPair(
-        address _pair
-    ) internal view returns (bool, address) {
-        for (uint i = 0; i < pairFactories.length; i++) {
+    function _locateFactoryForPair(address _pair) internal view returns (bool, address) {
+        for (uint256 i = 0; i < pairFactories.length; i++) {
             IPairFactory factory = IPairFactory(pairFactories[i]);
             try factory.isPair(_pair) returns (bool result) {
                 if (result) {

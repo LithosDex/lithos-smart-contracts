@@ -1,6 +1,8 @@
-import { Address, BigInt } from "@graphprotocol/graph-ts";
+import { Address, BigInt, store, ethereum } from "@graphprotocol/graph-ts";
 import {
   GaugeCreated as GaugeCreatedEvent,
+  Voted as VotedEvent,
+  Abstained as AbstainedEvent,
   VoterV3 as VoterV3Contract
 } from "../generated/VoterV3/VoterV3";
 
@@ -9,10 +11,14 @@ import {
   GaugeCreatedEvent as GaugeCreatedEventEntity,
   BribeFactory,
   Bribe,
-  Gauge
+  Gauge,
+  Pair,
+  GaugeEpochVote,
+  TokenGaugeEpochVote,
+  TokenEpochVoting
 } from "../generated/schema";
 
-import { BI_ZERO, BI_ONE, createUser, getOrCreateToken } from "./helpers";
+import { BI_ZERO, BI_ONE, WEEK, createUser, getOrCreateToken, getEpoch } from "./helpers";
 
 // Import templates for dynamic contract instantiation
 import { Bribes as BribesTemplate, GaugeV2 as GaugeV2Template } from "../generated/templates";
@@ -130,6 +136,164 @@ function createGauge(address: Address, voterAddress: Address): Gauge {
   return gauge;
 }
 
+// Synchronize per-token votes and aggregate weights for the current epoch
+function syncTokenVotes(event: ethereum.Event, tokenId: BigInt): void {
+  let contract = VoterV3Contract.bind(event.address);
+  let epochStart = getEpoch(event.block.timestamp);
+  let epochEnd = epochStart.plus(WEEK);
+
+  let tokenEpochId = tokenId
+    .toString()
+    .concat("-")
+    .concat(epochStart.toString());
+  let tokenEpoch = TokenEpochVoting.load(tokenEpochId);
+  if (tokenEpoch === null) {
+    tokenEpoch = new TokenEpochVoting(tokenEpochId);
+    tokenEpoch.tokenId = tokenId;
+    tokenEpoch.epoch = epochStart;
+    tokenEpoch.pools = new Array<string>();
+  }
+
+  let previousPools = tokenEpoch.pools;
+  if (previousPools === null) {
+    previousPools = new Array<string>();
+  }
+
+  let currentPools = new Array<string>();
+  let currentWeights = new Array<BigInt>();
+
+  let poolVoteLengthResult = contract.try_poolVoteLength(tokenId);
+  if (!poolVoteLengthResult.reverted) {
+    let length = poolVoteLengthResult.value.toI32();
+    for (let i = 0; i < length; i++) {
+      let poolResult = contract.try_poolVote(tokenId, BigInt.fromI32(i));
+      if (poolResult.reverted) {
+        continue;
+      }
+      let poolAddress = poolResult.value;
+      let poolId = poolAddress.toHexString();
+      if (currentPools.indexOf(poolId) != -1) {
+        continue;
+      }
+      currentPools.push(poolId);
+      let voteResult = contract.try_votes(tokenId, poolAddress);
+      if (!voteResult.reverted) {
+        currentWeights.push(voteResult.value);
+      } else {
+        currentWeights.push(BI_ZERO);
+      }
+    }
+  }
+
+  let mergedPools = previousPools.concat(currentPools);
+  let uniquePools = new Array<string>();
+  for (let i = 0; i < mergedPools.length; i++) {
+    let poolId = mergedPools[i];
+    if (uniquePools.indexOf(poolId) == -1) {
+      uniquePools.push(poolId);
+    }
+  }
+
+  for (let i = 0; i < uniquePools.length; i++) {
+    let poolId = uniquePools[i];
+    let pair = Pair.load(poolId);
+    if (pair === null) {
+      continue;
+    }
+    let gaugeId = pair.gauge;
+    if (gaugeId === null) {
+      continue;
+    }
+    let gauge = Gauge.load(gaugeId as string);
+    if (gauge === null) {
+      continue;
+    }
+    let weightResult = contract.try_weights(Address.fromString(poolId));
+    if (weightResult.reverted) {
+      continue;
+    }
+    let epochVoteId = (gaugeId as string)
+      .concat("-")
+      .concat(epochStart.toString());
+    let epochVote = GaugeEpochVote.load(epochVoteId);
+    if (epochVote === null) {
+      epochVote = new GaugeEpochVote(epochVoteId);
+      epochVote.gauge = gaugeId as string;
+      epochVote.bribe = gauge.externalBribe;
+      epochVote.pair = pair.id;
+      epochVote.epoch = epochStart;
+      epochVote.epochStart = epochStart;
+      epochVote.epochEnd = epochEnd;
+      epochVote.totalWeight = weightResult.value;
+    } else {
+      epochVote.totalWeight = weightResult.value;
+      epochVote.epoch = epochStart;
+      epochVote.epochStart = epochStart;
+      epochVote.epochEnd = epochEnd;
+    }
+    epochVote.updatedAtTimestamp = event.block.timestamp;
+    epochVote.updatedAtBlockNumber = event.block.number;
+    epochVote.save();
+  }
+
+  for (let i = 0; i < currentPools.length; i++) {
+    let poolId = currentPools[i];
+    let pair = Pair.load(poolId);
+    if (pair === null) {
+      continue;
+    }
+    let gaugeId = pair.gauge;
+    if (gaugeId === null) {
+      continue;
+    }
+    let gauge = Gauge.load(gaugeId as string);
+    if (gauge === null) {
+      continue;
+    }
+    let tokenVoteId = tokenId
+      .toString()
+      .concat("-")
+      .concat(epochStart.toString())
+      .concat("-")
+      .concat(poolId);
+    let tokenVote = TokenGaugeEpochVote.load(tokenVoteId);
+    if (tokenVote === null) {
+      tokenVote = new TokenGaugeEpochVote(tokenVoteId);
+      tokenVote.tokenId = tokenId;
+      tokenVote.gauge = gaugeId as string;
+      tokenVote.bribe = gauge.externalBribe;
+      tokenVote.pair = pair.id;
+      tokenVote.epoch = epochStart;
+      tokenVote.epochStart = epochStart;
+      tokenVote.epochEnd = epochEnd;
+    }
+    tokenVote.weight = currentWeights[i];
+    tokenVote.updatedAtTimestamp = event.block.timestamp;
+    tokenVote.updatedAtBlockNumber = event.block.number;
+    tokenVote.save();
+  }
+
+  for (let i = 0; i < previousPools.length; i++) {
+    let poolId = previousPools[i];
+    if (currentPools.indexOf(poolId) != -1) {
+      continue;
+    }
+    let tokenVoteId = tokenId
+      .toString()
+      .concat("-")
+      .concat(epochStart.toString())
+      .concat("-")
+      .concat(poolId);
+    store.remove("TokenGaugeEpochVote", tokenVoteId);
+  }
+
+  tokenEpoch.pools = currentPools;
+  tokenEpoch.epoch = epochStart;
+  tokenEpoch.updatedAtTimestamp = event.block.timestamp;
+  tokenEpoch.updatedAtBlockNumber = event.block.number;
+  tokenEpoch.save();
+}
+
 // Handle GaugeCreated events from VoterV3
 export function handleGaugeCreated(event: GaugeCreatedEvent): void {
   let voter = getOrCreateVoter(event.address);
@@ -148,7 +312,22 @@ export function handleGaugeCreated(event: GaugeCreatedEvent): void {
   gauge.stakingToken = poolToken.id;
   gauge.internalBribe = internalBribe.id;
   gauge.externalBribe = externalBribe.id;
+
+  let pairEntity = Pair.load(event.params.pool.toHexString());
+  if (pairEntity !== null) {
+    pairEntity.gauge = gauge.id;
+    pairEntity.save();
+    gauge.pair = pairEntity.id;
+  }
+
   gauge.save();
+  
+  internalBribe.gauge = gauge.id;
+  internalBribe.pair = gauge.pair;
+  internalBribe.save();
+  externalBribe.gauge = gauge.id;
+  externalBribe.pair = gauge.pair;
+  externalBribe.save();
   
   // Create GaugeCreatedEvent entity
   let gaugeCreatedEvent = new GaugeCreatedEventEntity(
@@ -179,4 +358,12 @@ export function handleGaugeCreated(event: GaugeCreatedEvent): void {
   BribesTemplate.create(event.params.internal_bribe);
   BribesTemplate.create(event.params.external_bribe);
   GaugeV2Template.create(event.params.gauge);
+}
+
+export function handleVoted(event: VotedEvent): void {
+  syncTokenVotes(event, event.params.tokenId);
+}
+
+export function handleAbstained(event: AbstainedEvent): void {
+  syncTokenVotes(event, event.params.tokenId);
 }

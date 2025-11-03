@@ -18,7 +18,8 @@ import {
   GaugeRewardAdded,
   GaugeHarvest,
   GaugeFeeClaim,
-  GaugeEmergencyEvent
+  GaugeEmergencyEvent,
+  Pair
 } from "../generated/schema";
 
 import { BI_ZERO, BI_ONE, createUser, getOrCreateToken } from "./helpers";
@@ -55,6 +56,13 @@ function getOrCreateGauge(address: Address): Gauge {
     if (!stakingTokenResult.reverted) {
       let stakingToken = getOrCreateToken(stakingTokenResult.value);
       gauge.stakingToken = stakingToken.id;
+
+      let pairEntity = Pair.load(stakingToken.id);
+      if (pairEntity !== null) {
+        pairEntity.gauge = gauge.id;
+        pairEntity.save();
+        gauge.pair = pairEntity.id;
+      }
     } else {
       // Fallback to zero address token
       let stakingToken = getOrCreateToken(Address.zero());

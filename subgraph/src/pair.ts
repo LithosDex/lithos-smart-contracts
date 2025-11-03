@@ -20,6 +20,7 @@ import {
   Transaction,
   LiquidityPosition,
   Factory,
+  PairEpochData,
 } from "../generated/schema";
 
 import { Pair as PairContract } from "../generated/templates/Pair/Pair";
@@ -47,6 +48,8 @@ import {
   findEthPerToken,
   fetchTokenDecimals,
   ZERO_ADDRESS,
+  WEEK,
+  getEpoch,
 } from "./helpers";
 
 export function handleMint(event: MintEvent): void {
@@ -244,6 +247,40 @@ export function handleSwap(event: SwapEvent): void {
   factory.totalVolumeUSD = factory.totalVolumeUSD.plus(trackedAmountUSD);
   factory.txCount = factory.txCount.plus(ONE_BI);
 
+  // Update weekly epoch aggregation (volume)
+  let epochStartVol = getEpoch(event.block.timestamp);
+  let epochIdVol = pair.id.concat("-").concat(epochStartVol.toString());
+  let epochVol = PairEpochData.load(epochIdVol);
+  if (epochVol === null) {
+    epochVol = new PairEpochData(epochIdVol);
+    epochVol.pair = pair.id;
+    epochVol.token0 = pair.token0;
+    epochVol.token1 = pair.token1;
+    epochVol.epoch = epochStartVol;
+    epochVol.epochStart = epochStartVol;
+    epochVol.epochEnd = epochStartVol.plus(WEEK);
+    // initialize fees buckets to zero (may be filled by Fees handler)
+    epochVol.feesToken0 = ZERO_BD;
+    epochVol.feesToken1 = ZERO_BD;
+    epochVol.feesUSD = ZERO_BD;
+    epochVol.referralFeesToken0 = ZERO_BD;
+    epochVol.referralFeesToken1 = ZERO_BD;
+    epochVol.referralFeesUSD = ZERO_BD;
+    epochVol.stakingFeesToken0 = ZERO_BD;
+    epochVol.stakingFeesToken1 = ZERO_BD;
+    epochVol.stakingFeesUSD = ZERO_BD;
+    // initialize new volume fields
+    epochVol.volumeToken0 = ZERO_BD;
+    epochVol.volumeToken1 = ZERO_BD;
+    epochVol.volumeUSD = ZERO_BD;
+  }
+  epochVol.volumeToken0 = epochVol.volumeToken0.plus(amount0Total);
+  epochVol.volumeToken1 = epochVol.volumeToken1.plus(amount1Total);
+  epochVol.volumeUSD = epochVol.volumeUSD.plus(trackedAmountUSD);
+  epochVol.updatedAtTimestamp = event.block.timestamp;
+  epochVol.updatedAtBlockNumber = event.block.number;
+  epochVol.save();
+
   // Create swap entity
   let swap = new Swap(
     event.transaction.hash
@@ -430,6 +467,46 @@ export function handleFees(event: Fees): void {
   pair.feesUSD = pair.feesUSD.plus(lpUSD);
   pair.referralFeesUSD = pair.referralFeesUSD.plus(referralUSD);
   pair.stakingFeesUSD = pair.stakingFeesUSD.plus(stakingUSD);
+
+  // Update weekly epoch aggregation
+  let epochStart = getEpoch(event.block.timestamp);
+  let epochId = pair.id.concat("-").concat(epochStart.toString());
+  let epochData = PairEpochData.load(epochId);
+  if (epochData === null) {
+    epochData = new PairEpochData(epochId);
+    epochData.pair = pair.id;
+    epochData.token0 = pair.token0;
+    epochData.token1 = pair.token1;
+    epochData.epoch = epochStart;
+    epochData.epochStart = epochStart;
+    epochData.epochEnd = epochStart.plus(WEEK);
+    epochData.feesToken0 = ZERO_BD;
+    epochData.feesToken1 = ZERO_BD;
+    epochData.feesUSD = ZERO_BD;
+    epochData.referralFeesToken0 = ZERO_BD;
+    epochData.referralFeesToken1 = ZERO_BD;
+    epochData.referralFeesUSD = ZERO_BD;
+    epochData.stakingFeesToken0 = ZERO_BD;
+    epochData.stakingFeesToken1 = ZERO_BD;
+    epochData.stakingFeesUSD = ZERO_BD;
+    // initialize new volume fields if created here first
+    epochData.volumeToken0 = ZERO_BD;
+    epochData.volumeToken1 = ZERO_BD;
+    epochData.volumeUSD = ZERO_BD;
+  }
+
+  epochData.feesToken0 = epochData.feesToken0.plus(lpAmount0);
+  epochData.feesToken1 = epochData.feesToken1.plus(lpAmount1);
+  epochData.feesUSD = epochData.feesUSD.plus(lpUSD);
+  epochData.referralFeesToken0 = epochData.referralFeesToken0.plus(referralAmount0);
+  epochData.referralFeesToken1 = epochData.referralFeesToken1.plus(referralAmount1);
+  epochData.referralFeesUSD = epochData.referralFeesUSD.plus(referralUSD);
+  epochData.stakingFeesToken0 = epochData.stakingFeesToken0.plus(stakingAmount0);
+  epochData.stakingFeesToken1 = epochData.stakingFeesToken1.plus(stakingAmount1);
+  epochData.stakingFeesUSD = epochData.stakingFeesUSD.plus(stakingUSD);
+  epochData.updatedAtTimestamp = event.block.timestamp;
+  epochData.updatedAtBlockNumber = event.block.number;
+  epochData.save();
 
   pair.save();
 }

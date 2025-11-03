@@ -1,7 +1,7 @@
 // Example: Calculate LITH pool total votes using the subgraph only.
 
 const SUBGRAPH =
-  "https://api.goldsky.com/api/public/project_cmfuu39qbys1j01009omjbmts/subgraphs/lithos-subgraph-mainnet/v1.0.4/gn";
+  "https://api.goldsky.com/api/public/project_cmfuu39qbys1j01009omjbmts/subgraphs/lithos-subgraph-mainnet/v1.0.6/gn";
 
 // WXPL/LITH pair address (LP token) — lowercased for subgraph IDs
 const LITH_POOL = "0x7dab98cc51835beae6dee43bbda84cdb96896fb5";

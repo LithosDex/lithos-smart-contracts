@@ -15,6 +15,7 @@ export let ONE_BI = BigInt.fromI32(1)
 export let ZERO_BD = BigDecimal.fromString("0")
 export let ONE_BD = BigDecimal.fromString("1")
 export let BI_18 = BigInt.fromI32(18)
+export let WEEK = BigInt.fromI32(86400 * 7)
 
 // Export aliases for VotingEscrow handlers
 export let BI_ZERO = ZERO_BI
@@ -114,6 +115,11 @@ export function createTransaction(event: ethereum.Event): Transaction {
     transaction.save()
   }
   return transaction as Transaction
+}
+
+// Calculate the epoch start (weekly)
+export function getEpoch(timestamp: BigInt): BigInt {
+  return timestamp.div(WEEK).times(WEEK)
 }
 
 // Convert token amount to decimal based on token decimals

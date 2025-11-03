@@ -18,40 +18,37 @@ interface IPairAPI {
         address pair_address; // pair contract address
         string symbol; // pair symbol
         string name; // pair name
-        uint decimals; // pair decimals
+        uint256 decimals; // pair decimals
         bool stable; // pair pool type (stable = false, means it's a variable type of pool)
-        uint total_supply; // pair tokens supply
+        uint256 total_supply; // pair tokens supply
         // token pair info
         address token0; // pair 1st token address
         string token0_symbol; // pair 1st token symbol
-        uint token0_decimals; // pair 1st token decimals
-        uint reserve0; // pair 1st token reserves (nr. of tokens in the contract)
-        uint claimable0; // claimable 1st token from fees (for unstaked positions)
+        uint256 token0_decimals; // pair 1st token decimals
+        uint256 reserve0; // pair 1st token reserves (nr. of tokens in the contract)
+        uint256 claimable0; // claimable 1st token from fees (for unstaked positions)
         address token1; // pair 2nd token address
         string token1_symbol; // pair 2nd token symbol
-        uint token1_decimals; // pair 2nd token decimals
-        uint reserve1; // pair 2nd token reserves (nr. of tokens in the contract)
-        uint claimable1; // claimable 2nd token from fees (for unstaked positions)
+        uint256 token1_decimals; // pair 2nd token decimals
+        uint256 reserve1; // pair 2nd token reserves (nr. of tokens in the contract)
+        uint256 claimable1; // claimable 2nd token from fees (for unstaked positions)
         // pairs gauge
         address gauge; // pair gauge address
-        uint gauge_total_supply; // pair staked tokens (less/eq than/to pair total supply)
+        uint256 gauge_total_supply; // pair staked tokens (less/eq than/to pair total supply)
         address fee; // pair fees contract address
         address bribe; // pair bribes contract address
-        uint emissions; // pair emissions (per second)
+        uint256 emissions; // pair emissions (per second)
         address emissions_token; // pair emissions token address
-        uint emissions_token_decimals; // pair emissions token decimals
+        uint256 emissions_token_decimals; // pair emissions token decimals
         // User deposit
-        uint account_lp_balance; // account LP tokens balance
-        uint account_token0_balance; // account 1st token balance
-        uint account_token1_balance; // account 2nd token balance
-        uint account_gauge_balance; // account pair staked in gauge balance
-        uint account_gauge_earned; // account earned emissions for this pair
+        uint256 account_lp_balance; // account LP tokens balance
+        uint256 account_token0_balance; // account 1st token balance
+        uint256 account_token1_balance; // account 2nd token balance
+        uint256 account_gauge_balance; // account pair staked in gauge balance
+        uint256 account_gauge_earned; // account earned emissions for this pair
     }
 
-    function getPair(
-        address _pair,
-        address _account
-    ) external view returns (pairInfo memory _pairInfo);
+    function getPair(address _pair, address _account) external view returns (pairInfo memory _pairInfo);
 
     function pair_factory() external view returns (address);
 }
@@ -104,6 +101,7 @@ contract veNFTAPI is Initializable {
     address[] internal pairFactories;
 
     address public owner;
+
     event Owner(address oldOwner, address newOwner);
 
     struct AllPairRewards {
@@ -112,11 +110,7 @@ contract veNFTAPI is Initializable {
 
     constructor() {}
 
-    function initialize(
-        address _voter,
-        address _rewarddistro,
-        address _pairApi
-    ) public initializer {
+    function initialize(address _voter, address _rewarddistro, address _pairApi) public initializer {
         owner = msg.sender;
 
         pairAPI = _pairApi;
@@ -131,14 +125,11 @@ contract veNFTAPI is Initializable {
         _refreshPairFactories(_voter);
     }
 
-    function getAllNFT(
-        uint256 _amounts,
-        uint256 _offset
-    ) external view returns (veNFT[] memory _veNFT) {
+    function getAllNFT(uint256 _amounts, uint256 _offset) external view returns (veNFT[] memory _veNFT) {
         require(_amounts <= MAX_RESULTS, "too many nfts");
         _veNFT = new veNFT[](_amounts);
 
-        uint i = _offset;
+        uint256 i = _offset;
         address _owner;
 
         for (i; i < _offset + _amounts; i++) {
@@ -154,9 +145,7 @@ contract veNFTAPI is Initializable {
         return _getNFTFromId(id, ve.ownerOf(id));
     }
 
-    function getNFTFromAddress(
-        address _user
-    ) external view returns (veNFT[] memory venft) {
+    function getNFTFromAddress(address _user) external view returns (veNFT[] memory venft) {
         uint256 i = 0;
         uint256 _id;
         uint256 totNFTs = ve.balanceOf(_user);
@@ -171,21 +160,18 @@ contract veNFTAPI is Initializable {
         }
     }
 
-    function _getNFTFromId(
-        uint256 id,
-        address _owner
-    ) internal view returns (veNFT memory venft) {
+    function _getNFTFromId(uint256 id, address _owner) internal view returns (veNFT memory venft) {
         if (_owner == address(0)) {
             return venft;
         }
 
-        uint _totalPoolVotes = voter.poolVoteLength(id);
+        uint256 _totalPoolVotes = voter.poolVoteLength(id);
         pairVotes[] memory votes = new pairVotes[](_totalPoolVotes);
 
         IVotingEscrow.LockedBalance memory _lockedBalance;
         _lockedBalance = ve.locked(id);
 
-        uint k;
+        uint256 k;
         uint256 _poolWeight;
         address _votedPair;
 
@@ -216,11 +202,11 @@ contract veNFTAPI is Initializable {
     }
 
     // used only for sAMM and vAMM
-    function allPairRewards(
-        uint256 _amount,
-        uint256 _offset,
-        uint256 id
-    ) external view returns (AllPairRewards[] memory rewards) {
+    function allPairRewards(uint256 _amount, uint256 _offset, uint256 id)
+        external
+        view
+        returns (AllPairRewards[] memory rewards)
+    {
         rewards = new AllPairRewards[](MAX_PAIRS);
 
         uint256 totalPairs = _totalPairsLength();
@@ -235,33 +221,22 @@ contract veNFTAPI is Initializable {
         }
     }
 
-    function singlePairReward(
-        uint256 id,
-        address _pair
-    ) external view returns (Reward[] memory _reward) {
+    function singlePairReward(uint256 id, address _pair) external view returns (Reward[] memory _reward) {
         return _pairReward(_pair, id);
     }
 
-    function _pairReward(
-        address _pair,
-        uint256 id
-    ) internal view returns (Reward[] memory _reward) {
+    function _pairReward(address _pair, uint256 id) internal view returns (Reward[] memory _reward) {
         if (_pair == address(0)) {
             return _reward;
         }
 
-        IPairAPI.pairInfo memory _pairApi = IPairAPI(pairAPI).getPair(
-            _pair,
-            address(0)
-        );
+        IPairAPI.pairInfo memory _pairApi = IPairAPI(pairAPI).getPair(_pair, address(0));
 
         address externalBribe = _pairApi.bribe;
 
-        uint256 totBribeTokens = (externalBribe == address(0))
-            ? 0
-            : IBribeAPI(externalBribe).rewardsListLength();
+        uint256 totBribeTokens = (externalBribe == address(0)) ? 0 : IBribeAPI(externalBribe).rewardsListLength();
 
-        uint bribeAmount;
+        uint256 bribeAmount;
 
         _reward = new Reward[](2 + totBribeTokens);
 
@@ -307,7 +282,7 @@ contract veNFTAPI is Initializable {
             return _reward;
         }
 
-        uint k = 0;
+        uint256 k = 0;
         address _token;
 
         for (k; k < totBribeTokens; k++) {
@@ -368,23 +343,15 @@ contract veNFTAPI is Initializable {
         pairFactory = IPairFactory(_pairFactory);
     }
 
-    function pairFactoriesList()
-        external
-        view
-        returns (address[] memory factories)
-    {
+    function pairFactoriesList() external view returns (address[] memory factories) {
         factories = new address[](pairFactories.length);
-        for (uint i = 0; i < pairFactories.length; i++) {
+        for (uint256 i = 0; i < pairFactories.length; i++) {
             factories[i] = pairFactories[i];
         }
     }
 
-    function _resolvePairFactories(
-        address _voter
-    ) internal view returns (address[] memory) {
-        (bool ok, bytes memory data) = _voter.staticcall(
-            abi.encodeWithSignature("factory()")
-        );
+    function _resolvePairFactories(address _voter) internal view returns (address[] memory) {
+        (bool ok, bytes memory data) = _voter.staticcall(abi.encodeWithSignature("factory()"));
         if (ok && data.length >= 32) {
             address factoryAddr = abi.decode(data, (address));
             if (factoryAddr != address(0)) {
@@ -397,16 +364,16 @@ contract veNFTAPI is Initializable {
         (ok, data) = _voter.staticcall(abi.encodeWithSignature("factories()"));
         if (ok && data.length >= 32) {
             address[] memory factories = abi.decode(data, (address[]));
-            uint count;
-            for (uint i = 0; i < factories.length; i++) {
+            uint256 count;
+            for (uint256 i = 0; i < factories.length; i++) {
                 if (factories[i] != address(0)) {
                     count++;
                 }
             }
             if (count > 0) {
                 address[] memory sanitized = new address[](count);
-                uint idx;
-                for (uint i = 0; i < factories.length; i++) {
+                uint256 idx;
+                for (uint256 i = 0; i < factories.length; i++) {
                     if (factories[i] != address(0)) {
                         sanitized[idx++] = factories[i];
                     }
@@ -423,7 +390,7 @@ contract veNFTAPI is Initializable {
         require(factories.length > 0, "veNFTAPI: no factories");
 
         delete pairFactories;
-        for (uint i = 0; i < factories.length; i++) {
+        for (uint256 i = 0; i < factories.length; i++) {
             pairFactories.push(factories[i]);
         }
 
@@ -431,17 +398,15 @@ contract veNFTAPI is Initializable {
     }
 
     function _totalPairsLength() internal view returns (uint256 total) {
-        for (uint i = 0; i < pairFactories.length; i++) {
+        for (uint256 i = 0; i < pairFactories.length; i++) {
             total += IPairFactory(pairFactories[i]).allPairsLength();
         }
     }
 
-    function _pairAddressAtIndex(
-        uint256 index
-    ) internal view returns (address) {
-        for (uint i = 0; i < pairFactories.length; i++) {
+    function _pairAddressAtIndex(uint256 index) internal view returns (address) {
+        for (uint256 i = 0; i < pairFactories.length; i++) {
             IPairFactory factory = IPairFactory(pairFactories[i]);
-            uint len = factory.allPairsLength();
+            uint256 len = factory.allPairsLength();
             if (index < len) {
                 return factory.allPairs(index);
             }

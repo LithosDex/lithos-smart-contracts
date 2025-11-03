@@ -26,18 +26,100 @@ type GaugeResp = {
   };
 };
 
-const ENDPOINT = 'https://api.goldsky.com/api/public/project_cmfuu39qbys1j01009omjbmts/subgraphs/lithos-subgraph-mainnet/v1.0.4/gn';
+const ENDPOINT = 'https://api.goldsky.com/api/public/project_cmfuu39qbys1j01009omjbmts/subgraphs/lithos-subgraph-mainnet/v1.0.6/gn';
 const PAIR_ID = '0x7dab98cc51835beae6dee43bbda84cdb96896fb5'; // WXPL/LITH
 const LITH_ADDRESS = '0xabb48792a3161e81b47ca084c0b7a22a50324a44';
-const XPL_USDT_PRICE = 0.48; // Manual XPL price in USDT
+
+// Manual price quotes (BASE/QUOTE = price). Update as needed.
+const LITH_XPL_PRICE = 0.2; // 1 LITH = 0.2 XPL
+const LITH_USDT_PRICE = 0.096; // 1 LITH = 0.096 USDT
+const XPL_USDT_PRICE = 0.48; // 1 XPL = 0.48 USDT
 
 // In this protocol, gauge emissions paid via Voter/Minter are LITH.
 // Treat reward token as LITH even if the gauge's rewardToken() returns address(0).
 const REWARD_TOKEN_IS_LITH = true;
 
+type PriceQuote = { base: string; quote: string; price: number };
+type PriceGraph = Map<string, Array<{ to: string; factor: number }>>;
+
+const TOKEN_SYMBOL_ALIAS: Record<string, string> = {
+  LITH: 'LITH',
+  XPL: 'XPL',
+  WXPL: 'XPL',
+  USDT: 'USDT',
+  USDt: 'USDT',
+};
+
+const TOKEN_ADDRESS_ALIAS: Record<string, string> = {
+  [LITH_ADDRESS.toLowerCase()]: 'LITH',
+};
+
+const MANUAL_QUOTES: PriceQuote[] = [
+  { base: 'LITH', quote: 'XPL', price: LITH_XPL_PRICE },
+  { base: 'LITH', quote: 'USDT', price: LITH_USDT_PRICE },
+  { base: 'XPL', quote: 'USDT', price: XPL_USDT_PRICE },
+].filter((quote) => Number.isFinite(quote.price) && quote.price > 0);
+
+const MANUAL_PRICE_GRAPH: PriceGraph = buildPriceGraph(MANUAL_QUOTES);
+
 function pct(n: number): string {
   if (!isFinite(n)) return '0%';
   return (n * 100).toFixed(2) + '%';
+}
+
+function normalizeTokenSymbol(symbol: string): string {
+  const upper = (symbol ?? '').toUpperCase();
+  return TOKEN_SYMBOL_ALIAS[upper] ?? upper;
+}
+
+function resolveTokenKey(token: { id: string; symbol: string }): string {
+  const addressKey = TOKEN_ADDRESS_ALIAS[token.id.toLowerCase()];
+  if (addressKey) return addressKey;
+  return normalizeTokenSymbol(token.symbol);
+}
+
+function getConversionFactor(
+  graph: PriceGraph,
+  from: string,
+  to: string,
+): number | null {
+  if (!from || !to) return null;
+  if (from === to) return 1;
+
+  const queue: Array<{ token: string; factor: number }> = [{ token: from, factor: 1 }];
+  const visited = new Set<string>();
+
+  while (queue.length) {
+    const { token, factor } = queue.shift()!;
+    if (token === to) return factor;
+    if (visited.has(token)) continue;
+    visited.add(token);
+
+    const edges = graph.get(token);
+    if (!edges) continue;
+    for (const edge of edges) {
+      if (edge.factor <= 0 || !isFinite(edge.factor)) continue;
+      queue.push({ token: edge.to, factor: factor * edge.factor });
+    }
+  }
+  return null;
+}
+
+function buildPriceGraph(quotes: PriceQuote[]): PriceGraph {
+  const graph: PriceGraph = new Map();
+  const addEdge = (from: string, to: string, factor: number) => {
+    if (!graph.has(from)) graph.set(from, []);
+    graph.get(from)!.push({ to, factor });
+  };
+
+  for (const { base, quote, price } of quotes) {
+    if (!base || !quote || !price || !isFinite(price) || price <= 0) continue;
+    const baseKey = normalizeTokenSymbol(base);
+    const quoteKey = normalizeTokenSymbol(quote);
+    addEdge(baseKey, quoteKey, price);
+    addEdge(quoteKey, baseKey, 1 / price);
+  }
+  return graph;
 }
 
 async function main() {
@@ -113,28 +195,40 @@ async function main() {
   const perLP0 = reserve0 / totalSupply; // token0 per LP
   const perLP1 = reserve1 / totalSupply; // token1 per LP
 
-  // Identify which token is LITH and compute LP value in LITH terms
-  const token0IsLITH = p.token0.id.toLowerCase() === lithAddress;
-  const token1IsLITH = p.token1.id.toLowerCase() === lithAddress;
-  if (!token0IsLITH && !token1IsLITH) {
-    console.error(`Pair does not contain provided LITH token (${lithAddress}).`);
+  // Resolve token identifiers for manual pricing
+  const token0Key = resolveTokenKey(p.token0);
+  const token1Key = resolveTokenKey(p.token1);
+  const token0IsLITH = token0Key === 'LITH' || p.token0.id.toLowerCase() === lithAddress;
+  const token1IsLITH = token1Key === 'LITH' || p.token1.id.toLowerCase() === lithAddress;
+
+  let priceLITHperToken0: number | null = token0IsLITH
+    ? 1
+    : getConversionFactor(MANUAL_PRICE_GRAPH, token0Key, 'LITH');
+  let priceLITHperToken1: number | null = token1IsLITH
+    ? 1
+    : getConversionFactor(MANUAL_PRICE_GRAPH, token1Key, 'LITH');
+
+  // Fallback to on-pair ratio if one side is LITH
+  if ((priceLITHperToken0 == null || !Number.isFinite(priceLITHperToken0)) && token1IsLITH) {
+    if (reserve0 > 0 && reserve1 > 0) {
+      priceLITHperToken0 = reserve1 / reserve0;
+    }
+  }
+  if ((priceLITHperToken1 == null || !Number.isFinite(priceLITHperToken1)) && token0IsLITH) {
+    if (reserve0 > 0 && reserve1 > 0) {
+      priceLITHperToken1 = reserve0 / reserve1;
+    }
+  }
+
+  const missingToLITH: string[] = [];
+  if (priceLITHperToken0 == null || !Number.isFinite(priceLITHperToken0)) missingToLITH.push(token0Key);
+  if (priceLITHperToken1 == null || !Number.isFinite(priceLITHperToken1)) missingToLITH.push(token1Key);
+  if (missingToLITH.length) {
+    console.error(`Unable to derive LITH price for tokens: ${missingToLITH.join(', ')}`);
     process.exit(1);
   }
 
-  let priceLITHperToken0 = 0; // how many LITH per 1 token0
-  let priceLITHperToken1 = 0; // how many LITH per 1 token1
-
-  if (token0IsLITH) {
-    // 1 token1 = (reserve0 / reserve1) LITH
-    priceLITHperToken0 = 1; // token0 is LITH
-    priceLITHperToken1 = reserve0 / reserve1;
-  } else {
-    // token1 is LITH
-    priceLITHperToken0 = reserve1 / reserve0; // 1 token0 = (reserve1 / reserve0) LITH
-    priceLITHperToken1 = 1;
-  }
-
-  const lpPriceInLITH = perLP0 * priceLITHperToken0 + perLP1 * priceLITHperToken1;
+  const lpPriceInLITH = perLP0 * (priceLITHperToken0 as number) + perLP1 * (priceLITHperToken1 as number);
   const stakedLP = totalStakedRaw / 10 ** stakingTokenDecimals;
   const stakedTVL_LITH = stakedLP * lpPriceInLITH;
 
@@ -143,7 +237,7 @@ async function main() {
 
   const aprLITH = stakedTVL_LITH > 0 ? rewardsPerYearLITH / stakedTVL_LITH : 0;
 
-  // Optional USD projection via manual XPL/USDT input
+  // Optional USD projection via manual price graph
   let usdBlock: undefined | {
     xplUsdt: number;
     lithUsdt: number;
@@ -153,24 +247,32 @@ async function main() {
     aprUSD: number;
   } = undefined;
 
-  if (xplUsdt && xplUsdt > 0) {
-    // Derive LITH price in XPL via pool ratio, then USD via XPL/USDT
-    // If token0 is WXPL and token1 is LITH: LITH_per_XPL = reserve1/reserve0
-    // USD(LITH) = USD(XPL) / (LITH_per_XPL)
-    let lithPerXpl: number;
-    if (token0IsLITH) {
-      // token0=LITH, token1=WXPL => WXPL per LITH = reserve1/reserve0, so LITH per XPL = 1 / (reserve1/reserve0) = reserve0/reserve1
-      lithPerXpl = reserve0 / reserve1;
-    } else {
-      // token1=LITH, token0=WXPL => LITH per XPL = reserve1/reserve0
-      lithPerXpl = reserve1 / reserve0;
-    }
-    const lithUsdt = xplUsdt / lithPerXpl;
-    const lpPriceUSD = lpPriceInLITH * lithUsdt;
+  const priceToken0USD = getConversionFactor(MANUAL_PRICE_GRAPH, token0Key, 'USDT');
+  const priceToken1USD = getConversionFactor(MANUAL_PRICE_GRAPH, token1Key, 'USDT');
+  const lithUsdt = getConversionFactor(MANUAL_PRICE_GRAPH, 'LITH', 'USDT');
+  const xplUsdtViaGraph = getConversionFactor(MANUAL_PRICE_GRAPH, 'XPL', 'USDT');
+
+  if (
+    lithUsdt != null &&
+    priceToken0USD != null &&
+    priceToken1USD != null &&
+    Number.isFinite(lithUsdt) &&
+    Number.isFinite(priceToken0USD) &&
+    Number.isFinite(priceToken1USD)
+  ) {
+    const lpPriceUSD = perLP0 * priceToken0USD + perLP1 * priceToken1USD;
     const stakedTVL_USD = stakedLP * lpPriceUSD;
     const rewardsPerYearUSD = rewardsPerYearLITH * lithUsdt;
     const aprUSD = stakedTVL_USD > 0 ? rewardsPerYearUSD / stakedTVL_USD : 0; // should numerically match aprLITH
-    usdBlock = { xplUsdt, lithUsdt, lpPriceUSD, stakedTVL_USD, rewardsPerYearUSD, aprUSD };
+    const xplUsdtOut = xplUsdtViaGraph ?? xplUsdt;
+    usdBlock = {
+      xplUsdt: xplUsdtOut,
+      lithUsdt,
+      lpPriceUSD,
+      stakedTVL_USD,
+      rewardsPerYearUSD,
+      aprUSD,
+    };
   }
 
   const out = {

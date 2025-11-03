@@ -91,6 +91,15 @@ The ve(3,3) system is live on Plasma mainnet. Key governance contracts (synced t
 - **WXPL/USDT Hypervisor**: [0x19F4eBc0a1744b93A355C2320899276aE7F79Ee5](https://plasmascan.to/address/0x19F4eBc0a1744b93A355C2320899276aE7F79Ee5)
 - **WETH/USDT Hypervisor**: [0xca8759814695516C34168BBedd86290964D37adA](https://plasmascan.to/address/0xca8759814695516C34168BBedd86290964D37adA)
 
+#### API Helper Proxies
+
+- **PairAPI** (proxy): [0x833Cb061EB4c176FC0Fc00196E9Fa4A5473D84cC](https://plasmascan.to/address/0x833Cb061EB4c176FC0Fc00196E9Fa4A5473D84cC)
+- **PairAPI Implementation**: [0x58f187b860A796F4da2BB777a065d5c557404008](https://plasmascan.to/address/0x58f187b860A796F4da2BB777a065d5c557404008)
+- **RewardAPI** (proxy): [0x6BF5ad21FFeAf0f9B69f4A29B627801EbF8Fff37](https://plasmascan.to/address/0x6BF5ad21FFeAf0f9B69f4A29B627801EbF8Fff37)
+- **RewardAPI Implementation**: [0xF90742f9EF92f7CB36c9D3F16AE3180Ec1dE1833](https://plasmascan.to/address/0xF90742f9EF92f7CB36c9D3F16AE3180Ec1dE1833)
+- **veNFTAPI** (proxy): [0x950830f2eB571cd65cb02f7aB8c50E1E95eFc89f](https://plasmascan.to/address/0x950830f2eB571cd65cb02f7aB8c50E1E95eFc89f)
+- **veNFTAPI Implementation**: [0x53FfBAD767def2021fEfC0B26D781Edb27fe5a13](https://plasmascan.to/address/0x53FfBAD767def2021fEfC0B26D781Edb27fe5a13)
+
 ### Testnet (Plasma)
 
 #### Core DEX

@@ -10,20 +10,13 @@ interface IVoterLite {
 
     function gauges(address pool) external view returns (address);
 
-    function createGauge(
-        address pool,
-        uint256 gaugeType
-    )
+    function createGauge(address pool, uint256 gaugeType)
         external
         returns (address gauge, address internalBribe, address externalBribe);
 }
 
 interface IPairFactoryLite {
-    function getPair(
-        address tokenA,
-        address tokenB,
-        bool stable
-    ) external view returns (address);
+    function getPair(address tokenA, address tokenB, bool stable) external view returns (address);
 }
 
 contract CreateLithGaugeScript is Script {
@@ -37,18 +30,12 @@ contract CreateLithGaugeScript is Script {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerKey);
 
-        string memory statePath = string.concat(
-            "deployments/",
-            env,
-            "/state.json"
-        );
+        string memory statePath = string.concat("deployments/", env, "/state.json");
         require(vm.exists(statePath), "state file missing");
         _loadState(statePath);
 
         IVoterLite voter = IVoterLite(deployed["VoterV3"]);
-        IPairFactoryLite pairFactory = IPairFactoryLite(
-            deployed["PairFactoryUpgradeable"]
-        );
+        IPairFactoryLite pairFactory = IPairFactoryLite(deployed["PairFactoryUpgradeable"]);
 
         require(address(voter) != address(0), "voter missing");
         require(address(pairFactory) != address(0), "pair factory missing");
@@ -70,11 +57,7 @@ contract CreateLithGaugeScript is Script {
         if (existingGauge != address(0)) {
             console2.log("Gauge already exists:", existingGauge);
         } else {
-            (
-                address gauge,
-                address internalBribe,
-                address externalBribe
-            ) = voter.createGauge(pair, 0);
+            (address gauge, address internalBribe, address externalBribe) = voter.createGauge(pair, 0);
             console2.log("Created gauge:", gauge);
             console2.log("  Internal bribe:", internalBribe);
             console2.log("  External bribe:", externalBribe);
@@ -83,11 +66,7 @@ contract CreateLithGaugeScript is Script {
         vm.stopBroadcast();
     }
 
-    function _ensureWhitelisted(
-        IVoterLite voter,
-        address token,
-        string memory label
-    ) internal {
+    function _ensureWhitelisted(IVoterLite voter, address token, string memory label) internal {
         if (voter.isWhitelisted(token)) {
             console2.log(label, "already whitelisted");
             return;
@@ -102,9 +81,6 @@ contract CreateLithGaugeScript is Script {
     function _loadState(string memory path) internal {
         string memory json = vm.readFile(path);
         deployed["VoterV3"] = vm.parseJsonAddress(json, ".Voter");
-        deployed["PairFactoryUpgradeable"] = vm.parseJsonAddress(
-            json,
-            ".PairFactoryUpgradeable"
-        );
+        deployed["PairFactoryUpgradeable"] = vm.parseJsonAddress(json, ".PairFactoryUpgradeable");
     }
 }
