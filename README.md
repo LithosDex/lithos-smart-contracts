@@ -86,6 +86,19 @@ The ve(3,3) system is live on Plasma mainnet. Key governance contracts (synced t
 - **Algebra Factory**: [0x10253594A832f967994b44f33411940533302ACb](https://plasmascan.to/address/0x10253594A832f967994b44f33411940533302ACb)
 - **GaugeFactoryV2_CL**: [0x60072e4939985737AF4fD75403D7cfBCf4468d99](https://plasmascan.to/address/0x60072e4939985737AF4fD75403D7cfBCf4468d99)
 
+##### CL Config
+
+- **Pool Init Code Hash**: `0x62441ebe4e4315cf3d49d5957f94d66b253dbabe7006f34ad7f70947e60bf15c`
+
+##### CL Periphery
+
+- **SwapRouter (IRouterV3)**: [0x3012E9049d05B4B5369D690114D5A5861EbB85cb](https://plasmascan.to/address/0x3012E9049d05B4B5369D690114D5A5861EbB85cb)
+- **Quoter**: [0x03f8B4b140249Dc7B2503C928E7258CCe1d91F1A](https://plasmascan.to/address/0x03f8B4b140249Dc7B2503C928E7258CCe1d91F1A)
+- **QuoterV2**: [0xa77aD9f635a3FB3bCCC5E6d1A87cB269746Aba17](https://plasmascan.to/address/0xa77aD9f635a3FB3bCCC5E6d1A87cB269746Aba17)
+- **TickLens**: [0x13fcE0acbe6Fb11641ab753212550574CaD31415](https://plasmascan.to/address/0x13fcE0acbe6Fb11641ab753212550574CaD31415)
+- **NonfungiblePositionManager**: [0x69D57B9D705eaD73a5d2f2476C30c55bD755cc2F](https://plasmascan.to/address/0x69D57B9D705eaD73a5d2f2476C30c55bD755cc2F)
+- **Algebra Interface Multicall**: [0xB4F9b6b019E75CBe51af4425b2Fc12797e2Ee2a1](https://plasmascan.to/address/0xB4F9b6b019E75CBe51af4425b2Fc12797e2Ee2a1)
+
 ##### Hypervisors
 
 - **WXPL/USDT Hypervisor**: [0x19F4eBc0a1744b93A355C2320899276aE7F79Ee5](https://plasmascan.to/address/0x19F4eBc0a1744b93A355C2320899276aE7F79Ee5)
