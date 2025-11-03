@@ -81,6 +81,16 @@ The ve(3,3) system is live on Plasma mainnet. Key governance contracts (synced t
 - **VeArtProxy Implementation**: [0xdE68b70dCB2c5A8fd1802e18b46037666b9271dC](https://plasmascan.to/address/0xdE68b70dCB2c5A8fd1802e18b46037666b9271dC)
 - **Timelock**: [0x16F5cE1EB8a0EE5816262f2c5bddF4dd55a9FCF4](https://plasmascan.to/address/0x16F5cE1EB8a0EE5816262f2c5bddF4dd55a9FCF4)
 
+#### Concentrated Liquidity (CL)
+
+- **Algebra Factory**: [0x10253594A832f967994b44f33411940533302ACb](https://plasmascan.to/address/0x10253594A832f967994b44f33411940533302ACb)
+- **GaugeFactoryV2_CL**: [0x60072e4939985737AF4fD75403D7cfBCf4468d99](https://plasmascan.to/address/0x60072e4939985737AF4fD75403D7cfBCf4468d99)
+
+##### Hypervisors
+
+- **WXPL/USDT Hypervisor**: [0x19F4eBc0a1744b93A355C2320899276aE7F79Ee5](https://plasmascan.to/address/0x19F4eBc0a1744b93A355C2320899276aE7F79Ee5)
+- **WETH/USDT Hypervisor**: [0xca8759814695516C34168BBedd86290964D37adA](https://plasmascan.to/address/0xca8759814695516C34168BBedd86290964D37adA)
+
 #### API Helper Proxies
 
 - **PairAPI** (proxy): [0x833Cb061EB4c176FC0Fc00196E9Fa4A5473D84cC](https://plasmascan.to/address/0x833Cb061EB4c176FC0Fc00196E9Fa4A5473D84cC)
