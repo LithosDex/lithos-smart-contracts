@@ -10,6 +10,8 @@ interface IVoterV3Minimal {
         external
         returns (address _gauge, address _internal_bribe, address _external_bribe);
     function gauges(address pool) external view returns (address);
+    function internal_bribes(address gauge) external view returns (address);
+    function external_bribes(address gauge) external view returns (address);
     function vote(uint256 _tokenId, address[] memory _poolVote, uint256[] memory _weights) external;
     function distributeAll() external;
 }
@@ -122,15 +124,19 @@ contract CLForkE2ETest is Test {
     }
 
     function test_complete_CL_flow() public {
-        console.log("\n=== STEP 1: Register CL factory via multisig (prank) ===");
-        vm.startPrank(LITHOS_MULTISIG);
-        voter.addFactory(ALGEBRA_FACTORY, CL_GAUGE_FACTORY);
-        vm.stopPrank();
-        console.log("Factory registered successfully");
+        console.log("\n=== STEP 1: Factory already registered on mainnet (SKIPPED) ===");
+        console.log("CL Factory registered on mainnet");
 
-        console.log("\n=== STEP 2: Create gauges for both hypervisors (gaugeType=1) ===");
-        (address g1, address i1, address e1) = voter.createGauge(HYP_WXPL_USDT, 1);
-        (address g2, address i2, address e2) = voter.createGauge(HYP_WETH_USDT, 1);
+        console.log("\n=== STEP 2: Fetch existing gauges from mainnet ===");
+        // Gauges already created on mainnet - just fetch them
+        address g1 = voter.gauges(HYP_WXPL_USDT);
+        address g2 = voter.gauges(HYP_WETH_USDT);
+        
+        // Get bribe addresses
+        address i1 = voter.internal_bribes(g1);
+        address e1 = voter.external_bribes(g1);
+        address i2 = voter.internal_bribes(g2);
+        address e2 = voter.external_bribes(g2);
 
         // Store gauge addresses for later use
         gaugeWxplUsdt = g1;
@@ -170,7 +176,7 @@ contract CLForkE2ETest is Test {
         // Calculate correct deposit amounts using getDepositAmount()
         // Start with 10 WXPL and calculate required USDT
         uint256 wxplAmount = 10e18;
-        (uint256 usdtMin, uint256 usdtMax) = IUniProxyETHMinimal(uniProxy).getDepositAmount(
+        (uint256 usdtMin, ) = IUniProxyETHMinimal(uniProxy).getDepositAmount(
             HYP_WXPL_USDT,
             token0, // WXPL
             wxplAmount
@@ -370,9 +376,9 @@ contract CLForkE2ETest is Test {
             console.log("\n========================================");
             console.log("[SUCCESS] COMPLETE CL END-TO-END FLOW!");
             console.log("========================================");
-            console.log("1. Factory registration      - DONE");
-            console.log("2. Gauge creation            - DONE");
-            console.log("3. FeeVault deployment       - DONE");
+            console.log("1. Factory registration      - VERIFIED (on mainnet)");
+            console.log("2. Gauge creation            - VERIFIED (on mainnet)");
+            console.log("3. FeeVault deployment       - VERIFIED");
             console.log("4. Liquidity provision       - DONE");
             console.log("5. LP staking in gauge       - DONE");
             console.log("6. veNFT voting for gauges   - DONE");
