@@ -3,6 +3,29 @@ schema:
   file: ./schema.graphql
 
 dataSources:
+  - kind: ethereum
+    name: AlgebraFactory
+    network: plasma-mainnet
+    source:
+      address: "0x10253594A832f967994b44f33411940533302ACb"
+      abi: AlgebraFactory
+      startBlock: 2558544
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - CLPool
+        - Token
+      abis:
+        - name: AlgebraFactory
+          file: ./abis/AlgebraFactory.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: Pool(indexed address,indexed address,address)
+          handler: handlePoolCreated
+      file: ./src/cl/factory.ts
   # PairFactory - Creates new pairs
   - kind: ethereum
     name: PairFactory
@@ -170,6 +193,33 @@ dataSources:
       file: ./src/voter.ts
 
 templates:
+  - kind: ethereum/contract
+    name: AlgebraPool
+    network: plasma-mainnet
+    source:
+      abi: AlgebraPool
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - CLPool
+        - Token
+      abis:
+        - name: AlgebraPool
+          file: ./abis/AlgebraPool.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: Initialize(uint160,int24)
+          handler: handleInitialize
+        - event: Mint(address,indexed address,indexed int24,indexed int24,uint128,uint256,uint256)
+          handler: handleMint
+        - event: Burn(indexed address,indexed int24,indexed int24,uint128,uint256,uint256)
+          handler: handleBurn
+        - event: Swap(indexed address,indexed address,int256,int256,uint160,uint128,int24)
+          handler: handleSwap
+      file: ./src/cl/pool.ts
   # Pair template - Dynamic pairs created by factory
   - kind: ethereum/contract
     name: Pair

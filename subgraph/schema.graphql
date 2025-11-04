@@ -148,6 +148,42 @@ type Pair @entity(immutable: false) {
   observations: [Observation!]! @derivedFrom(field: "pair")
 }
 
+type CLPool @entity(immutable: false) {
+  # Pool address
+  id: ID!
+
+  # Algebra factory that created the pool
+  factory: Bytes!
+
+  # Underlying tokens
+  token0: Token!
+  token1: Token!
+
+  # Current liquidity and price state
+  liquidity: BigInt!
+  sqrtPriceX96: BigInt!
+  tick: BigInt!
+
+  # Aggregated volume metrics
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  volumeUSD: BigDecimal!
+
+  # Total swaps observed
+  txCount: BigInt!
+
+  # Creation metadata
+  createdAtTimestamp: BigInt!
+  createdAtBlockNumber: BigInt!
+
+  # Last update metadata
+  lastUpdateTimestamp: BigInt!
+  lastUpdateBlockNumber: BigInt!
+
+  # Optional link to corresponding gauge if incentivised
+  gauge: Gauge
+}
+
 type User @entity(immutable: false) {
   # User address
   id: ID!
