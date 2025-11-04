@@ -186,9 +186,8 @@ contract GlobalRouter {
             address to = i < routes.length - 1
                 ? tradeHelper.pairFor(routes[i + 1].from, routes[i + 1].to, routes[i + 1].stable)
                 : _to;
-            IBaseV1Pair(tradeHelper.pairFor(routes[i].from, routes[i].to, routes[i].stable)).swap(
-                amount0Out, amount1Out, to, new bytes(0)
-            );
+            IBaseV1Pair(tradeHelper.pairFor(routes[i].from, routes[i].to, routes[i].stable))
+                .swap(amount0Out, amount1Out, to, new bytes(0));
             //emit Swap(msg.sender,amounts[i],routes[i].from, _to, routes[i].stable);
         }
     }

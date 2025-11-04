@@ -165,9 +165,9 @@ contract TradeHelper {
             uint256 reserveIn = (tokenIn == p.token0()) ? p.reserve0() : p.reserve1();
             uint256 reserveOut = (tokenOut == p.token0()) ? p.reserve0() : p.reserve1();
 
-            amountIn = (
-                ((amountOut * reserveIn) / (reserveOut - amountOut)) * (10000 + PairFactory(factory).getFee(false))
-            ) / 10000;
+            amountIn =
+                (((amountOut * reserveIn) / (reserveOut - amountOut)) * (10000 + PairFactory(factory).getFee(false)))
+                    / 10000;
         }
     }
 

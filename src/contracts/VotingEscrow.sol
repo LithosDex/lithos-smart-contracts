@@ -35,6 +35,7 @@ contract VotingEscrow is IERC721, IERC721Metadata, IVotes {
         uint256 ts;
         uint256 blk; // block
     }
+
     /* We cannot really do block numbers per se b/c slope is per time, not per block
      * and per block could be fairly bad b/c Ethereum changes blocktimes.
      * What we can do is to extrapolate ***At functions */
@@ -147,9 +148,8 @@ contract VotingEscrow is IERC721, IERC721Metadata, IVotes {
     function tokenURI(uint256 _tokenId) external view returns (string memory) {
         require(idToOwner[_tokenId] != address(0), "Query for nonexistent token");
         LockedBalance memory _locked = locked[_tokenId];
-        return IVeArtProxy(artProxy)._tokenURI(
-            _tokenId, _balanceOfNFT(_tokenId, block.timestamp), _locked.end, uint256(int256(_locked.amount))
-        );
+        return IVeArtProxy(artProxy)
+            ._tokenURI(_tokenId, _balanceOfNFT(_tokenId, block.timestamp), _locked.end, uint256(int256(_locked.amount)));
     }
 
     /*//////////////////////////////////////////////////////////////

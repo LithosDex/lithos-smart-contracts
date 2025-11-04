@@ -283,8 +283,9 @@ contract RouterV2 {
         address to,
         uint256 deadline
     ) external ensure(deadline) returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
-        (amountA, amountB) =
-            _addLiquidity(tokenA, tokenB, stable, amountADesired, amountBDesired, amountAMin, amountBMin);
+        (amountA, amountB) = _addLiquidity(
+            tokenA, tokenB, stable, amountADesired, amountBDesired, amountAMin, amountBMin
+        );
         address pair = pairFor(tokenA, tokenB, stable);
         _safeTransferFrom(tokenA, msg.sender, pair, amountA);
         _safeTransferFrom(tokenB, msg.sender, pair, amountB);
@@ -399,9 +400,8 @@ contract RouterV2 {
                 routes[i].from == token0 ? (uint256(0), amountOut) : (amountOut, uint256(0));
             address to =
                 i < routes.length - 1 ? pairFor(routes[i + 1].from, routes[i + 1].to, routes[i + 1].stable) : _to;
-            IBaseV1Pair(pairFor(routes[i].from, routes[i].to, routes[i].stable)).swap(
-                amount0Out, amount1Out, to, new bytes(0)
-            );
+            IBaseV1Pair(pairFor(routes[i].from, routes[i].to, routes[i].stable))
+                .swap(amount0Out, amount1Out, to, new bytes(0));
 
             emit Swap(msg.sender, amounts[i], routes[i].from, _to, routes[i].stable);
         }

@@ -144,13 +144,15 @@ library DeploymentHelpers {
     ) internal {
         // Initialize contracts that weren't initialized during proxy deployment
         GaugeFactoryV2(contracts.gaugeFactory).initialize(contracts.permissionsRegistry);
-        BribeFactoryV3(contracts.bribeFactory).initialize( // need to check with rahul on bribefactory Initialisation
-        deployer, contracts.permissionsRegistry);
+        BribeFactoryV3(contracts.bribeFactory)
+            .initialize( // need to check with rahul on bribefactory Initialisation
+                deployer,
+                contracts.permissionsRegistry
+            );
 
         // Initialize Voter // contract initilaisation not system.
-        VoterV3(contracts.voter).initialize(
-            contracts.votingEscrow, pairFactory, contracts.gaugeFactory, contracts.bribeFactory
-        );
+        VoterV3(contracts.voter)
+            .initialize(contracts.votingEscrow, pairFactory, contracts.gaugeFactory, contracts.bribeFactory);
 
         // Setup initial roles BEFORE calling _init (required for authorization)
         PermissionsRegistry registry = PermissionsRegistry(contracts.permissionsRegistry);
@@ -189,11 +191,12 @@ library DeploymentHelpers {
     /// @param proxy Address of proxy to upgrade
     /// @param newImplementation Address of new implementation
     function upgradeContract(address proxyAdmin, address proxy, address newImplementation) internal {
-        ProxyAdmin(proxyAdmin).upgradeAndCall(
-            ITransparentUpgradeableProxy(proxy),
-            newImplementation,
-            "" // No initialization call
-        );
+        ProxyAdmin(proxyAdmin)
+            .upgradeAndCall(
+                ITransparentUpgradeableProxy(proxy),
+                newImplementation,
+                "" // No initialization call
+            );
     }
 
     /// @notice Upgrade a contract with initialization call

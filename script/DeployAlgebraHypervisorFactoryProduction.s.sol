@@ -12,7 +12,7 @@ contract DeployAlgebraHypervisorFactoryProduction is Script {
 
         // Algebra Factory address
         address algebraFactory = 0x10253594A832f967994b44f33411940533302ACb;
-        
+
         AlgebraHypervisorFactory factory = new AlgebraHypervisorFactory(algebraFactory);
 
         console.log("AlgebraHypervisorFactory deployed at:", address(factory));
@@ -22,8 +22,7 @@ contract DeployAlgebraHypervisorFactoryProduction is Script {
         // Save address
         string memory jsonObj = string.concat('{"AlgebraHypervisorFactory":"', vm.toString(address(factory)), '"}');
         vm.writeFile(
-            string.concat(vm.projectRoot(), "/deployments/mainnet/hypervisor_factory_production.json"),
-            jsonObj
+            string.concat(vm.projectRoot(), "/deployments/mainnet/hypervisor_factory_production.json"), jsonObj
         );
 
         console.log("\nSaved to deployments/mainnet/hypervisor_factory_production.json");

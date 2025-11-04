@@ -47,7 +47,10 @@ contract MinterUpgradeable is IMinter, Initializable, OwnableUpgradeable {
         address __voter, // the voting & distribution system
         address __ve, // the ve(3,3) system that will be locked into
         address __rewards_distributor // the distribution system that ensures users aren't diluted
-    ) public initializer {
+    )
+        public
+        initializer
+    {
         __Ownable_init(msg.sender);
 
         _initializer = msg.sender;
@@ -73,7 +76,9 @@ contract MinterUpgradeable is IMinter, Initializable, OwnableUpgradeable {
         address[] memory claimants,
         uint256[] memory amounts,
         uint256 max // sum amounts / max = % ownership of top protocols, so if initial 20m is distributed, and target is 25% protocol ownership, then max - 4 x 20m = 80m
-    ) external {
+    )
+        external
+    {
         require(_initializer == msg.sender);
         if (max > 0) {
             _lithos.mint(address(this), max);

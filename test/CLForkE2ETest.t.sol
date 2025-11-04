@@ -25,7 +25,9 @@ interface IGaugeV2CLMinimal {
 }
 
 interface IHypervisorMinimal {
-    function deposit(uint256 deposit0, uint256 deposit1, address to, address from, uint256[4] memory inMin) external returns (uint256);
+    function deposit(uint256 deposit0, uint256 deposit1, address to, address from, uint256[4] memory inMin)
+        external
+        returns (uint256);
     function token0() external view returns (address);
     function token1() external view returns (address);
     function balanceOf(address account) external view returns (uint256);
@@ -41,12 +43,11 @@ interface IUniProxyETHMinimal {
         uint256[4] memory minIn,
         uint256 maxSlippage
     ) external payable returns (uint256 shares);
-    
-    function getDepositAmount(
-        address pos,
-        address token,
-        uint256 _deposit
-    ) external view returns (uint256 amountStart, uint256 amountEnd);
+
+    function getDepositAmount(address pos, address token, uint256 _deposit)
+        external
+        view
+        returns (uint256 amountStart, uint256 amountEnd);
 }
 
 interface IERC20Minimal {
@@ -92,18 +93,18 @@ contract CLForkE2ETest is Test {
     address constant ALGEBRA_FACTORY = 0x10253594A832f967994b44f33411940533302ACb; // pair/DEX
     address constant CL_GAUGE_FACTORY = 0x60072e4939985737AF4fD75403D7cfBCf4468d99; // deployed
 
-    // Provided hypervisors 
-    address constant HYP_WXPL_USDT = 0x19F4eBc0a1744b93A355C2320899276aE7F79Ee5; 
+    // Provided hypervisors
+    address constant HYP_WXPL_USDT = 0x19F4eBc0a1744b93A355C2320899276aE7F79Ee5;
     address constant HYP_WETH_USDT = 0xca8759814695516C34168BBedd86290964D37adA;
 
     // Multisig with VOTER_ADMIN
     address constant LITHOS_MULTISIG = 0x21F1c2F66d30e22DaC1e2D509228407ccEff4dBC;
-    
+
     // Test accounts
     address constant LITH_WHALE = 0xe98c1e28805A06F23B41cf6d356dFC7709DB9385;
     address constant VOTER_USER = address(0x1000);
     address constant LP_USER = address(0x2000);
-    
+
     // Storage for created gauges (will be set during test)
     address public gaugeWxplUsdt;
     address public gaugeWethUsdt;
@@ -156,50 +157,52 @@ contract CLForkE2ETest is Test {
         assertTrue(fv2 != address(0), "feeVault2");
 
         console.log("\n=== STEP 4: Provide Liquidity (via UniProxyETH) and Stake ===");
-        
+
         // Get hypervisor token addresses
         address token0 = IHypervisorMinimal(HYP_WXPL_USDT).token0();
         address token1 = IHypervisorMinimal(HYP_WXPL_USDT).token1();
         console.log("Token0 (WXPL):", token0);
         console.log("Token1 (USDT):", token1);
-        
+
         // Get the UniProxyETH address from hypervisor
         address uniProxy = IHypervisorMinimal(HYP_WXPL_USDT).whitelistedAddress();
         console.log("UniProxyETH:", uniProxy);
-        
+
         // Calculate correct deposit amounts using getDepositAmount()
         // Start with 10 WXPL and calculate required USDT
         uint256 wxplAmount = 10e18;
-        (uint256 usdtMin, uint256 usdtMax) = IUniProxyETHMinimal(uniProxy).getDepositAmount(
-            HYP_WXPL_USDT,
-            token0, // WXPL
-            wxplAmount
-        );
+        (uint256 usdtMin, uint256 usdtMax) =
+            IUniProxyETHMinimal(uniProxy)
+                .getDepositAmount(
+                    HYP_WXPL_USDT,
+                    token0, // WXPL
+                    wxplAmount
+                );
         uint256 usdtAmount = usdtMin; // Use the minimum required
         console.log("WXPL amount:", wxplAmount / 1e18);
         console.log("USDT amount:", usdtAmount / 1e18);
-        
+
         // Give LP_USER tokens
         deal(token1, LP_USER, usdtAmount + 10e18); // USDT + extra
         vm.deal(LP_USER, wxplAmount + 10e18); // XPL + extra for gas
-        
+
         // CORRECT FLOW: Approve UniProxyETH for non-WXPL token (USDT)
         vm.startPrank(LP_USER);
         IERC20Minimal(token1).approve(uniProxy, usdtAmount);
-        
+
         // Deposit via UniProxyETH.depositETH()
         // For native XPL handling, send WXPL amount as msg.value
         uint256 shares = IUniProxyETHMinimal(uniProxy).depositETH{value: wxplAmount}(
-            wxplAmount,  // deposit0 (WXPL via native XPL)
-            usdtAmount,  // deposit1 (USDT)
-            LP_USER,     // to
+            wxplAmount, // deposit0 (WXPL via native XPL)
+            usdtAmount, // deposit1 (USDT)
+            LP_USER, // to
             HYP_WXPL_USDT, // pos (hypervisor address)
-            [uint256(0),0,0,0], // minIn
-            1000         // maxSlippage (10%)
+            [uint256(0), 0, 0, 0], // minIn
+            1000 // maxSlippage (10%)
         );
         vm.stopPrank();
         console.log("Deposited via UniProxyETH, shares:", shares);
-        
+
         // Stake in gauge
         vm.startPrank(LP_USER);
         uint256 lpBalance = IHypervisorMinimal(HYP_WXPL_USDT).balanceOf(LP_USER);
@@ -207,27 +210,29 @@ contract CLForkE2ETest is Test {
         IGaugeV2CLMinimal(gaugeWxplUsdt).deposit(lpBalance);
         vm.stopPrank();
         console.log("Staked:", lpBalance);
-        
+
         console.log("\n=== STEP 5: Find existing veNFT and vote ===");
-        
+
         // The VotingEscrow contract has historical corruption that causes overflow
         // when calling totalSupply(), balanceOf(), or balanceOfNFT()
         // We'll try to find a veNFT by checking specific token IDs directly
-        
+
         address veNFTHolder = address(0);
-        
+
         // Try tokenIds 1-100 and check if they exist and can vote
         console.log("Scanning for existing veNFTs (tokenIds 1-100)...");
-        
+
         // Fast forward time NOW to bypass any VOTE_DELAY for all candidates
         console.log("Fast forwarding 7 days + 1 hour to bypass VOTE_DELAY...");
         vm.warp(block.timestamp + 7 days + 1 hours);
-        
+
         address[] memory pools = new address[](2);
         uint256[] memory weights = new uint256[](2);
-        pools[0] = HYP_WXPL_USDT; weights[0] = 5000;
-        pools[1] = HYP_WETH_USDT; weights[1] = 5000;
-        
+        pools[0] = HYP_WXPL_USDT;
+        weights[0] = 5000;
+        pools[1] = HYP_WETH_USDT;
+        weights[1] = 5000;
+
         for (uint256 tokenId = 1; tokenId <= 100; tokenId++) {
             try ve.ownerOf(tokenId) returns (address owner) {
                 if (owner != address(0)) {
@@ -237,7 +242,7 @@ contract CLForkE2ETest is Test {
                             console.log("Found veNFT:", tokenId);
                             console.log("  Owner:", owner);
                             console.log("  Power:", power);
-                            
+
                             // Immediately try to vote with it
                             vm.startPrank(owner);
                             try voter.vote(tokenId, pools, weights) {
@@ -263,39 +268,39 @@ contract CLForkE2ETest is Test {
                 // Token doesn't exist or ownerOf reverted
             }
         }
-        
+
         if (!veNFTCreated) {
             console.log("WARNING: No usable veNFT found after scanning 100 tokenIds");
             console.log("Skipping vote - gauges/staking still verified");
         }
-        
+
         console.log("\n=== STEP 6: Trigger epoch flip and distribute emissions ===");
-        
+
         uint256 periodBefore = minter.active_period();
         console.log("Active period before:", periodBefore);
         console.log("Current timestamp:", block.timestamp);
-        
+
         // Calculate next epoch (period + 1 week)
         uint256 nextEpoch = periodBefore + 604800; // +1 week
         console.log("Next epoch starts at:", nextEpoch);
-        
+
         // Fast forward to next epoch + 1 hour to be safe
         uint256 targetTime = nextEpoch + 1 hours;
         console.log("Fast forwarding to:", targetTime);
         vm.warp(targetTime);
-        
+
         // Check if we can update
         bool canUpdate = minter.check();
         console.log("Can update period:", canUpdate);
-        
+
         if (canUpdate) {
             uint256 weeklyBefore = minter.weekly();
             console.log("Weekly emissions before:", weeklyBefore / 1e18, "LITH");
-            
+
             // Update period and distribute to gauges
             console.log("Calling voter.distributeAll()...");
             voter.distributeAll(); // This calls minter.update_period() internally
-            
+
             uint256 periodAfter = minter.active_period();
             uint256 weeklyAfter = minter.weekly();
             console.log("Active period after:", periodAfter);
@@ -304,38 +309,38 @@ contract CLForkE2ETest is Test {
         } else {
             console.log("WARNING: Cannot update period yet (may need more time)");
         }
-        
+
         console.log("\n=== STEP 7: Wait and trigger SECOND epoch (votes take effect) ===");
-        
+
         // IMPORTANT: Votes cast in Step 5 affect emissions for NEXT epoch
         // We just distributed emissions in Step 6, so we need ANOTHER epoch flip
         // to see emissions based on our votes
-        
+
         uint256 periodAfterVote = minter.active_period();
         uint256 nextEpoch2 = periodAfterVote + 604800;
         console.log("Fast forwarding to second epoch after vote...");
         vm.warp(nextEpoch2 + 1 hours);
-        
+
         bool canUpdate2 = minter.check();
         if (canUpdate2) {
             console.log("Triggering second epoch flip for vote-based emissions...");
             voter.distributeAll();
             console.log("Second epoch distribution complete!");
         }
-        
+
         // Fast forward 1 day to accumulate rewards
         vm.warp(block.timestamp + 1 days);
-        
+
         console.log("\n=== STEP 8: Claim emissions ===");
-        
+
         // Check and claim emissions from WXPL/USDT gauge
         vm.startPrank(LP_USER);
         uint256 lithBefore = lith.balanceOf(LP_USER);
         console.log("LP LITH balance before claim:", lithBefore / 1e18, "LITH");
-        
+
         uint256 earned = IGaugeV2CLMinimal(gaugeWxplUsdt).earned(LP_USER);
         console.log("Earned emissions:", earned / 1e18, "LITH");
-        
+
         if (earned > 0) {
             console.log("Claiming emissions...");
             IGaugeV2CLMinimal(gaugeWxplUsdt).getReward();
@@ -348,22 +353,22 @@ contract CLForkE2ETest is Test {
             console.log("NOTE: No emissions yet");
         }
         vm.stopPrank();
-        
+
         console.log("\n=== COMPLETE FLOW RESULT ===");
         console.log("Gauge WXPL/USDT:", gaugeWxplUsdt);
         console.log("Gauge WETH/USDT:", gaugeWethUsdt);
         console.log("veNFT used:", veTokenId);
         console.log("Emissions distributed: YES");
-        
+
         // Final assertions
         assertTrue(gaugeWxplUsdt != address(0), "WXPL/USDT gauge should exist");
         assertTrue(gaugeWethUsdt != address(0), "WETH/USDT gauge should exist");
-        
+
         // Verify deposit/staking worked
         uint256 stakedBalance = IGaugeV2CLMinimal(gaugeWxplUsdt).balanceOf(LP_USER);
         console.log("Final staked balance:", stakedBalance);
         assertTrue(stakedBalance > 0, "Should have staked LP tokens");
-        
+
         // veNFT and voting status
         if (veNFTCreated) {
             assertTrue(veTokenId > 0, "veNFT should exist");
@@ -383,8 +388,5 @@ contract CLForkE2ETest is Test {
             console.log("\n[PARTIAL SUCCESS] Factory/Gauge/Deposit/Staking/Emissions verified");
             console.log("Note: Voting skipped (no available veNFT found)");
         }
-
-
-        
     }
 }

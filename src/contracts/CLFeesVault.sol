@@ -38,10 +38,7 @@ contract CLFeesVault {
     }
 
     modifier onlyAdmin() {
-        require(
-            permissionsRegistry.hasRole("CL_FEES_VAULT_ADMIN", msg.sender),
-            "!admin"
-        );
+        require(permissionsRegistry.hasRole("CL_FEES_VAULT_ADMIN", msg.sender), "!admin");
         _;
     }
 
@@ -68,11 +65,7 @@ contract CLFeesVault {
      * @param _permissionRegistry The permissions registry address
      * @param _voter The voter contract address
      */
-    constructor(
-        address _pool,
-        address _permissionRegistry,
-        address _voter
-    ) {
+    constructor(address _pool, address _permissionRegistry, address _voter) {
         require(_pool != address(0), "zero pool");
         require(_permissionRegistry != address(0), "zero registry");
         require(_voter != address(0), "zero voter");
@@ -92,11 +85,7 @@ contract CLFeesVault {
      * @return claimed0 Amount of token0 claimed
      * @return claimed1 Amount of token1 claimed
      */
-    function claimFees()
-        external
-        onlyGauge
-        returns (uint256 claimed0, uint256 claimed1)
-    {
+    function claimFees() external onlyGauge returns (uint256 claimed0, uint256 claimed1) {
         // Verify gauge is for this pool
         address _pool = voter.poolForGauge(msg.sender);
         require(pool == _pool, "wrong pool");
@@ -118,14 +107,7 @@ contract CLFeesVault {
             IERC20(token1).safeTransfer(msg.sender, claimed1);
         }
 
-        emit FeesCollected(
-            claimed0,
-            claimed1,
-            token0,
-            token1,
-            msg.sender,
-            block.timestamp
-        );
+        emit FeesCollected(claimed0, claimed1, token0, token1, msg.sender, block.timestamp);
     }
 
     /* ========================================================================== */
@@ -164,18 +146,9 @@ contract CLFeesVault {
      * @param tokenAddress Token to withdraw
      * @param tokenAmount Amount to withdraw
      */
-    function emergencyWithdraw(address tokenAddress, uint256 tokenAmount)
-        external
-        onlyAdmin
-    {
-        require(
-            tokenAmount <= IERC20(tokenAddress).balanceOf(address(this)),
-            "insufficient balance"
-        );
-        IERC20(tokenAddress).safeTransfer(
-            permissionsRegistry.emergencyCouncil(),
-            tokenAmount
-        );
+    function emergencyWithdraw(address tokenAddress, uint256 tokenAmount) external onlyAdmin {
+        require(tokenAmount <= IERC20(tokenAddress).balanceOf(address(this)), "insufficient balance");
+        IERC20(tokenAddress).safeTransfer(permissionsRegistry.emergencyCouncil(), tokenAmount);
     }
 }
 

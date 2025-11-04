@@ -26,12 +26,9 @@ contract DeployCLGaugeFactory is Script {
         // Update state.json
         string memory key = "CLGaugeFactory";
         string memory jsonObj = string.concat('{"', key, '":"', vm.toString(address(factory)), '"}');
-        
+
         // Save to file
-        vm.writeFile(
-            string.concat(vm.projectRoot(), "/deployments/mainnet/cl_gauge_factory.json"),
-            jsonObj
-        );
+        vm.writeFile(string.concat(vm.projectRoot(), "/deployments/mainnet/cl_gauge_factory.json"), jsonObj);
 
         console.log("\nDeployment completed successfully!");
         console.log("Next step: Register this factory with VoterV3");

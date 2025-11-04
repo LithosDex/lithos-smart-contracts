@@ -51,8 +51,9 @@ contract GaugeFactoryV2 is IGaugeFactory, OwnableUpgradeable {
         address _external_bribe,
         bool _isPair
     ) external returns (address) {
-        last_gauge =
-            address(new GaugeV2(_rewardToken, _ve, _token, _distribution, _internal_bribe, _external_bribe, _isPair));
+        last_gauge = address(
+            new GaugeV2(_rewardToken, _ve, _token, _distribution, _internal_bribe, _external_bribe, _isPair)
+        );
         __gauges.push(last_gauge);
         return last_gauge;
     }

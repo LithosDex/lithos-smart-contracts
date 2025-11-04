@@ -87,10 +87,7 @@ contract VoterV3 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
 
     constructor() {}
 
-    function initialize(address __ve, address _pairFactory, address _gaugeFactory, address _bribes)
-        public
-        initializer
-    {
+    function initialize(address __ve, address _pairFactory, address _gaugeFactory, address _bribes) public initializer {
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
 
@@ -578,9 +575,8 @@ contract VoterV3 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
         _external_bribe = IBribeFactory(bribefactory).createBribe(_owner, tokenA, tokenB, _type);
 
         // create gauge
-        _gauge = IGaugeFactory(_gaugeFactory).createGaugeV2(
-            base, _ve, _pool, address(this), _internal_bribe, _external_bribe, isPair
-        );
+        _gauge = IGaugeFactory(_gaugeFactory)
+            .createGaugeV2(base, _ve, _pool, address(this), _internal_bribe, _external_bribe, isPair);
 
         // approve spending for $LITH
         IERC20Metadata(base).approve(_gauge, type(uint256).max);
@@ -655,6 +651,7 @@ contract VoterV3 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
     function _epochTimestamp() public view returns (uint256) {
         return IMinter(minter).active_period();
     }
+
     /* -----------------------------------------------------------------------------
     --------------------------------------------------------------------------------
     --------------------------------------------------------------------------------

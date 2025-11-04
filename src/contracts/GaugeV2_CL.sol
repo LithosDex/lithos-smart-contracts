@@ -11,29 +11,21 @@ import "./interfaces/IBribe.sol";
 import "./libraries/Math.sol";
 
 interface IRewarder {
-    function onReward(
-        address user,
-        address recipient,
-        uint256 userBalance
-    ) external;
+    function onReward(address user, address recipient, uint256 userBalance) external;
 }
 
 interface IFeeVault {
-    function claimFees() external returns(uint256 claimed0, uint256 claimed1);
+    function claimFees() external returns (uint256 claimed0, uint256 claimed1);
 }
 
-
 contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
-
     using SafeERC20 for IERC20;
 
     bool public emergency;
 
-
     IERC20 public immutable rewardToken;
     IERC20 public immutable TOKEN;
 
-    
     address public VE;
     address public DISTRIBUTION;
     address public gaugeRewarder;
@@ -46,7 +38,6 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
     uint256 public rewardRate;
     uint256 public lastUpdateTime;
     uint256 public rewardPerTokenStored;
-
 
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
@@ -82,22 +73,28 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         _;
     }
 
-    constructor(address _rewardToken,address _ve,address _token,address _distribution, address _internal_bribe, address _external_bribe, address _feeVault) {
-        rewardToken = IERC20(_rewardToken);     // main reward
-        VE = _ve;                               // vested
-        TOKEN = IERC20(_token);                 // underlying (LP)
-        DISTRIBUTION = _distribution;           // distro address (voter)
-        DURATION = 7 days;                       // distro time
+    constructor(
+        address _rewardToken,
+        address _ve,
+        address _token,
+        address _distribution,
+        address _internal_bribe,
+        address _external_bribe,
+        address _feeVault
+    ) {
+        rewardToken = IERC20(_rewardToken); // main reward
+        VE = _ve; // vested
+        TOKEN = IERC20(_token); // underlying (LP)
+        DISTRIBUTION = _distribution; // distro address (voter)
+        DURATION = 7 days; // distro time
 
-        internal_bribe = _internal_bribe;       // lp fees goes here
-        external_bribe = _external_bribe;       // bribe fees goes here
+        internal_bribe = _internal_bribe; // lp fees goes here
+        external_bribe = _external_bribe; // bribe fees goes here
 
-        feeVault = _feeVault;                   // fee vault concentrated liqudity position
+        feeVault = _feeVault; // fee vault concentrated liqudity position
 
-        emergency = false;                       // emergency flag
-
+        emergency = false; // emergency flag
     }
-
 
     /* -----------------------------------------------------------------------------
     --------------------------------------------------------------------------------
@@ -127,7 +124,6 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         feeVault = _feeVault;
     }
 
-
     ///@notice set new internal bribe contract (where to send fees)
     function setInternalBribe(address _int) external onlyOwner {
         require(_int >= address(0), "zero");
@@ -141,11 +137,10 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
     }
 
     function stopEmergencyMode() external onlyOwner {
-        require(emergency == true,"emergency");
+        require(emergency == true, "emergency");
         emergency = false;
         emit EmergencyDeactivated(address(this), block.timestamp);
     }
-
 
     /* -----------------------------------------------------------------------------
     --------------------------------------------------------------------------------
@@ -167,20 +162,22 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
 
     ///@notice last time reward
     function lastTimeRewardApplicable() public view returns (uint256) {
-        return Math.min(block.timestamp, _periodFinish);    }
+        return Math.min(block.timestamp, _periodFinish);
+    }
 
     ///@notice  reward for a single token
     function rewardPerToken() public view returns (uint256) {
         if (_totalSupply == 0) {
             return rewardPerTokenStored;
         } else {
-            return rewardPerTokenStored + (lastTimeRewardApplicable() - lastUpdateTime) * rewardRate * 1e18 / _totalSupply; 
+            return
+                rewardPerTokenStored + (lastTimeRewardApplicable() - lastUpdateTime) * rewardRate * 1e18 / _totalSupply;
         }
     }
 
     ///@notice see earned rewards for user
     function earned(address account) public view returns (uint256) {
-        return rewards[account] + _balances[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / 1e18;  
+        return rewards[account] + _balances[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / 1e18;
     }
 
     ///@notice get total reward for the duration
@@ -192,8 +189,6 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         return _periodFinish;
     }
 
-
-
     /* -----------------------------------------------------------------------------
     --------------------------------------------------------------------------------
     --------------------------------------------------------------------------------
@@ -201,7 +196,6 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
     --------------------------------------------------------------------------------
     --------------------------------------------------------------------------------
     ----------------------------------------------------------------------------- */
-
 
     ///@notice deposit all TOKEN of msg.sender
     function depositAll() external {
@@ -223,7 +217,7 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         TOKEN.safeTransferFrom(account, address(this), amount);
 
         if (address(gaugeRewarder) != address(0)) {
-            IRewarder(gaugeRewarder).onReward( account, account, _balances[account]);
+            IRewarder(gaugeRewarder).onReward(account, account, _balances[account]);
         }
 
         emit Deposit(account, amount);
@@ -267,7 +261,7 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         TOKEN.safeTransfer(msg.sender, _amount);
         emit Withdraw(msg.sender, _amount);
     }
-    
+
     function emergencyWithdrawAmount(uint256 _amount) external nonReentrant {
         require(emergency, "emergency");
         require(_balances[msg.sender] >= _amount, "no balances");
@@ -284,7 +278,6 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         getReward();
     }
 
- 
     ///@notice User harvest function called from distribution (voter allows harvest on multiple gauges)
     function getReward(address _user) public nonReentrant onlyDistribution updateReward(_user) {
         uint256 reward = rewards[_user];
@@ -299,7 +292,7 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         }
     }
 
-     ///@notice User harvest function
+    ///@notice User harvest function
     function getReward() public nonReentrant updateReward(msg.sender) {
         uint256 reward = rewards[msg.sender];
         if (reward > 0) {
@@ -313,13 +306,6 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         }
     }
 
-
-
-
-
-
-
-
     /* -----------------------------------------------------------------------------
     --------------------------------------------------------------------------------
     --------------------------------------------------------------------------------
@@ -328,10 +314,15 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
     --------------------------------------------------------------------------------
     ----------------------------------------------------------------------------- */
 
-
     /// @dev Receive rewards from distribution
 
-    function notifyRewardAmount(address token, uint256 reward) external nonReentrant isNotEmergency onlyDistribution updateReward(address(0)) {
+    function notifyRewardAmount(address token, uint256 reward)
+        external
+        nonReentrant
+        isNotEmergency
+        onlyDistribution
+        updateReward(address(0))
+    {
         require(token == address(rewardToken), "not rew token");
         rewardToken.safeTransferFrom(DISTRIBUTION, address(this), reward);
 
@@ -355,36 +346,32 @@ contract GaugeV2_CL is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         emit RewardAdded(reward);
     }
 
-
     function claimFees() external nonReentrant returns (uint256 claimed0, uint256 claimed1) {
         return _claimFees();
     }
 
-     function _claimFees() internal returns (uint256 claimed0, uint256 claimed1) {
-
+    function _claimFees() internal returns (uint256 claimed0, uint256 claimed1) {
         address _token = address(TOKEN);
         (claimed0, claimed1) = IFeeVault(feeVault).claimFees();
 
         if (claimed0 > 0 || claimed1 > 0) {
-
             uint256 _fees0 = claimed0;
             uint256 _fees1 = claimed1;
 
             (address _token0) = IPairInfo(_token).token0();
             (address _token1) = IPairInfo(_token).token1();
-            if (_fees0  > 0) {
+            if (_fees0 > 0) {
                 IERC20(_token0).approve(internal_bribe, 0);
                 IERC20(_token0).approve(internal_bribe, _fees0);
                 IBribe(internal_bribe).notifyRewardAmount(_token0, _fees0);
-            } 
+            }
 
-            if (_fees1  > 0) {
+            if (_fees1 > 0) {
                 IERC20(_token1).approve(internal_bribe, 0);
                 IERC20(_token1).approve(internal_bribe, _fees1);
                 IBribe(internal_bribe).notifyRewardAmount(_token1, _fees1);
-            } 
+            }
             emit ClaimFees(msg.sender, claimed0, claimed1);
         }
     }
-
 }

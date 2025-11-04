@@ -86,19 +86,19 @@ contract V2PoolForkE2ETest is Test {
 
     // Known V2 pair from mainnet (WXPL/USDT volatile)
     address constant PAIR_WXPL_USDT = 0xA0926801A2abC718822a60d8Fa1bc2A51Fa09F1e;
-    
+
     // Token addresses
     address constant WXPL = 0x6100E367285b01F48D07953803A2d8dCA5D19873;
     address constant USDT = 0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb;
 
     // Multisig with VOTER_ADMIN
     address constant LITHOS_MULTISIG = 0x21F1c2F66d30e22DaC1e2D509228407ccEff4dBC;
-    
+
     // Test accounts
     address constant LITH_WHALE = 0xe98c1e28805A06F23B41cf6d356dFC7709DB9385;
     address constant VOTER_USER = address(0x1000);
     address constant LP_USER = address(0x2000);
-    
+
     // Storage for created gauge
     address public gaugeWxplUsdt;
     uint256 public veTokenId;
@@ -118,7 +118,7 @@ contract V2PoolForkE2ETest is Test {
         console.log("\n========================================");
         console.log("V2 POOL (NON-CL) END-TO-END TEST");
         console.log("========================================");
-        
+
         console.log("\n=== STEP 1: Check V2 factories registration ===");
         // On mainnet, factories are likely already registered
         // Try to add, but if already exists, that's fine
@@ -135,7 +135,7 @@ contract V2PoolForkE2ETest is Test {
         console.log("\n=== STEP 2: Get or create gauge for V2 pair (gaugeType=0) ===");
         console.log("Using existing V2 pair: WXPL/USDT");
         console.log("Pair address:", PAIR_WXPL_USDT);
-        
+
         // Verify it's a valid pair
         IPairMinimal pair = IPairMinimal(PAIR_WXPL_USDT);
         address token0 = pair.token0();
@@ -144,12 +144,12 @@ contract V2PoolForkE2ETest is Test {
         console.log("Token0:", token0);
         console.log("Token1:", token1);
         console.log("Is Stable:", isStable);
-        
+
         // Check if gauge already exists
         address existingGauge = voter.gauges(PAIR_WXPL_USDT);
         address internal_bribe;
         address external_bribe;
-        
+
         if (existingGauge != address(0)) {
             console.log("Gauge already exists:", existingGauge);
             gaugeWxplUsdt = existingGauge;
@@ -164,15 +164,15 @@ contract V2PoolForkE2ETest is Test {
             internal_bribe = int_bribe;
             external_bribe = ext_bribe;
         }
-        
+
         console.log("Gauge:", gaugeWxplUsdt);
         console.log("  Internal bribe:", internal_bribe);
         console.log("  External bribe:", external_bribe);
-        
+
         assertTrue(gaugeWxplUsdt != address(0), "Gauge should exist");
         assertTrue(internal_bribe != address(0), "Internal bribe should be created");
         assertTrue(external_bribe != address(0), "External bribe should be created");
-        
+
         // Verify gauge is for pair
         IGaugeV2Minimal gaugeContract = IGaugeV2Minimal(gaugeWxplUsdt);
         bool isForPair = gaugeContract.isForPair();
@@ -180,55 +180,55 @@ contract V2PoolForkE2ETest is Test {
         assertTrue(isForPair, "Gauge should be for pair");
 
         console.log("\n=== STEP 3: Obtain LP tokens for testing ===");
-        
+
         // For this test, we're focused on testing the gauge/emission system,
         // not the liquidity provision mechanics. So we'll directly deal LP tokens
         // to the test user, simulating that they already provided liquidity.
-        
+
         // Get current pair state
         (uint256 reserve0, uint256 reserve1,) = pair.getReserves();
         uint256 pairTotalSupply = pair.totalSupply();
         console.log("Pair reserves - Reserve0:", reserve0);
         console.log("Pair reserves - Reserve1:", reserve1);
         console.log("Pair total supply:", pairTotalSupply);
-        
+
         // Deal some LP tokens to LP_USER (simulate existing LP position)
         // We'll give them 0.01% of the pool
         uint256 lpAmount = pairTotalSupply / 10000;
         if (lpAmount < 1e18) {
             lpAmount = 1e18; // Minimum 1 LP token
         }
-        
+
         console.log("Dealing LP tokens to user:", lpAmount);
         deal(PAIR_WXPL_USDT, LP_USER, lpAmount);
-        
+
         uint256 lpBalance = pair.balanceOf(LP_USER);
         console.log("LP token balance:", lpBalance);
         assertTrue(lpBalance > 0, "Should have LP tokens");
         assertTrue(lpBalance == lpAmount, "Should have correct LP balance");
 
         console.log("\n=== STEP 4: Stake LP tokens in gauge ===");
-        
+
         vm.startPrank(LP_USER);
         IERC20Minimal(PAIR_WXPL_USDT).approve(gaugeWxplUsdt, lpBalance);
         gaugeContract.deposit(lpBalance);
         vm.stopPrank();
-        
+
         uint256 stakedBalance = gaugeContract.balanceOf(LP_USER);
         console.log("Staked balance in gauge:", stakedBalance);
         assertTrue(stakedBalance == lpBalance, "Should have staked all LP tokens");
 
         console.log("\n=== STEP 5: Find existing veNFT and vote ===");
-        
+
         // Fast forward time to bypass VOTE_DELAY
         console.log("Fast forwarding 7 days + 1 hour to bypass VOTE_DELAY...");
         vm.warp(block.timestamp + 7 days + 1 hours);
-        
+
         address[] memory pools = new address[](1);
         uint256[] memory weights = new uint256[](1);
         pools[0] = PAIR_WXPL_USDT;
         weights[0] = 10000; // 100%
-        
+
         console.log("Scanning for existing veNFTs (tokenIds 1-100)...");
         for (uint256 tokenId = 1; tokenId <= 100; tokenId++) {
             try ve.ownerOf(tokenId) returns (address owner) {
@@ -238,7 +238,7 @@ contract V2PoolForkE2ETest is Test {
                             console.log("Found veNFT:", tokenId);
                             console.log("  Owner:", owner);
                             console.log("  Power:", power);
-                            
+
                             vm.startPrank(owner);
                             try voter.vote(tokenId, pools, weights) {
                                 console.log("  SUCCESS: Voted with veNFT", tokenId);
@@ -262,39 +262,39 @@ contract V2PoolForkE2ETest is Test {
                 // Token doesn't exist
             }
         }
-        
+
         if (!veNFTCreated) {
             console.log("WARNING: No usable veNFT found");
             console.log("Continuing with test - gauges/staking still verified");
         }
 
         console.log("\n=== STEP 6: Trigger epoch flip and distribute emissions ===");
-        
+
         uint256 periodBefore = minter.active_period();
         console.log("Active period before:", periodBefore);
         console.log("Current timestamp:", block.timestamp);
-        
+
         // Calculate next epoch
         uint256 nextEpoch = periodBefore + 604800; // +1 week
         console.log("Next epoch starts at:", nextEpoch);
-        
+
         // Fast forward to next epoch + 1 hour
         uint256 targetTime = nextEpoch + 1 hours;
         console.log("Fast forwarding to:", targetTime);
         vm.warp(targetTime);
-        
+
         // Check if we can update
         bool canUpdate = minter.check();
         console.log("Can update period:", canUpdate);
-        
+
         if (canUpdate) {
             uint256 weeklyBefore = minter.weekly();
             console.log("Weekly emissions before:", weeklyBefore / 1e18, "LITH");
-            
+
             // Update period and distribute
             console.log("Calling voter.distributeAll()...");
             voter.distributeAll();
-            
+
             uint256 periodAfter = minter.active_period();
             uint256 weeklyAfter = minter.weekly();
             console.log("Active period after:", periodAfter);
@@ -305,32 +305,32 @@ contract V2PoolForkE2ETest is Test {
         }
 
         console.log("\n=== STEP 7: Trigger SECOND epoch (votes take effect) ===");
-        
+
         uint256 periodAfterVote = minter.active_period();
         uint256 nextEpoch2 = periodAfterVote + 604800;
         console.log("Fast forwarding to second epoch...");
         vm.warp(nextEpoch2 + 1 hours);
-        
+
         bool canUpdate2 = minter.check();
         if (canUpdate2) {
             console.log("Triggering second epoch flip for vote-based emissions...");
             voter.distributeAll();
             console.log("Second epoch distribution complete!");
         }
-        
+
         // Fast forward 1 day to accumulate rewards
         console.log("Fast forwarding 1 day to accumulate rewards...");
         vm.warp(block.timestamp + 1 days);
 
         console.log("\n=== STEP 8: Check and claim emissions ===");
-        
+
         vm.startPrank(LP_USER);
         uint256 lithBefore = lith.balanceOf(LP_USER);
         console.log("LP LITH balance before claim:", lithBefore / 1e18, "LITH");
-        
+
         uint256 earned = gaugeContract.earned(LP_USER);
         console.log("Earned emissions:", earned / 1e18, "LITH");
-        
+
         if (earned > 0) {
             console.log("Claiming emissions...");
             gaugeContract.getReward();
@@ -347,11 +347,11 @@ contract V2PoolForkE2ETest is Test {
         vm.stopPrank();
 
         console.log("\n=== STEP 9: Verify fee claiming mechanism ===");
-        
+
         // For V2 pairs, fees accumulate in the pair contract
         // Gauge can claim them via claimFees() which sends to internal bribe
         console.log("Testing fee claiming from pair to bribe...");
-        
+
         // The gauge's claimFees() function should work
         // We can't generate real fees in a fork test easily, but we can verify the mechanism exists
         try gaugeContract.getReward() {
@@ -363,17 +363,17 @@ contract V2PoolForkE2ETest is Test {
         console.log("\n========================================");
         console.log("FINAL VERIFICATION");
         console.log("========================================");
-        
+
         // Final assertions
         assertTrue(gaugeWxplUsdt != address(0), "Gauge should exist");
         assertTrue(stakedBalance > 0, "Should have staked LP tokens");
         assertTrue(gaugeContract.isForPair(), "Gauge should be for pair");
-        
+
         console.log("\nGauge address:", gaugeWxplUsdt);
         console.log("Pair address:", PAIR_WXPL_USDT);
         console.log("Staked balance:", stakedBalance);
         console.log("veNFT used:", veTokenId);
-        
+
         if (veNFTCreated) {
             assertTrue(veTokenId > 0, "veNFT should exist");
             console.log("\n========================================");
