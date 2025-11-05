@@ -164,10 +164,21 @@ type CLPool @entity(immutable: false) {
   sqrtPriceX96: BigInt!
   tick: BigInt!
 
+  # Derived token prices (token1 per token0, token0 per token1)
+  token0Price: BigDecimal!
+  token1Price: BigDecimal!
+
   # Aggregated volume metrics
   volumeToken0: BigDecimal!
   volumeToken1: BigDecimal!
   volumeUSD: BigDecimal!
+
+  # Fee tracking
+  feeGrowthGlobal0X128: BigInt!
+  feeGrowthGlobal1X128: BigInt!
+  feesToken0: BigDecimal!
+  feesToken1: BigDecimal!
+  feesUSD: BigDecimal!
 
   # Total swaps observed
   txCount: BigInt!
@@ -182,6 +193,36 @@ type CLPool @entity(immutable: false) {
 
   # Optional link to corresponding gauge if incentivised
   gauge: Gauge
+
+  # Derived collections
+  epochData: [CLPoolEpochData!]! @derivedFrom(field: "pool")
+}
+
+type CLPoolEpochData @entity(immutable: false) {
+  # pool address + epoch timestamp
+  id: ID!
+
+  # References
+  pool: CLPool!
+  token0: Token!
+  token1: Token!
+
+  # Epoch details
+  epoch: BigInt!
+  epochStart: BigInt!
+  epochEnd: BigInt!
+
+  # Metrics (delta over epoch)
+  feesToken0: BigDecimal!
+  feesToken1: BigDecimal!
+  feesUSD: BigDecimal!
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  volumeUSD: BigDecimal!
+
+  # Last update timestamp
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
 }
 
 type User @entity(immutable: false) {
