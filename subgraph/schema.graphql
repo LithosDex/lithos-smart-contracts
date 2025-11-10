@@ -164,10 +164,21 @@ type CLPool @entity(immutable: false) {
   sqrtPriceX96: BigInt!
   tick: BigInt!
 
+  # Derived token prices (token1 per token0, token0 per token1)
+  token0Price: BigDecimal!
+  token1Price: BigDecimal!
+
   # Aggregated volume metrics
   volumeToken0: BigDecimal!
   volumeToken1: BigDecimal!
   volumeUSD: BigDecimal!
+
+  # Fee tracking
+  feeGrowthGlobal0X128: BigInt!
+  feeGrowthGlobal1X128: BigInt!
+  feesToken0: BigDecimal!
+  feesToken1: BigDecimal!
+  feesUSD: BigDecimal!
 
   # Total swaps observed
   txCount: BigInt!
@@ -182,7 +193,10 @@ type CLPool @entity(immutable: false) {
 
   # Optional link to corresponding gauge if incentivised
   gauge: Gauge
-  
+
+  # Derived collections
+  epochData: [CLPoolEpochData!]! @derivedFrom(field: "pool")
+
   # Optional link to corresponding Hypervisor (Gamma vault)
   hypervisor: Hypervisor
 }
@@ -192,10 +206,10 @@ type CLPool @entity(immutable: false) {
 type HypeRegistry @entity(immutable: false) {
   # Registry contract address
   id: ID!
-  
+
   # Total number of hypervisors created
   hypervisorCount: BigInt!
-  
+
   # All hypervisors created by this registry
   hypervisors: [Hypervisor!]! @derivedFrom(field: "registry")
 }
@@ -203,50 +217,50 @@ type HypeRegistry @entity(immutable: false) {
 type Hypervisor @entity(immutable: false) {
   # Hypervisor contract address (also ERC20 token address)
   id: ID!
-  
+
   # Registry that created this hypervisor
   registry: HypeRegistry!
-  
+
   # Index in the registry
   registryIndex: BigInt!
-  
+
   # CL Pool this hypervisor manages
   pool: CLPool!
-  
+
   # ERC20 token details
   name: String!
   symbol: String!
   decimals: BigInt!
   totalSupply: BigInt!
-  
+
   # Position range details
   baseLower: BigInt!
   baseUpper: BigInt!
   limitLower: BigInt!
   limitUpper: BigInt!
-  
+
   # Total amounts managed
   totalAmount0: BigDecimal!
   totalAmount1: BigDecimal!
   totalValueUSD: BigDecimal!
-  
+
   # Fees collected
   feesEarned0: BigDecimal!
   feesEarned1: BigDecimal!
   feesEarnedUSD: BigDecimal!
-  
+
   # Statistics
   depositCount: BigInt!
   withdrawCount: BigInt!
-  
-  # Creation metadata  
+
+  # Creation metadata
   createdAtTimestamp: BigInt!
   createdAtBlockNumber: BigInt!
-  
+
   # Relations
   deposits: [HypervisorDeposit!]! @derivedFrom(field: "hypervisor")
   withdraws: [HypervisorWithdraw!]! @derivedFrom(field: "hypervisor")
-  
+
   # Optional gauge if hypervisor tokens are stakeable
   gauge: Gauge
 }
@@ -254,24 +268,24 @@ type Hypervisor @entity(immutable: false) {
 type HypervisorDeposit @entity(immutable: true) {
   # tx_hash + log_index
   id: ID!
-  
+
   # Hypervisor contract
   hypervisor: Hypervisor!
-  
+
   # User who deposited
   sender: User!
   to: User!
-  
+
   # Amounts deposited
   amount0: BigDecimal!
   amount1: BigDecimal!
-  
+
   # Shares minted
   shares: BigDecimal!
-  
+
   # USD value at time of deposit
   amountUSD: BigDecimal!
-  
+
   # Transaction details
   transaction: Transaction!
   timestamp: BigInt!
@@ -281,28 +295,55 @@ type HypervisorDeposit @entity(immutable: true) {
 type HypervisorWithdraw @entity(immutable: true) {
   # tx_hash + log_index
   id: ID!
-  
+
   # Hypervisor contract
   hypervisor: Hypervisor!
-  
+
   # User who withdrew
   sender: User!
   to: User!
-  
+
   # Amounts withdrawn
   amount0: BigDecimal!
   amount1: BigDecimal!
-  
+
   # Shares burned
   shares: BigDecimal!
-  
+
   # USD value at time of withdrawal
   amountUSD: BigDecimal!
-  
+
   # Transaction details
   transaction: Transaction!
   timestamp: BigInt!
   blockNumber: BigInt!
+}
+
+type CLPoolEpochData @entity(immutable: false) {
+  # pool address + epoch timestamp
+  id: ID!
+
+  # References
+  pool: CLPool!
+  token0: Token!
+  token1: Token!
+
+  # Epoch details
+  epoch: BigInt!
+  epochStart: BigInt!
+  epochEnd: BigInt!
+
+  # Metrics (delta over epoch)
+  feesToken0: BigDecimal!
+  feesToken1: BigDecimal!
+  feesUSD: BigDecimal!
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  volumeUSD: BigDecimal!
+
+  # Last update timestamp
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
 }
 
 type User @entity(immutable: false) {
@@ -854,30 +895,30 @@ type VeDelegation @entity(immutable: false) {
 type Minter @entity(immutable: false) {
   # Minter contract address
   id: ID!
-  
+
   # Contract address
   address: Bytes!
-  
+
   # Total emissions minted
   totalEmissions: BigInt!
-  
+
   # Current weekly emission
   currentWeeklyEmission: BigInt!
-  
+
   # Number of mint events
   mintCount: BigInt!
-  
+
   # Current period
   activePeriod: BigInt!
-  
+
   # Emission parameters
   emissionRate: BigInt! # EMISSION parameter
   tailEmissionRate: BigInt! # TAIL_EMISSION parameter
   teamRate: BigInt!
-  
+
   # Last mint timestamp
   lastMintTimestamp: BigInt!
-  
+
   # All mint events from this contract
   mintEvents: [MintEvent!]! @derivedFrom(field: "minter")
 }
@@ -885,25 +926,25 @@ type Minter @entity(immutable: false) {
 type MintEvent @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
-  
+
   # Block data
   timestamp: BigInt!
   blockNumber: BigInt!
-  
+
   # Minter contract
   minter: Minter!
-  
+
   # User who triggered the mint (called update_period)
   sender: User!
-  
+
   # Emission data from event
   weeklyEmission: BigInt!
   circulatingSupply: BigInt!
   circulatingEmission: BigInt!
-  
+
   # Calculated fields
   period: BigInt! # The period this mint corresponds to
 }
@@ -913,21 +954,19 @@ type MintEvent @entity(immutable: false) {
 type BribeFactory @entity(immutable: false) {
   # BribeFactory contract address
   id: ID!
-  
+
   # Contract address
   address: Bytes!
-  
+
   # Associated contracts
   voter: Bytes! # VoterV3 contract
   permissionsRegistry: Bytes! # Permissions registry
-  
   # Factory statistics
   totalBribesCreated: BigInt! # Total number of bribes created
   lastBribe: Bytes! # Address of the last created bribe
-  
   # Default reward tokens for new bribes
   defaultRewardTokenCount: BigInt!
-  
+
   # All bribes created by this factory
   bribes: [Bribe!]! @derivedFrom(field: "factory")
 }
@@ -937,22 +976,22 @@ type BribeFactory @entity(immutable: false) {
 type Voter @entity(immutable: false) {
   # VoterV3 contract address
   id: ID!
-  
+
   # Contract address
   address: Bytes!
-  
+
   # Associated factories
   gaugeFactory: Bytes!
   bribeFactory: Bytes!
-  
+
   # Associated contracts
   minter: Bytes!
   votingEscrow: Bytes!
-  
+
   # Voting statistics
   totalGaugesCreated: BigInt!
   totalPoolsWithGauges: BigInt!
-  
+
   # All gauges created by this voter
   gauges: [Gauge!]! @derivedFrom(field: "voter")
 }
@@ -960,23 +999,23 @@ type Voter @entity(immutable: false) {
 type GaugeCreatedEvent @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
-  
+
   # Block data
   timestamp: BigInt!
   blockNumber: BigInt!
-  
+
   # Voter contract
   voter: Voter!
-  
+
   # Created gauge
   gauge: Gauge!
-  
+
   # Pool token (LP token)
   poolToken: Token!
-  
+
   # Created bribes
   internalBribe: Bribe!
   externalBribe: Bribe!
@@ -987,16 +1026,16 @@ type GaugeCreatedEvent @entity(immutable: false) {
 type Bribe @entity(immutable: false) {
   # Bribe contract address
   id: ID!
-  
+
   # Contract address
   address: Bytes!
-  
+
   # Bribe type (internal/external)
   type: String!
-  
+
   # Factory that created this bribe
   factory: BribeFactory!
-  
+
   # Associated contracts
   voter: Bytes!
   minter: Bytes!
@@ -1005,28 +1044,28 @@ type Bribe @entity(immutable: false) {
   pair: Pair
   clPool: CLPool
   hypervisor: Hypervisor
-  
+
   # Owner
   owner: User!
-  
+
   # Total voting power across all epochs
   totalVotingPower: BigInt!
-  
+
   # Number of reward tokens
   rewardTokenCount: BigInt!
-  
+
   # All reward tokens for this bribe
   rewardTokens: [BribeRewardToken!]! @derivedFrom(field: "bribe")
-  
+
   # All reward events
   rewardEvents: [BribeRewardAdded!]! @derivedFrom(field: "bribe")
-  
+
   # All stake events
   stakeEvents: [BribeStake!]! @derivedFrom(field: "bribe")
-  
+
   # All withdraw events
   withdrawEvents: [BribeWithdraw!]! @derivedFrom(field: "bribe")
-  
+
   # All reward payment events
   rewardPayments: [BribeRewardPaid!]! @derivedFrom(field: "bribe")
 
@@ -1042,25 +1081,25 @@ type Bribe @entity(immutable: false) {
 type BribeRewardToken @entity(immutable: false) {
   # Bribe address + token address
   id: ID!
-  
+
   # Bribe contract
   bribe: Bribe!
-  
+
   # Reward token
   token: Token!
-  
+
   # Total rewards added across all epochs
   totalRewards: BigInt!
-  
+
   # Number of epochs with rewards
   epochCount: BigInt!
-  
+
   # Is currently active reward token
   isActive: Boolean!
-  
+
   # All reward additions for this token
   rewardAdditions: [BribeRewardAdded!]! @derivedFrom(field: "rewardToken")
-  
+
   # Epoch-level reward aggregates for this token
   epochRewards: [BribeEpochReward!]! @derivedFrom(field: "rewardToken")
 }
@@ -1068,29 +1107,29 @@ type BribeRewardToken @entity(immutable: false) {
 type BribeRewardAdded @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
-  
+
   # Block data
   timestamp: BigInt!
   blockNumber: BigInt!
-  
+
   # Bribe contract
   bribe: Bribe!
-  
+
   # Reward token entity
   rewardToken: BribeRewardToken!
-  
+
   # Raw reward token address
   rewardTokenAddress: Bytes!
-  
+
   # Reward amount
   reward: BigInt!
-  
+
   # Start timestamp (epoch when rewards become available)
   startTimestamp: BigInt!
-  
+
   # Calculated epoch
   epoch: BigInt!
 }
@@ -1101,11 +1140,11 @@ type BribeStake @entity(immutable: false) {
 
   # Transaction hash
   transaction: Bytes!
-  
+
   # Block data
   timestamp: BigInt!
   blockNumber: BigInt!
-  
+
   # Bribe contract
   bribe: Bribe!
 
@@ -1150,23 +1189,23 @@ type BribeEpochVeStake @entity(immutable: false) {
 type BribeWithdraw @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
-  
+
   # Block data
   timestamp: BigInt!
   blockNumber: BigInt!
-  
+
   # Bribe contract
   bribe: Bribe!
-  
+
   # veNFT that was withdrawn
   veNFTId: BigInt!
-  
+
   # Voting power amount withdrawn
   amount: BigInt!
-  
+
   # Epoch this withdrawal affects
   epoch: BigInt!
 }
@@ -1174,23 +1213,23 @@ type BribeWithdraw @entity(immutable: false) {
 type BribeRewardPaid @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
-  
+
   # Block data
   timestamp: BigInt!
   blockNumber: BigInt!
-  
+
   # Bribe contract
   bribe: Bribe!
-  
+
   # User who received the reward
   user: User!
-  
+
   # Reward token address
   rewardTokenAddress: Bytes!
-  
+
   # Reward amount
   reward: BigInt!
 }
@@ -1198,21 +1237,21 @@ type BribeRewardPaid @entity(immutable: false) {
 type BribeEpochReward @entity(immutable: false) {
   # Bribe address + reward token address + epoch
   id: ID!
-  
+
   # Bribe contract
   bribe: Bribe!
-  
+
   # Reward token entity
   rewardToken: BribeRewardToken!
-  
+
   # Epoch info
   epoch: BigInt!
   epochStart: BigInt!
   epochEnd: BigInt!
-  
+
   # Aggregate reward amount for the epoch
   reward: BigInt!
-  
+
   # Last update info
   updatedAtTimestamp: BigInt!
   updatedAtBlockNumber: BigInt!
@@ -1241,20 +1280,20 @@ type PairBribeEpochReward @entity(immutable: false) {
 type GaugeEpochVote @entity(immutable: false) {
   # Gauge address + epoch timestamp
   id: ID!
-  
+
   # Gauge/Bribe context
   gauge: Gauge!
   bribe: Bribe!
   pair: Pair!
-  
+
   # Epoch timing
   epoch: BigInt!
   epochStart: BigInt!
   epochEnd: BigInt!
-  
+
   # Total vote weight for this epoch
   totalWeight: BigInt!
-  
+
   # Last update metadata
   updatedAtTimestamp: BigInt!
   updatedAtBlockNumber: BigInt!
@@ -1263,18 +1302,18 @@ type GaugeEpochVote @entity(immutable: false) {
 type TokenGaugeEpochVote @entity(immutable: false) {
   # tokenId + gauge + epoch
   id: ID!
-  
+
   tokenId: BigInt!
   gauge: Gauge!
   bribe: Bribe!
   pair: Pair!
-  
+
   epoch: BigInt!
   epochStart: BigInt!
   epochEnd: BigInt!
-  
+
   weight: BigInt!
-  
+
   updatedAtTimestamp: BigInt!
   updatedAtBlockNumber: BigInt!
 }
@@ -1282,11 +1321,11 @@ type TokenGaugeEpochVote @entity(immutable: false) {
 type TokenEpochVoting @entity(immutable: false) {
   # tokenId + epoch
   id: ID!
-  
+
   tokenId: BigInt!
   epoch: BigInt!
   pools: [String!]!
-  
+
   updatedAtTimestamp: BigInt!
   updatedAtBlockNumber: BigInt!
 }
@@ -1296,59 +1335,55 @@ type TokenEpochVoting @entity(immutable: false) {
 type Gauge @entity(immutable: false) {
   # Gauge contract address
   id: ID!
-  
+
   # Contract address
   address: Bytes!
-  
+
   # Voter that created this gauge
   voter: Voter!
-  
+
   # Associated contracts
-  rewardToken: Token!  # Main reward token (usually protocol token)
+  rewardToken: Token! # Main reward token (usually protocol token)
   stakingToken: Token! # LP token or other stakeable token
   votingEscrow: Bytes! # VE contract address
   distribution: Bytes! # VoterV3 contract address
   # Pair this gauge is associated with (if staking V2 LP tokens)
   pair: Pair
-  
+
   # CL Pool this gauge is associated with (if staking CL LP tokens)
   clPool: CLPool
-  
+
   # Hypervisor this gauge is associated with (if staking Gamma Hyper tokens)
   hypervisor: Hypervisor
 
   # Bribe contracts
   internalBribe: Bribe! # Internal bribe (receives fees)
   externalBribe: Bribe! # External bribe (receives incentives)
-  
   # Gauge properties
   isForPair: Boolean! # Whether this gauge is for a trading pair
   emergency: Boolean! # Emergency mode status
-  
   # Staking totals
   totalStaked: BigInt! # Total LP tokens staked
   totalRewardsDistributed: BigInt! # Total rewards distributed
-  
   # Reward rate and timing
   rewardRate: BigInt! # Current reward rate per second
   periodFinish: BigInt! # When current reward period ends
   lastUpdateTime: BigInt! # Last reward calculation update
-  
   # Gauge rewarder (additional rewards)
   gaugeRewarder: Bytes
-  
+
   # All deposits to this gauge
   deposits: [GaugeDeposit!]! @derivedFrom(field: "gauge")
-  
+
   # All withdrawals from this gauge
   withdrawals: [GaugeWithdraw!]! @derivedFrom(field: "gauge")
-  
+
   # All reward distributions to this gauge
   rewardAdditions: [GaugeRewardAdded!]! @derivedFrom(field: "gauge")
-  
+
   # All harvest events from this gauge
   harvests: [GaugeHarvest!]! @derivedFrom(field: "gauge")
-  
+
   # All fee claims by this gauge
   feeClaims: [GaugeFeeClaim!]! @derivedFrom(field: "gauge")
   epochVotes: [GaugeEpochVote!]! @derivedFrom(field: "gauge")
@@ -1358,21 +1393,19 @@ type Gauge @entity(immutable: false) {
 type GaugePosition @entity(immutable: false) {
   # Gauge address + User address
   id: ID!
-  
+
   # Gauge and user
   gauge: Gauge!
   user: User!
-  
+
   # Position details
   stakedBalance: BigInt! # Current staked amount
   rewardDebt: BigInt! # Reward debt for reward calculations
   pendingRewards: BigInt! # Unclaimed rewards
-  
   # Totals
   totalDeposited: BigInt! # Lifetime deposits
   totalWithdrawn: BigInt! # Lifetime withdrawals
   totalRewardsClaimed: BigInt! # Lifetime rewards claimed
-  
   # Last interaction
   lastDepositTime: BigInt!
   lastWithdrawTime: BigInt!
@@ -1382,20 +1415,20 @@ type GaugePosition @entity(immutable: false) {
 type GaugeDeposit @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
-  
+
   # Block data
   timestamp: BigInt!
   blockNumber: BigInt!
-  
+
   # Gauge contract
   gauge: Gauge!
-  
+
   # User who deposited
   user: User!
-  
+
   # Deposit amount
   amount: BigInt!
 }
@@ -1403,23 +1436,23 @@ type GaugeDeposit @entity(immutable: false) {
 type GaugeWithdraw @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
-  
+
   # Block data
   timestamp: BigInt!
   blockNumber: BigInt!
-  
+
   # Gauge contract
   gauge: Gauge!
-  
+
   # User who withdrew
   user: User!
-  
+
   # Withdrawal amount
   amount: BigInt!
-  
+
   # Whether this was an emergency withdrawal
   isEmergency: Boolean!
 }
@@ -1427,23 +1460,23 @@ type GaugeWithdraw @entity(immutable: false) {
 type GaugeRewardAdded @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
-  
+
   # Block data
   timestamp: BigInt!
   blockNumber: BigInt!
-  
+
   # Gauge contract
   gauge: Gauge!
-  
+
   # Reward amount added
   reward: BigInt!
-  
+
   # New reward rate
   newRewardRate: BigInt!
-  
+
   # Period finish time
   periodFinish: BigInt!
 }
@@ -1451,20 +1484,20 @@ type GaugeRewardAdded @entity(immutable: false) {
 type GaugeHarvest @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
-  
+
   # Block data
   timestamp: BigInt!
   blockNumber: BigInt!
-  
+
   # Gauge contract
   gauge: Gauge!
-  
+
   # User who harvested
   user: User!
-  
+
   # Reward amount harvested
   reward: BigInt!
 }
@@ -1472,20 +1505,20 @@ type GaugeHarvest @entity(immutable: false) {
 type GaugeFeeClaim @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
-  
+
   # Block data
   timestamp: BigInt!
   blockNumber: BigInt!
-  
+
   # Gauge contract
   gauge: Gauge!
-  
+
   # Address that triggered the claim (usually the gauge itself)
   from: Bytes!
-  
+
   # Fee amounts claimed from the underlying pair
   claimed0: BigInt! # Token0 fees
   claimed1: BigInt! # Token1 fees
@@ -1494,17 +1527,17 @@ type GaugeFeeClaim @entity(immutable: false) {
 type GaugeEmergencyEvent @entity(immutable: false) {
   # Transaction hash + log index
   id: ID!
-  
+
   # Transaction hash
   transaction: Bytes!
-  
+
   # Block data
   timestamp: BigInt!
   blockNumber: BigInt!
-  
+
   # Gauge contract
   gauge: Gauge!
-  
+
   # Event type (activated or deactivated)
   eventType: String! # "activated" or "deactivated"
 }

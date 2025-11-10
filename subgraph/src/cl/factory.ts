@@ -26,6 +26,13 @@ export function handlePoolCreated(event: PoolEvent): void {
   entity.volumeToken0 = ZERO_BD
   entity.volumeToken1 = ZERO_BD
   entity.volumeUSD = ZERO_BD
+  entity.token0Price = ZERO_BD
+  entity.token1Price = ZERO_BD
+  entity.feeGrowthGlobal0X128 = ZERO_BI
+  entity.feeGrowthGlobal1X128 = ZERO_BI
+  entity.feesToken0 = ZERO_BD
+  entity.feesToken1 = ZERO_BD
+  entity.feesUSD = ZERO_BD
   entity.txCount = ZERO_BI
   entity.createdAtTimestamp = event.block.timestamp
   entity.createdAtBlockNumber = event.block.number
