@@ -182,6 +182,127 @@ type CLPool @entity(immutable: false) {
 
   # Optional link to corresponding gauge if incentivised
   gauge: Gauge
+  
+  # Optional link to corresponding Hypervisor (Gamma vault)
+  hypervisor: Hypervisor
+}
+
+# ===== GAMMA HYPERVISOR ENTITIES =====
+
+type HypeRegistry @entity(immutable: false) {
+  # Registry contract address
+  id: ID!
+  
+  # Total number of hypervisors created
+  hypervisorCount: BigInt!
+  
+  # All hypervisors created by this registry
+  hypervisors: [Hypervisor!]! @derivedFrom(field: "registry")
+}
+
+type Hypervisor @entity(immutable: false) {
+  # Hypervisor contract address (also ERC20 token address)
+  id: ID!
+  
+  # Registry that created this hypervisor
+  registry: HypeRegistry!
+  
+  # Index in the registry
+  registryIndex: BigInt!
+  
+  # CL Pool this hypervisor manages
+  pool: CLPool!
+  
+  # ERC20 token details
+  name: String!
+  symbol: String!
+  decimals: BigInt!
+  totalSupply: BigInt!
+  
+  # Position range details
+  baseLower: BigInt!
+  baseUpper: BigInt!
+  limitLower: BigInt!
+  limitUpper: BigInt!
+  
+  # Total amounts managed
+  totalAmount0: BigDecimal!
+  totalAmount1: BigDecimal!
+  totalValueUSD: BigDecimal!
+  
+  # Fees collected
+  feesEarned0: BigDecimal!
+  feesEarned1: BigDecimal!
+  feesEarnedUSD: BigDecimal!
+  
+  # Statistics
+  depositCount: BigInt!
+  withdrawCount: BigInt!
+  
+  # Creation metadata  
+  createdAtTimestamp: BigInt!
+  createdAtBlockNumber: BigInt!
+  
+  # Relations
+  deposits: [HypervisorDeposit!]! @derivedFrom(field: "hypervisor")
+  withdraws: [HypervisorWithdraw!]! @derivedFrom(field: "hypervisor")
+  
+  # Optional gauge if hypervisor tokens are stakeable
+  gauge: Gauge
+}
+
+type HypervisorDeposit @entity(immutable: true) {
+  # tx_hash + log_index
+  id: ID!
+  
+  # Hypervisor contract
+  hypervisor: Hypervisor!
+  
+  # User who deposited
+  sender: User!
+  to: User!
+  
+  # Amounts deposited
+  amount0: BigDecimal!
+  amount1: BigDecimal!
+  
+  # Shares minted
+  shares: BigDecimal!
+  
+  # USD value at time of deposit
+  amountUSD: BigDecimal!
+  
+  # Transaction details
+  transaction: Transaction!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+}
+
+type HypervisorWithdraw @entity(immutable: true) {
+  # tx_hash + log_index
+  id: ID!
+  
+  # Hypervisor contract
+  hypervisor: Hypervisor!
+  
+  # User who withdrew
+  sender: User!
+  to: User!
+  
+  # Amounts withdrawn
+  amount0: BigDecimal!
+  amount1: BigDecimal!
+  
+  # Shares burned
+  shares: BigDecimal!
+  
+  # USD value at time of withdrawal
+  amountUSD: BigDecimal!
+  
+  # Transaction details
+  transaction: Transaction!
+  timestamp: BigInt!
+  blockNumber: BigInt!
 }
 
 type User @entity(immutable: false) {
@@ -882,6 +1003,8 @@ type Bribe @entity(immutable: false) {
   bribeFactory: Bytes!
   gauge: Gauge
   pair: Pair
+  clPool: CLPool
+  hypervisor: Hypervisor
   
   # Owner
   owner: User!
@@ -1185,8 +1308,14 @@ type Gauge @entity(immutable: false) {
   stakingToken: Token! # LP token or other stakeable token
   votingEscrow: Bytes! # VE contract address
   distribution: Bytes! # VoterV3 contract address
-  # Pair this gauge is associated with (if staking LP tokens)
+  # Pair this gauge is associated with (if staking V2 LP tokens)
   pair: Pair
+  
+  # CL Pool this gauge is associated with (if staking CL LP tokens)
+  clPool: CLPool
+  
+  # Hypervisor this gauge is associated with (if staking Gamma Hyper tokens)
+  hypervisor: Hypervisor
 
   # Bribe contracts
   internalBribe: Bribe! # Internal bribe (receives fees)

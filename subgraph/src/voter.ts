@@ -13,6 +13,8 @@ import {
   Bribe,
   Gauge,
   Pair,
+  CLPool,
+  Hypervisor,
   GaugeEpochVote,
   TokenGaugeEpochVote,
   TokenEpochVoting
@@ -313,20 +315,49 @@ export function handleGaugeCreated(event: GaugeCreatedEvent): void {
   gauge.internalBribe = internalBribe.id;
   gauge.externalBribe = externalBribe.id;
 
-  let pairEntity = Pair.load(event.params.pool.toHexString());
+  // Check if pool is a V2 Pair, CL Pool, or Hypervisor
+  let poolId = event.params.pool.toHexString();
+  let pairEntity = Pair.load(poolId);
   if (pairEntity !== null) {
+    // V2 Pair
     pairEntity.gauge = gauge.id;
     pairEntity.save();
     gauge.pair = pairEntity.id;
+  } else {
+    // Check if it's a CL Pool
+    let clPoolEntity = CLPool.load(poolId);
+    if (clPoolEntity !== null) {
+      clPoolEntity.gauge = gauge.id;
+      clPoolEntity.save();
+      gauge.clPool = clPoolEntity.id;
+    } else {
+      // Check if it's a Hypervisor (Gamma vault)
+      let hypervisorEntity = Hypervisor.load(poolId);
+      if (hypervisorEntity !== null) {
+        hypervisorEntity.gauge = gauge.id;
+        hypervisorEntity.save();
+        gauge.hypervisor = hypervisorEntity.id;
+        
+        // Also link the underlying CL pool if available
+        let underlyingClPool = CLPool.load(hypervisorEntity.pool);
+        if (underlyingClPool !== null) {
+          gauge.clPool = underlyingClPool.id;
+        }
+      }
+    }
   }
 
   gauge.save();
   
   internalBribe.gauge = gauge.id;
   internalBribe.pair = gauge.pair;
+  internalBribe.clPool = gauge.clPool;
+  internalBribe.hypervisor = gauge.hypervisor;
   internalBribe.save();
   externalBribe.gauge = gauge.id;
   externalBribe.pair = gauge.pair;
+  externalBribe.clPool = gauge.clPool;
+  externalBribe.hypervisor = gauge.hypervisor;
   externalBribe.save();
   
   // Create GaugeCreatedEvent entity
