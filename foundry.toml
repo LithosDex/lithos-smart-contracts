@@ -12,7 +12,6 @@ via_ir = true
 # Gas settings for Plasma network
 gas_price = 2_000_000_000  # 2 gwei
 gas_limit = 90_000_000
-legacy = true
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 
@@ -25,15 +24,9 @@ fs_permissions = [
 [profile.testnet]
 # Plasma Testnet Configuration
 eth_rpc_url = "${RPC_URL}"
-etherscan_api_url = "https://testnet.plasmascan.to/api"
 etherscan_api_key = "${ETHERSCAN_API_KEY}"
-verifier = "etherscan"
-verifier_url = "https://api.routescan.io/v2/network/testnet/evm/9746_5/etherscan"
 
 [profile.mainnet]
 # Plasma Mainnet Configuration
 eth_rpc_url = "${RPC_URL}"
-etherscan_api_url = "https://plasmascan.to/api"
 etherscan_api_key = "${ETHERSCAN_API_KEY}"
-verifier = "etherscan"
-verifier_url = "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan"

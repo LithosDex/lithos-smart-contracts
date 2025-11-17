@@ -98,7 +98,9 @@ contract DistributeGaugeFeesScript is Script {
     }
 
     // Update this list as needed to skip gauges that revert (e.g., fee-on-transfer tokens)
-    function _isSkipped(address) internal pure returns (bool) {
+    function _isSkipped(address gauge) internal pure returns (bool) {
+        if (gauge == 0x69e4CeCE94cD707A0bb5DCeB450D4A3f121747Ee) return true;
+        if (gauge == 0xa10F495bB7C1Ee69dF11be9258E4F24f2D99DEc1) return true;
         return false;
     }
 }
