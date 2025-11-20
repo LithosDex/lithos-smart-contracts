@@ -342,6 +342,8 @@ export function handleGaugeCreated(event: GaugeCreatedEvent): void {
         let underlyingClPool = CLPool.load(hypervisorEntity.pool);
         if (underlyingClPool !== null) {
           gauge.clPool = underlyingClPool.id;
+          underlyingClPool.gauge = gauge.id;
+          underlyingClPool.save();
         }
       }
     }
