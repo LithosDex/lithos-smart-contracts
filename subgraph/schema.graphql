@@ -353,6 +353,9 @@ type User @entity(immutable: false) {
   # Liquidity positions
   liquidityPositions: [LiquidityPosition!]! @derivedFrom(field: "user")
 
+  # Gauge positions
+  gaugePositions: [GaugePosition!]! @derivedFrom(field: "user")
+
   # USD swapped
   usdSwapped: BigDecimal!
 
