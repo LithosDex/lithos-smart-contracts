@@ -4,6 +4,34 @@ schema:
 
 dataSources:
   - kind: ethereum
+    name: HypeRegistry
+    network: plasma-mainnet
+    source:
+      address: "0xDb7608614dfdD9feBFC1b82A7609420fa7B3Bc34"
+      abi: HypeRegistry
+      startBlock: 4651144
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - HypeRegistry
+        - Hypervisor
+        - CLPool
+      abis:
+        - name: HypeRegistry
+          file: ./abis/HypeRegistery.json
+        - name: Hypervisor
+          file: ./abis/Hypervisor.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: HypeAdded(address,uint256)
+          handler: handleHypeAdded
+        - event: HypeRemoved(address,uint256)
+          handler: handleHypeRemoved
+      file: ./src/gamma/registry.ts
+  - kind: ethereum
     name: AlgebraFactory
     network: plasma-mainnet
     source:
@@ -193,6 +221,36 @@ dataSources:
       file: ./src/voter.ts
 
 templates:
+  - kind: ethereum/contract
+    name: Hypervisor
+    network: plasma-mainnet
+    source:
+      abi: Hypervisor
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Hypervisor
+        - HypervisorDeposit
+        - HypervisorWithdraw
+        - User
+        - Token
+      abis:
+        - name: Hypervisor
+          file: ./abis/Hypervisor.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: Deposit(indexed address,indexed address,uint256,uint256,uint256)
+          handler: handleDeposit
+        - event: Withdraw(indexed address,indexed address,uint256,uint256,uint256)
+          handler: handleWithdraw
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+        - event: Rebalance(int24,uint256,uint256,uint256,uint256,uint256)
+          handler: handleRebalance
+      file: ./src/gamma/hypervisor.ts
   - kind: ethereum/contract
     name: AlgebraPool
     network: plasma-mainnet

@@ -19,7 +19,9 @@ import {
   GaugeHarvest,
   GaugeFeeClaim,
   GaugeEmergencyEvent,
-  Pair
+  Pair,
+  CLPool,
+  Hypervisor
 } from "../generated/schema";
 
 import { BI_ZERO, BI_ONE, createUser, getOrCreateToken } from "./helpers";
@@ -57,11 +59,28 @@ function getOrCreateGauge(address: Address): Gauge {
       let stakingToken = getOrCreateToken(stakingTokenResult.value);
       gauge.stakingToken = stakingToken.id;
 
-      let pairEntity = Pair.load(stakingToken.id);
-      if (pairEntity !== null) {
-        pairEntity.gauge = gauge.id;
-        pairEntity.save();
-        gauge.pair = pairEntity.id;
+      // Check if this is a Hypervisor (CL pool gauge)
+      let hypervisorEntity = Hypervisor.load(stakingToken.id);
+      if (hypervisorEntity !== null) {
+        hypervisorEntity.gauge = gauge.id;
+        hypervisorEntity.save();
+        gauge.hypervisor = hypervisorEntity.id;
+        
+        // Link to the underlying CLPool
+        let clPool = CLPool.load(hypervisorEntity.pool);
+        if (clPool !== null) {
+          clPool.gauge = gauge.id;
+          clPool.save();
+          gauge.clPool = clPool.id;
+        }
+      } else {
+        // Check if this is a regular V2 pair
+        let pairEntity = Pair.load(stakingToken.id);
+        if (pairEntity !== null) {
+          pairEntity.gauge = gauge.id;
+          pairEntity.save();
+          gauge.pair = pairEntity.id;
+        }
       }
     } else {
       // Fallback to zero address token
