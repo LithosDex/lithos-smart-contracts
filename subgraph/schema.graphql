@@ -371,6 +371,10 @@ type User @entity(immutable: false) {
   veWithdraws: [VeWithdraw!]! @derivedFrom(field: "user")
   veTransfersTo: [VeTransfer!]! @derivedFrom(field: "toUser")
   veDelegations: [VeDelegation!]! @derivedFrom(field: "delegator")
+
+  # Hypervisor deposits/withdraws (CL liquidity positions)
+  hypervisorDeposits: [HypervisorDeposit!]! @derivedFrom(field: "to")
+  hypervisorWithdraws: [HypervisorWithdraw!]! @derivedFrom(field: "to")
 }
 
 type LiquidityPosition @entity(immutable: false) {
