@@ -71,23 +71,48 @@ source .env && cast call 0x2Eff716Caa7F9EB441861340998B0952AF056686 "tokenOfOwne
 source .env && cast call 0x2Eff716Caa7F9EB441861340998B0952AF056686 "balanceOfNFT(uint256)(uint256)" <TOKEN_ID> --rpc-url $RPC_URL
 ```
 
-### Step 3: Select the best veNFT
+### Step 3: Select the best veNFT and strategy
 
-Compare the total target votes against each veNFT's voting power. Select the veNFT that is closest to the target (within 20% is acceptable). The votes are distributed proportionally by weight, so the actual votes will be scaled by:
+**Key insight**: When voting with a veNFT, its **entire voting power** is distributed proportionally across the pools based on weight ratios. You cannot partially vote - all power gets used.
+
+Compare each veNFT's voting power against the total target votes:
+- **Overshoot** (veNFT power > target): Actual votes will be higher than targets, but ratios preserved
+- **Undershoot** (veNFT power < target): Actual votes will be lower than targets, but ratios preserved
+
+**Recommended strategy**: Prefer overshooting over undershooting. Select the veNFT whose voting power is closest to (but ideally above) the target total.
+
+Calculate the scale factor and show the user the projected actual votes:
 
 ```
-actual_votes = target_votes * (veNFT_voting_power / total_target_votes)
+scale_factor = veNFT_voting_power / total_target_votes
+actual_votes_per_pool = target_weight * scale_factor
 ```
 
-### Step 4: Check if veNFT has already voted
+**Multi-veNFT handling**: If the multisig owns multiple veNFTs:
+1. Ask the user whether to vote with ONE veNFT or ALL veNFTs
+2. If voting with ONE veNFT, the others should be RESET to clear their votes
+3. Include reset transactions in the same batch BEFORE the vote transaction
+4. Present the comparison table showing each veNFT's % of target to help user decide
+
+### Step 4: Check if veNFTs have already voted
 
 ```bash
 source .env && cast call 0x2Eff716Caa7F9EB441861340998B0952AF056686 "voted(uint256)(bool)" <TOKEN_ID> --rpc-url $RPC_URL
 ```
 
-If `true`, the user must reset votes first using the `vote-reset` skill.
+Check ALL veNFTs, not just the one you plan to vote with. If any veNFT has `voted=true`, include a reset transaction for it in the batch.
 
-### Step 5: Generate vote calldata
+### Step 5: Generate reset calldata (if needed)
+
+For any veNFT that needs to be reset (either already voted, or not being used for voting):
+
+```bash
+cast calldata "reset(uint256)" <TOKEN_ID>
+```
+
+The function selector for `reset(uint256)` is `0x310bd74b`.
+
+### Step 6: Generate vote calldata
 
 **IMPORTANT**: The `vote()` function takes **POOL addresses**, not gauge addresses!
 
@@ -97,9 +122,9 @@ cast calldata "vote(uint256,address[],uint256[])" <TOKEN_ID> "[<POOL1>,<POOL2>,.
 
 The function selector for `vote(uint256,address[],uint256[])` is `0x7ac09bf7`.
 
-### Step 6: Create Safe batch JSON
+### Step 7: Create Safe batch JSON
 
-Generate a JSON file with this structure:
+Generate a JSON file with this structure. **Include reset transactions BEFORE the vote transaction** in the transactions array:
 
 ```json
 {
@@ -107,11 +132,30 @@ Generate a JSON file with this structure:
   "chainId": "9745",
   "createdAt": <UNIX_TIMESTAMP>,
   "meta": {
-    "name": "Vote with veNFT #<TOKEN_ID>",
-    "description": "Cast votes for veNFT #<TOKEN_ID> (<VOTING_POWER> voting power) across <NUM_POOLS> pools.\n\nVote Distribution:\n<POOL_BREAKDOWN>",
+    "name": "Reset #<IDs> & Vote with #<TOKEN_ID>",
+    "description": "Reset votes for veNFT #<RESET_IDs>, then cast votes with veNFT #<TOKEN_ID> (<VOTING_POWER> voting power) across <NUM_POOLS> pools.\n\nVote Distribution:\n<POOL_BREAKDOWN_WITH_ACTUAL_VOTES>",
     "txBuilderVersion": "1.16.5"
   },
   "transactions": [
+    {
+      "to": "0x2AF460a511849A7aA37Ac964074475b0E6249c69",
+      "value": "0",
+      "data": "<RESET_CALLDATA>",
+      "contractMethod": {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "_tokenId",
+            "type": "uint256"
+          }
+        ],
+        "name": "reset",
+        "payable": false
+      },
+      "contractInputsValues": {
+        "_tokenId": "<RESET_TOKEN_ID>"
+      }
+    },
     {
       "to": "0x2AF460a511849A7aA37Ac964074475b0E6249c69",
       "value": "0",
@@ -147,7 +191,7 @@ Generate a JSON file with this structure:
 }
 ```
 
-### Step 7: Write to file
+### Step 8: Write to file
 
 Save the JSON to `safe-txs/safe.vote-<TOKEN_ID>.json`.
 
@@ -166,18 +210,30 @@ source .env && cast call 0x2AF460a511849A7aA37Ac964074475b0E6249c69 "votes(uint2
 ## Example Usage
 
 User: "Set votes for veNFTs owned by 0x495a98fd059551385Fc9bAbBcFD88878Da3A1b78 with these targets:
-- XPL/USDT (CL): 4,000,000
+- XPL/USDT (V): 4,000,000
+- USDT/USDe: 125,000
 - LITH/XPL: 1,500,000
-- MSUSD/USDT0: 2,000,000"
+- MSUSD/USDT0: 2,000,000
+- MSUSD/USDE: 200,000
+- XAUT0/USDT0: 35,000"
 
-1. Query veNFTs: finds 1163 (11.5M), 1447 (6.7M), 1448 (0.2M)
-2. Calculate total target: 7,500,000
-3. Select best match: veNFT 1447 (6.7M) is 89% of target - acceptable
-4. Check voted status: false (can proceed)
-5. Map pool names to addresses
-6. Generate calldata with pool addresses (NOT gauge addresses!)
-7. Create `safe-txs/safe.vote-1447.json`
-8. Report success with vote distribution breakdown
+**Workflow:**
+
+1. Query veNFTs: finds 1163 (11.4M), 1447 (6.67M), 1448 (0.22M)
+2. Calculate total target: 7,860,000
+3. Present options to user:
+   - veNFT #1163: 145% of target (overshoot by +3.5M)
+   - veNFT #1447: 85% of target (undershoot by -1.2M)
+   - veNFT #1448: 3% of target (way under)
+4. User chooses: "Use #1163 and reset the others" (prefers overshoot)
+5. Check voted status: #1447 is true (already voted), others false
+6. Generate reset calldata for #1447 and #1448
+7. Generate vote calldata for #1163
+8. Create single batch with: reset #1447 → reset #1448 → vote #1163
+9. Report actual vote distribution:
+   - XPL/USDT (V): 5,803,896 (target was 4M)
+   - MSUSD/USDT0: 2,901,948 (target was 2M)
+   - etc.
 
 ## Common Mistakes to Avoid
 
@@ -187,6 +243,12 @@ User: "Set votes for veNFTs owned by 0x495a98fd059551385Fc9bAbBcFD88878Da3A1b78 
 
 3. **Including pools with 0 weight** - Only include pools with non-zero weights in the arrays.
 
+4. **Not resetting unused veNFTs** - If the multisig owns multiple veNFTs but only votes with one, the others' votes from previous epochs may still be active. Always reset veNFTs not being used.
+
+5. **Assuming target weights = actual votes** - The veNFT's entire voting power is distributed proportionally. Actual votes = target × (veNFT_power / total_target). Always show the user the projected actual votes.
+
+6. **Voting with all veNFTs when user wants specific totals** - If user provides target vote amounts, they likely want TOTAL votes across all veNFTs to approximate those targets. Ask whether to use one or all veNFTs.
+
 ## Notes
 
 - Votes are proportional: weights determine the ratio, not absolute amounts
@@ -194,3 +256,13 @@ User: "Set votes for veNFTs owned by 0x495a98fd059551385Fc9bAbBcFD88878Da3A1b78 
 - Voting automatically resets previous votes for that token
 - Votes persist until the next epoch or until manually reset
 - Only the veNFT owner or approved address can vote
+- **This is a weekly process** - votes need to be set each epoch
+
+## Default Multisig Address
+
+The primary multisig that owns veNFTs: `0x495a98fd059551385Fc9bAbBcFD88878Da3A1b78`
+
+Current veNFTs owned (as of last update):
+- #1163: ~11.4M voting power
+- #1447: ~6.67M voting power
+- #1448: ~0.22M voting power

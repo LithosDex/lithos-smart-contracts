@@ -28,3 +28,4 @@ subgraph/.yarn/
 subgraph/yarn.lock
 subgraph/build
 AGENTS.md
+safe-txs/
