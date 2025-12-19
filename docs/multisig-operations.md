@@ -20,7 +20,7 @@ Addresses below reference the current mainnet deployment (`deployments/mainnet/s
 - `PermissionsRegistry`: `0x97A5AD8B3d1c16565d9EC94A95cBE2D61d0a4ac7`
 - `PairFactoryUpgradeable`: `0x71a870D1c935C2146b87644DF3B5316e8756aE18`
 - `Minter` (proxy): `0x3bE9e60902D5840306d3Eb45A29015B7EC3d10a6`
-- `RewardsDistributor`: `0x3B867F78D3eCfCad997b18220444AdafBC8372A8`
+- `RewardsDistributor`: `0x0E68ac23a0aFEF4f018d647C3E58d59c55065308`
 
 Use `cast` or your transaction builder of choice to reproduce the calldata shown in the examples.
 

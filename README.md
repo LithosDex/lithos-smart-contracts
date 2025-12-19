@@ -74,7 +74,7 @@ The ve(3,3) system is live on Plasma mainnet. Key governance contracts (synced t
 - **GaugeFactory**: [0xA0Ce83fd2003e7C7F06E01E917a3E57fceee41A0](https://plasmascan.to/address/0xA0Ce83fd2003e7C7F06E01E917a3E57fceee41A0)
 - **BribeFactory**: [0x9CfC6d1C1309457160A4BcAB3F71A16a09336788](https://plasmascan.to/address/0x9CfC6d1C1309457160A4BcAB3F71A16a09336788)
 - **PermissionsRegistry**: [0x97A5AD8B3d1c16565d9EC94A95cBE2D61d0a4ac7](https://plasmascan.to/address/0x97A5AD8B3d1c16565d9EC94A95cBE2D61d0a4ac7)
-- **RewardsDistributor**: [0x3B867F78D3eCfCad997b18220444AdafBC8372A8](https://plasmascan.to/address/0x3B867F78D3eCfCad997b18220444AdafBC8372A8)
+- **RewardsDistributor**: [0x0E68ac23a0aFEF4f018d647C3E58d59c55065308](https://plasmascan.to/address/0x0E68ac23a0aFEF4f018d647C3E58d59c55065308)
 - **Minter** (proxy): [0x3bE9e60902D5840306d3Eb45A29015B7EC3d10a6](https://plasmascan.to/address/0x3bE9e60902D5840306d3Eb45A29015B7EC3d10a6)
 - **Minter Implementation**: [0x469aCB68BeCd95EE43672C6FA0963aA4C8421f95](https://plasmascan.to/address/0x469aCB68BeCd95EE43672C6FA0963aA4C8421f95)
 - **VeArtProxy** (proxy): [0xBd24Ee2688d1b564E2f6Afa51b44aBF692877193](https://plasmascan.to/address/0xBd24Ee2688d1b564E2f6Afa51b44aBF692877193)

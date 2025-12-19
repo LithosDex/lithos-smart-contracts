@@ -19,7 +19,7 @@ contract RewardsDistributor is IRewardsDistributor {
 
     event Claimed(uint256 tokenId, uint256 amount, uint256 claim_epoch, uint256 max_epoch);
 
-    uint256 constant WEEK = 7 * 1 weeks;
+    uint256 constant WEEK = 7 days; // 604800 seconds - matches Velodrome's 7 * 86400
 
     uint256 public start_time;
     uint256 public time_cursor;
