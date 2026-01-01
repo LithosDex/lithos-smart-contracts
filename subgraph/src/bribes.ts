@@ -21,10 +21,13 @@ import {
   BribeEpochVeStake,
   Pair,
   PairBribeEpochReward,
-  Token
+  Token,
+  CLPool,
+  CLPoolEpochData,
+  Bundle
 } from "../generated/schema";
 
-import { BI_ZERO, BI_ONE, WEEK, createUser, getOrCreateToken, getEpoch } from "./helpers";
+import { BI_ZERO, BI_ONE, WEEK, createUser, getOrCreateToken, getEpoch, ZERO_BD, convertTokenToDecimal } from "./helpers";
 
 function getOrCreateEpochStake(
   bribe: Bribe,
@@ -219,6 +222,74 @@ export function handleRewardAdded(event: RewardAddedEvent): void {
       internalEpoch.updatedAtTimestamp = event.block.timestamp;
       internalEpoch.updatedAtBlockNumber = event.block.number;
       internalEpoch.save();
+    }
+  }
+  
+  // Track bribe rewards per CL pool/epoch (for CL pools with internal bribes)
+  if (bribe.clPool !== null && bribe.type == "internal") {
+    let clPoolId = bribe.clPool as string;
+    let clPool = CLPool.load(clPoolId);
+    if (clPool !== null) {
+      let rewardTokenId = rewardToken.token;
+      let token = Token.load(rewardTokenId);
+      if (token !== null) {
+        // Get pool tokens
+        let token0 = Token.load(clPool.token0);
+        let token1 = Token.load(clPool.token1);
+        
+        if (token0 !== null && token1 !== null) {
+          // Convert reward amount to BigDecimal
+          let rewardAmount = convertTokenToDecimal(event.params.reward, token.decimals);
+          
+          // Determine which token this is (token0 or token1)
+          let fee0 = ZERO_BD;
+          let fee1 = ZERO_BD;
+          if (token.id == token0.id) {
+            fee0 = rewardAmount;
+          } else if (token.id == token1.id) {
+            fee1 = rewardAmount;
+          }
+          
+          // Calculate USD value
+          let bundle = Bundle.load("1");
+          if (bundle !== null) {
+            let price0USD = token0.derivedETH.times(bundle.ethPrice);
+            let price1USD = token1.derivedETH.times(bundle.ethPrice);
+            let feeUSD = fee0.times(price0USD).plus(fee1.times(price1USD));
+            
+            // Update CLPoolEpochData
+            let epochStart = getEpoch(event.params.startTimestamp);
+            let epochId = clPoolId.concat("-").concat(epochStart.toString());
+            let epochData = CLPoolEpochData.load(epochId);
+            
+            if (epochData === null) {
+              epochData = new CLPoolEpochData(epochId);
+              epochData.pool = clPoolId;
+              epochData.token0 = token0.id;
+              epochData.token1 = token1.id;
+              epochData.epoch = epochStart;
+              epochData.epochStart = epochStart;
+              epochData.epochEnd = epochStart.plus(WEEK);
+              epochData.feesToken0 = ZERO_BD;
+              epochData.feesToken1 = ZERO_BD;
+              epochData.feesUSD = ZERO_BD;
+              epochData.volumeToken0 = ZERO_BD;
+              epochData.volumeToken1 = ZERO_BD;
+              epochData.volumeUSD = ZERO_BD;
+              epochData.updatedAtTimestamp = event.block.timestamp;
+              epochData.updatedAtBlockNumber = event.block.number;
+            }
+            
+            // Add fees to epoch data (only for internal bribes = trading fees)
+            epochData.feesToken0 = epochData.feesToken0.plus(fee0);
+            epochData.feesToken1 = epochData.feesToken1.plus(fee1);
+            epochData.feesUSD = epochData.feesUSD.plus(feeUSD);
+            epochData.updatedAtTimestamp = event.block.timestamp;
+            epochData.updatedAtBlockNumber = event.block.number;
+            epochData.save();
+          }
+        }
+      }
     }
   }
   

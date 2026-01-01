@@ -682,6 +682,23 @@ Deploy the subgraph to index blockchain data using Goldsky CLI:
    goldsky subgraph deploy <subgraph-name>/<version> --path .
    ```
 
+# 0. (Once) install & auth
+npm install -g @goldsky/cli
+goldsky login   # use your Goldsky API key
+
+# 1. Generate types
+yarn codegen
+
+# 2. Build (you already did this once, but safe to rerun)
+yarn build
+
+# 3a. Redeploy to the EXISTING prod subgraph (overwrite v1.0.6)
+goldsky subgraph deploy lithos-subgraph-mainnet/v1.0.6 --path .
+
+# OR, if you want to bump version (recommended):
+# 3b. Deploy as a NEW version
+goldsky subgraph deploy lithos-subgraph-mainnet/v1.0.7 --path .
+
 ### Example Deployment Commands
 
 **For mainnet:**
