@@ -16,7 +16,8 @@
     "ts:add-liquidity-sim": "tsx ts/addLiquiditySim.ts",
     "calc:votes": "tsx scripts/calcLithVotes.ts",
     "calc:apr": "tsx scripts/calcGaugeApr.ts",
-    "calc:bribes": "tsx scripts/calcBribeClaimables.ts"
+    "calc:bribes": "tsx scripts/calcBribeClaimables.ts",
+    "ts:velith-dist": "tsx ts/generateVelithDistribution.ts"
   },
   "repository": {
     "type": "git",
