@@ -197,8 +197,14 @@ type CLPool @entity(immutable: false) {
   # Derived collections
   epochData: [CLPoolEpochData!]! @derivedFrom(field: "pool")
 
+  # Epoch votes (for CL pools with gauges)
+  epochVotes: [CLPoolEpochVote!]! @derivedFrom(field: "pool")
+
   # Optional link to corresponding Hypervisor (Gamma vault)
   hypervisor: Hypervisor
+
+  # Direct positions (from NFPM)
+  positions: [CLPosition!]! @derivedFrom(field: "pool")
 }
 
 # ===== GAMMA HYPERVISOR ENTITIES =====
@@ -346,6 +352,99 @@ type CLPoolEpochData @entity(immutable: false) {
   updatedAtBlockNumber: BigInt!
 }
 
+type CLPoolEpochVote @entity(immutable: false) {
+  # pool address + epoch timestamp
+  id: ID!
+
+  # References
+  pool: CLPool!
+  gauge: Gauge!
+
+  # Epoch details
+  epoch: BigInt!
+  epochStart: BigInt!
+  epochEnd: BigInt!
+
+  # Total vote weight for this epoch
+  totalWeight: BigInt!
+
+  # Last update timestamp
+  updatedAtTimestamp: BigInt!
+  updatedAtBlockNumber: BigInt!
+}
+
+type CLPosition @entity(immutable: false) {
+  # NFT tokenId
+  id: ID!
+
+  # Token ID as BigInt
+  tokenId: BigInt!
+
+  # Position owner
+  owner: User!
+
+  # Pool this position is in
+  pool: CLPool!
+
+  # Tokens
+  token0: Token!
+  token1: Token!
+
+  # Position range
+  tickLower: Int!
+  tickUpper: Int!
+
+  # Liquidity
+  liquidity: BigInt!
+
+  # Fee tracking
+  feeGrowthInside0LastX128: BigInt!
+  feeGrowthInside1LastX128: BigInt!
+  tokensOwed0: BigInt!
+  tokensOwed1: BigInt!
+
+  # Position value (calculated)
+  depositedToken0: BigDecimal!
+  depositedToken1: BigDecimal!
+  depositedUSD: BigDecimal!
+
+  # Collected fees
+  collectedToken0: BigDecimal!
+  collectedToken1: BigDecimal!
+  collectedUSD: BigDecimal!
+
+  # Status
+  isActive: Boolean!
+
+  # Timestamps
+  createdAtTimestamp: BigInt!
+  createdAtBlockNumber: BigInt!
+  lastUpdateTimestamp: BigInt!
+  lastUpdateBlockNumber: BigInt!
+}
+
+type CLPositionEvent @entity(immutable: true) {
+  # tx_hash + log_index
+  id: ID!
+
+  # Transaction
+  transaction: Bytes!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+
+  # Position
+  position: CLPosition!
+
+  # Event type
+  eventType: String! # "mint", "increase", "decrease", "collect", "transfer"
+
+  # Event data
+  amount0: BigDecimal
+  amount1: BigDecimal
+  liquidity: BigInt
+  recipient: Bytes
+}
+
 type User @entity(immutable: false) {
   # User address
   id: ID!
@@ -375,6 +474,9 @@ type User @entity(immutable: false) {
   # Hypervisor deposits/withdraws (CL liquidity positions)
   hypervisorDeposits: [HypervisorDeposit!]! @derivedFrom(field: "to")
   hypervisorWithdraws: [HypervisorWithdraw!]! @derivedFrom(field: "to")
+
+  # Direct CL positions (NFT positions from NonfungiblePositionManager)
+  clPositions: [CLPosition!]! @derivedFrom(field: "owner")
 }
 
 type LiquidityPosition @entity(immutable: false) {

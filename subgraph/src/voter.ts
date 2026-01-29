@@ -16,6 +16,7 @@ import {
   CLPool,
   Hypervisor,
   GaugeEpochVote,
+  CLPoolEpochVote,
   TokenGaugeEpochVote,
   TokenEpochVoting
 } from "../generated/schema";
@@ -198,44 +199,121 @@ function syncTokenVotes(event: ethereum.Event, tokenId: BigInt): void {
 
   for (let i = 0; i < uniquePools.length; i++) {
     let poolId = uniquePools[i];
+    
+    // First try to load as basic Pair
     let pair = Pair.load(poolId);
-    if (pair === null) {
+    if (pair !== null) {
+      let gaugeId = pair.gauge;
+      if (gaugeId === null) {
+        continue;
+      }
+      let gauge = Gauge.load(gaugeId as string);
+      if (gauge === null) {
+        continue;
+      }
+      let weightResult = contract.try_weights(Address.fromString(poolId));
+      if (weightResult.reverted) {
+        continue;
+      }
+      let epochVoteId = (gaugeId as string)
+        .concat("-")
+        .concat(epochStart.toString());
+      let epochVote = GaugeEpochVote.load(epochVoteId);
+      if (epochVote === null) {
+        epochVote = new GaugeEpochVote(epochVoteId);
+        epochVote.gauge = gaugeId as string;
+        epochVote.bribe = gauge.externalBribe;
+        epochVote.pair = pair.id;
+        epochVote.epoch = epochStart;
+        epochVote.epochStart = epochStart;
+        epochVote.epochEnd = epochEnd;
+        epochVote.totalWeight = weightResult.value;
+      } else {
+        epochVote.totalWeight = weightResult.value;
+        epochVote.epoch = epochStart;
+        epochVote.epochStart = epochStart;
+        epochVote.epochEnd = epochEnd;
+      }
+      epochVote.updatedAtTimestamp = event.block.timestamp;
+      epochVote.updatedAtBlockNumber = event.block.number;
+      epochVote.save();
       continue;
     }
-    let gaugeId = pair.gauge;
-    if (gaugeId === null) {
+    
+    // Try to load as CL Pool (for hypervisors)
+    let clPool = CLPool.load(poolId);
+    if (clPool !== null) {
+      let gaugeId = clPool.gauge;
+      if (gaugeId === null) {
+        continue;
+      }
+      let gauge = Gauge.load(gaugeId as string);
+      if (gauge === null) {
+        continue;
+      }
+      let weightResult = contract.try_weights(Address.fromString(poolId));
+      if (weightResult.reverted) {
+        continue;
+      }
+      let clEpochVoteId = (gaugeId as string)
+        .concat("-")
+        .concat(epochStart.toString());
+      let clEpochVote = CLPoolEpochVote.load(clEpochVoteId);
+      if (clEpochVote === null) {
+        clEpochVote = new CLPoolEpochVote(clEpochVoteId);
+        clEpochVote.pool = clPool.id;
+        clEpochVote.gauge = gaugeId as string;
+        clEpochVote.epoch = epochStart;
+        clEpochVote.epochStart = epochStart;
+        clEpochVote.epochEnd = epochEnd;
+        clEpochVote.totalWeight = weightResult.value;
+      } else {
+        clEpochVote.totalWeight = weightResult.value;
+        clEpochVote.epoch = epochStart;
+        clEpochVote.epochStart = epochStart;
+        clEpochVote.epochEnd = epochEnd;
+      }
+      clEpochVote.updatedAtTimestamp = event.block.timestamp;
+      clEpochVote.updatedAtBlockNumber = event.block.number;
+      clEpochVote.save();
       continue;
     }
-    let gauge = Gauge.load(gaugeId as string);
-    if (gauge === null) {
-      continue;
+    
+    // Try to load as Hypervisor (which is linked to CL Pool)
+    let hypervisor = Hypervisor.load(poolId);
+    if (hypervisor !== null && hypervisor.pool !== null) {
+      let clPoolFromHypervisor = CLPool.load(hypervisor.pool as string);
+      if (clPoolFromHypervisor !== null && clPoolFromHypervisor.gauge !== null) {
+        let gaugeId = clPoolFromHypervisor.gauge as string;
+        let gauge = Gauge.load(gaugeId);
+        if (gauge !== null) {
+          let weightResult = contract.try_weights(Address.fromString(poolId));
+          if (!weightResult.reverted) {
+            let clEpochVoteId = gaugeId
+              .concat("-")
+              .concat(epochStart.toString());
+            let clEpochVote = CLPoolEpochVote.load(clEpochVoteId);
+            if (clEpochVote === null) {
+              clEpochVote = new CLPoolEpochVote(clEpochVoteId);
+              clEpochVote.pool = clPoolFromHypervisor.id;
+              clEpochVote.gauge = gaugeId;
+              clEpochVote.epoch = epochStart;
+              clEpochVote.epochStart = epochStart;
+              clEpochVote.epochEnd = epochEnd;
+              clEpochVote.totalWeight = weightResult.value;
+            } else {
+              clEpochVote.totalWeight = weightResult.value;
+              clEpochVote.epoch = epochStart;
+              clEpochVote.epochStart = epochStart;
+              clEpochVote.epochEnd = epochEnd;
+            }
+            clEpochVote.updatedAtTimestamp = event.block.timestamp;
+            clEpochVote.updatedAtBlockNumber = event.block.number;
+            clEpochVote.save();
+          }
+        }
+      }
     }
-    let weightResult = contract.try_weights(Address.fromString(poolId));
-    if (weightResult.reverted) {
-      continue;
-    }
-    let epochVoteId = (gaugeId as string)
-      .concat("-")
-      .concat(epochStart.toString());
-    let epochVote = GaugeEpochVote.load(epochVoteId);
-    if (epochVote === null) {
-      epochVote = new GaugeEpochVote(epochVoteId);
-      epochVote.gauge = gaugeId as string;
-      epochVote.bribe = gauge.externalBribe;
-      epochVote.pair = pair.id;
-      epochVote.epoch = epochStart;
-      epochVote.epochStart = epochStart;
-      epochVote.epochEnd = epochEnd;
-      epochVote.totalWeight = weightResult.value;
-    } else {
-      epochVote.totalWeight = weightResult.value;
-      epochVote.epoch = epochStart;
-      epochVote.epochStart = epochStart;
-      epochVote.epochEnd = epochEnd;
-    }
-    epochVote.updatedAtTimestamp = event.block.timestamp;
-    epochVote.updatedAtBlockNumber = event.block.number;
-    epochVote.save();
   }
 
   for (let i = 0; i < currentPools.length; i++) {

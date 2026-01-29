@@ -219,6 +219,40 @@ dataSources:
         - event: Abstained(uint256,uint256)
           handler: handleAbstained
       file: ./src/voter.ts
+  - kind: ethereum
+    name: NonfungiblePositionManager
+    network: plasma-mainnet
+    source:
+      address: "0x69D57B9D705eaD73a5d2f2476C30c55bD755cc2F"
+      abi: NonfungiblePositionManager
+      startBlock: 2558544
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - CLPosition
+        - CLPositionEvent
+        - CLPool
+        - User
+        - Token
+      abis:
+        - name: NonfungiblePositionManager
+          file: ./abis/NonfungiblePositionManager.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: AlgebraPool
+          file: ./abis/AlgebraPool.json
+      eventHandlers:
+        - event: IncreaseLiquidity(indexed uint256,uint128,uint128,uint256,uint256,address)
+          handler: handleIncreaseLiquidity
+        - event: DecreaseLiquidity(indexed uint256,uint128,uint256,uint256)
+          handler: handleDecreaseLiquidity
+        - event: Collect(indexed uint256,address,uint256,uint256)
+          handler: handleCollect
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleTransfer
+      file: ./src/cl/position.ts
 
 templates:
   - kind: ethereum/contract

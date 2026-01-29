@@ -693,11 +693,11 @@ yarn codegen
 yarn build
 
 # 3a. Redeploy to the EXISTING prod subgraph (overwrite v1.0.6)
-goldsky subgraph deploy lithos-subgraph-mainnet/v1.0.6 --path .
+goldsky subgraph deploy lithos-subgraph-mainnet/v1.0.20 --path .
 
 # OR, if you want to bump version (recommended):
 # 3b. Deploy as a NEW version
-goldsky subgraph deploy lithos-subgraph-mainnet/v1.0.7 --path .
+goldsky subgraph deploy lithos-subgraph-mainnet/v1.0.21 --path .
 
 ### Example Deployment Commands
 
