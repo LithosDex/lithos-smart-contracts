@@ -7,9 +7,8 @@ import {MinterUpgradeable} from "../src/contracts/MinterUpgradeable.sol";
 import {IGauge} from "../src/contracts/interfaces/IGauge.sol";
 
 /// @title DistributeAll Script
-/// @notice Run this script every epoch flip to distribute emissions AND trading fees to all gauges
-/// @dev Calls distributeAll() on VoterV3 which triggers update_period() and distributes to all gauges,
-///      then calls distributeFees() to flush accumulated trading fees from PairFees into internal bribes
+/// @notice Run this script periodically to distribute fees and emissions to all gauges
+/// @dev Calls distributeFees() then distributeAll() on VoterV3
 contract DistributeAllScript is Script {
     mapping(string => address) public deployed;
 
@@ -43,57 +42,53 @@ contract DistributeAllScript is Script {
             console2.log("Hours until next epoch:", hoursRemaining);
         }
 
+        // Build array of all gauges for distributeFees
+        uint256 poolCount = voter.length();
+        address[] memory allGauges = new address[](poolCount);
+        for (uint256 i = 0; i < poolCount; i++) {
+            allGauges[i] = voter.gauges(voter.pools(i));
+        }
+
+        // 1. Distribute LP fees from PairFees into internal bribes
+        //    Pre-check which gauges can claim fees using snapshot, since fee-on-transfer
+        //    tokens can cause claimFees to revert on some gauges
+        console2.log("\n--- Executing distributeFees() ---");
+        uint256 snapshotId = vm.snapshotState();
+        bool[] memory canClaim = new bool[](poolCount);
+        uint256 safeCount;
+        for (uint256 i = 0; i < poolCount; i++) {
+            if (voter.isAlive(allGauges[i])) {
+                try IGauge(allGauges[i]).claimFees() {
+                    canClaim[i] = true;
+                    safeCount++;
+                } catch {
+                    console2.log("  Gauge %d claimFees would revert, skipping", i);
+                }
+            }
+        }
+        vm.revertToState(snapshotId);
+
+        // Build filtered array of safe gauges
+        address[] memory safeGauges = new address[](safeCount);
+        uint256 idx;
+        for (uint256 i = 0; i < poolCount; i++) {
+            if (canClaim[i]) {
+                safeGauges[idx++] = allGauges[i];
+            }
+        }
+
         vm.startBroadcast();
 
-        // Call distributeAll() - this internally calls minter.update_period()
-        // and distributes emissions to all gauges
+        // Distribute fees only for gauges that won't revert
+        if (safeCount > 0) {
+            voter.distributeFees(safeGauges);
+        }
+        console2.log("distributeFees: %d/%d gauges succeeded", safeCount, poolCount);
+
+        // 2. Distribute LITHOS emissions to all gauges
         console2.log("\n--- Executing distributeAll() ---");
         voter.distributeAll();
         console2.log("distributeAll() executed successfully!");
-
-        // Distribute trading fees from PairFees contracts into internal bribes.
-        // Collects all active gauges, skipping known broken ones (fee-on-transfer
-        // tokens with insufficient PairFees balance), then batch-calls distributeFees.
-        console2.log("\n--- Distributing trading fees ---");
-
-        uint256 poolCount = voter.length();
-        uint256 activeCount = 0;
-        uint256 skippedCount = 0;
-
-        // First pass: count active gauges (excluding broken ones)
-        for (uint256 i = 0; i < poolCount; i++) {
-            address pool = voter.pools(i);
-            address gauge = voter.gauges(pool);
-            if (gauge == address(0) || !voter.isAlive(gauge)) continue;
-            if (_isSkipped(gauge)) {
-                skippedCount++;
-                continue;
-            }
-            activeCount++;
-        }
-
-        if (activeCount > 0) {
-            address[] memory gauges = new address[](activeCount);
-            uint256 j = 0;
-
-            // Second pass: collect gauges
-            for (uint256 i = 0; i < poolCount; i++) {
-                address pool = voter.pools(i);
-                address gauge = voter.gauges(pool);
-                if (gauge == address(0) || !voter.isAlive(gauge)) continue;
-                if (_isSkipped(gauge)) continue;
-                gauges[j++] = gauge;
-            }
-
-            console2.log("Distributing fees for", activeCount, "active gauges...");
-            if (skippedCount > 0) {
-                console2.log("Skipped", skippedCount, "gauges (fee-on-transfer tokens)");
-            }
-            voter.distributeFees(gauges);
-            console2.log("Fees distributed successfully!");
-        } else {
-            console2.log("No active gauges found.");
-        }
 
         vm.stopBroadcast();
 
@@ -102,14 +97,6 @@ contract DistributeAllScript is Script {
         console2.log("Weekly emissions:", minter.weekly() / 1e18, "LITH");
         console2.log("Circulating supply:", minter.circulating_supply() / 1e18, "LITH");
         console2.log("New active period:", minter.active_period());
-    }
-
-    /// @dev Gauges whose claimFees() reverts due to broken tokens (e.g. fee-on-transfer
-    ///      tokens where PairFees balance < recorded fees). These must be skipped to
-    ///      prevent the entire distributeFees batch from reverting.
-    function _isSkipped(address gauge) private pure returns (bool) {
-        return gauge == 0x69e4CeCE94cD707A0bb5DCeB450D4A3f121747Ee  // sUSDe/ELITE vAMM
-            || gauge == 0xa10F495bB7C1Ee69dF11be9258E4F24f2D99DEc1; // ELITE/WXPL vAMM
     }
 
     function _loadState(string memory path) private {
