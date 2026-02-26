@@ -29,3 +29,5 @@ subgraph/yarn.lock
 subgraph/build
 AGENTS.md
 safe-txs/
+logs/
+script/cron-distribute.sh

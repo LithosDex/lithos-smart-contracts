@@ -13,6 +13,9 @@ contract DistributeAllScript is Script {
     mapping(string => address) public deployed;
 
     function run() external {
+        uint256 deployerKey = vm.envUint("PRIVATE_KEY");
+        address deployer = vm.addr(deployerKey);
+
         string memory env = vm.envString("DEPLOY_ENV");
 
         string memory statePath = string.concat("deployments/", env, "/state.json");
@@ -23,6 +26,7 @@ contract DistributeAllScript is Script {
 
         console2.log("=== Distribute All Emissions ===");
         console2.log("Environment:", env);
+        console2.log("Executor:", deployer);
         console2.log("Timestamp:", block.timestamp);
         console2.log("Voter:", address(voter));
         console2.log("Minter:", address(minter));
@@ -77,7 +81,7 @@ contract DistributeAllScript is Script {
             }
         }
 
-        vm.startBroadcast();
+        vm.startBroadcast(deployerKey);
 
         // Distribute fees only for gauges that won't revert
         if (safeCount > 0) {
